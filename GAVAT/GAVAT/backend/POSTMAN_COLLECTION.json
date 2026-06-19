@@ -1,0 +1,587 @@
+{
+  "info": {
+    "_postman_id": "gavat-ecommerce-api-2026",
+    "name": "GAVAT E-commerce API",
+    "description": "API completa de la plataforma GAVAT - Ventanas y Puertas",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "🔐 AUTENTICACIÓN",
+      "item": [
+        {
+          "name": "Registrar Usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Carlos\",\n  \"email\": \"carlos@example.com\",\n  \"password\": \"password123\",\n  \"telefono\": \"3001234567\",\n  \"direccion\": \"Carrera 50 #25-30, Bogotá\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@gavat.com\",\n  \"password\": \"admin1234\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Obtener Mi Perfil",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Perfil",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Admin Actualizado\",\n  \"telefono\": \"3109876543\",\n  \"direccion\": \"Nueva dirección\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 CATÁLOGO (Público)",
+      "item": [
+        {
+          "name": "Obtener Categorías",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/catalogo/categorias?pagina=1&limite=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "catalogo", "categorias"],
+              "query": [
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "limite",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener Productos",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/catalogo/productos?pagina=1&limite=10&categoriaId=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "catalogo", "productos"],
+              "query": [
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "limite",
+                  "value": "10"
+                },
+                {
+                  "key": "categoriaId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener Detalle Producto",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/catalogo/productos/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "catalogo", "productos", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💬 COMENTARIOS",
+      "item": [
+        {
+          "name": "Crear Comentario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cliente_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": 1,\n  \"comentario\": \"Excelente producto, muy recomendado\",\n  \"calificacion\": 5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cliente/comentarios",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cliente", "comentarios"]
+            }
+          }
+        },
+        {
+          "name": "Obtener Comentarios de Producto",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/catalogo/productos/1/comentarios?pagina=1&limite=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "catalogo", "productos", "1", "comentarios"],
+              "query": [
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "limite",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener Comentarios Pendientes (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/comentarios/pendientes?pagina=1&limite=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "comentarios", "pendientes"],
+              "query": [
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "limite",
+                  "value": "15"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Moderar Comentario (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"aprobado\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/comentarios/1/moderar",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "comentarios", "1", "moderar"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar Comentario (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/comentarios/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "comentarios", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛒 CARRITO",
+      "item": [
+        {
+          "name": "Obtener Mi Carrito",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cliente_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cliente/carrito",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cliente", "carrito"]
+            }
+          }
+        },
+        {
+          "name": "Agregar al Carrito",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cliente_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": 1,\n  \"cantidad\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cliente/carrito",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cliente", "carrito"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Cantidad",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cliente_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cantidad\": 5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cliente/carrito/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cliente", "carrito", "1"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar del Carrito",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cliente_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cliente/carrito/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cliente", "carrito", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 PEDIDOS",
+      "item": [
+        {
+          "name": "Crear Pedido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cliente_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"direccionEnvio\": \"Carrera 50 #25-30, Bogotá\",\n  \"telefono\": \"3001234567\",\n  \"metodoPago\": \"efectivo\",\n  \"notasAdicionales\": \"Llamar antes de entregar\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cliente/pedidos",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cliente", "pedidos"]
+            }
+          }
+        },
+        {
+          "name": "Obtener Mis Pedidos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cliente_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cliente/pedidos?pagina=1&limite=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cliente", "pedidos"],
+              "query": [
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "limite",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener Detalle Pedido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cliente_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cliente/pedidos/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cliente", "pedidos", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👨‍💼 ADMINISTRADOR",
+      "item": [
+        {
+          "name": "Obtener Todos los Pedidos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/pedidos?pagina=1&limite=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "pedidos"],
+              "query": [
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "limite",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Estado de Pedido",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"procesado\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/pedidos/1/estado",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "pedidos", "1", "estado"]
+            }
+          }
+        },
+        {
+          "name": "Obtener Categorías",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/categorias",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "categorias"]
+            }
+          }
+        },
+        {
+          "name": "Crear Categoría",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Nueva Categoría\",\n  \"descripcion\": \"Descripción de la categoría\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/categorias",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "categorias"]
+            }
+          }
+        },
+        {
+          "name": "Obtener Productos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/productos?pagina=1&limite=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "productos"],
+              "query": [
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "limite",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cliente_token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

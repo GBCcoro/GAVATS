@@ -1,0 +1,941 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Especificación de Requerimientos de Software
+
+Proyecto: GAVAT- Plataforma de productos y servicios
+
+
+
+
+Revisión 1.0
+
+Brian Javier Ariza Cañon Santiago Zamudio Pinzon Juan Diego Coronado Agudelo Yai Ángel Jimenez Rodriguez
+
+
+
+
+
+
+
+Agosto de 2025
+ 
+
+ 
+TABLA DE CONTENIDOS
+ 
+Introducción	6
+Propósito.	6
+Personal involucrado	7
+Definiciones, siglas y abreviaturas	9
+Del negocio.	9
+Del sistema.	9
+Otros.	11
+Descripción general	12
+Perspectivas del producto.	12
+Funciones del producto por roles.	12
+Administrador del sistema (Emprendedor).	13
+Cliente.	14
+Visitante (No registrado).	16
+Alcance	18
+Políticas reguladoras.	18
+Limitaciones del hardware.	18
+Limitaciones del software.	18
+Funcionamiento Paralelo.	19
+Funciones de Auditoría.	19
+Funciones de Control.	19
+Requisitos del Lenguaje.	19
+Protocolos Utilizados.	19
+Requisitos de Fiabilidad.	19
+Credibilidad de la Aplicación.	19
+Consideraciones de Seguridad.	20
+Atención y Dependencias.	20
+Interfaces Externas.	20
+Requerimientos Funcionales y no Funcionales	21
+Requisitos funcionales del usuario.	21
+RF_Us_01 Registro del Usuario.	21
+RF_Us_02 Ingresó a la plataforma.	22
+RF_Us_03 Ver catálogo de productos y servicios.	23
+RF_Us_04 Agregar productos al carrito de compras.	24
+RF_Us_05 Consultar productos por categorías.	25
+RF_Us_06 Comentar sobre los productos o servicios.	26
+RF_Us_07 Ver comentarios sobre los servicios.	27
+RF_Us_08 Métodos de pago.	28
+RF_Us_09 Visualización de facturas.	29
+RF_Us_10 Notificaciones de Estado de Pedido.	30
+RF_Us_11 Visualizar publicaciones.	31
+Requisitos funcionales del administrador	32
+RF_Ad_01 Inicio de Sesión de Administrador	32
+RF_Ad_02 Gestión de cuentas de clientes.	33
+RF_Ad_03 Gestión de productos del catálogo.	34
+RF_Ad_04 Gestión de comentarios de clientes.	35
+RF_Ad_05 Gestión de envíos y logística.	36
+RF_Ad_06 Gestión de publicaciones.	37
+RF_Ad_07 Revisión de estadísticas de uso del sistema.	38
+Requerimientos No Funcionales	39
+RNF_01 Cantidad de usuarios Concurrentes.	39
+RNF_02 Cantidad de información a almacenar	40
+RNF_03 Administración de la Base de Datos.	41
+RNF_04 Sistema Operativo.	42
+RNF_05 Servidor Web.	43
+RNF_06 Disponibilidad del Sistema.	44
+RNF_07 Seguridad de contraseñas.	45
+Referencias	46
+ 
+CONTROL DE CAMBIOS
+Registro del control de cambios del documento ERS para el desarrollo de la Plataforma web servicios y productos de GAVAT.
+
+
+
+Revisión	Descripción	Autor	Fecha	Versión
+01	Versión inicial previa aprobación del cliente	-	Brian Javier Ariza Cañon
+-	Santiago Zamudio Pinzon
+-	Juan Diego Coronado Agudelo
+-	Yai Angel Jimenez Rodriguez	20/07/2025	1.0
+02	Revisión, ajuste del cliente y	-	Brian Javier Ariza Cañon	01/10/2025	2.0
+				
+ 
+Introducción
+
+Propósito.
+
+El presente documento tiene como propósito definir las especificaciones funcionales, no funcionales y del sistema para el desarrollo de la plataforma web GAVAT Construcciones
+Arquitectónicas. Esta plataforma busca facilitar la gestión y al mismo tiempo integra un sistema de comercio electrónico para la venta de productos relacionados con la construcción y el mejoramiento del hogar y otros espacios.
+La plataforma será utilizada por clientes que requieran servicios arquitectónicos o productos de construcción, por proveedores que suministren los materiales, y por el administrador principal (el emprendedor a cargo del proyecto), responsable de la gestión del inventario, la verificación de productos, el control de los pedidos y el control de publicaciones. Al combinar comercio electrónico con gestión de servicios especializados, GAVAT busca optimizar la experiencia del cliente, garantizar
+transparencia en las transacciones y contribuir al crecimiento sostenible del negocio.
+
+GAVAT será una plataforma web orientada a la venta de materiales de construcción y servicios relacionados. Su propósito es facilitar a los clientes la exploración, selección, compra y gestión de
+productos y servicios de manera rápida, segura y centralizada. La plataforma permitirá una experiencia de compra sencilla y completa, además de un control eficiente por parte del administrador.
+La plataforma contempla los siguientes módulos:
+
+●	Módulo Web de Clientes
+
+●	Módulo Administrativo
+ 
+Personal involucrado
+
+Nombre	Brian Ariza
+Rol	Project mánager
+Categoría Profesional	  Ingeniero de Sistemas
+
+
+
+Responsabilidades	Liderar el análisis y diseño del sistema, coordinar las fases del proyecto, generar el documento de arquitectura de software y supervisar la correcta integración de
+los módulos desarrollados.
+
+
+
+Nombre	Juan Coronado
+Rol	Desarrollador Frontend
+Categoría Profesional	Ingeniero de Sistemas
+
+
+
+
+
+Responsabilidades	Implementar el diseño de la interfaz gráfica en código, desarrollar la capa visual de la aplicación utilizando tecnologías como HTML, CSS, JavaScript y Bootstrap, garantizar la compatibilidad con navegadores modernos y optimizar
+la experiencia de usuario.
+
+
+
+Nombre	Yai Jiménez
+Rol	diseñador de software
+Categoría Profesional	Ingeniero de Sistemas
+
+
+Responsabilidades	Desarrollar la lógica del sistema en el servidor utilizando Python y Django,
+
+implementar la conexión con la base de datos (MySQL), garantizar la
+ 
+
+	seguridad en la gestión de usuarios y pedidos, y realizar pruebas de
+funcionalidad.
+
+
+
+Nombre	Santiago Zamudio
+Rol	Subgerente
+Categoría Profesional	Diseñador Gráfico
+
+
+
+
+
+
+Responsabilidades	Diseñar las interfaces gráficas de la aplicación, crear los elementos
+visuales y prototipos de usabilidad, garantizar una estética coherente con la identidad corporativa de GAVAT Construcciones Arquitectónicas, y apoyar en la experiencia de usuario (UX/UI).
+ 
+Definiciones, siglas y abreviaturas
+
+
+Del negocio.
+
+●	Gerente (Rol de usuario): Persona encargada de la administración general del negocio, control de inventario, gestión de precios y supervisión de pedidos. En este caso, corresponde al dueño del emprendimiento.
+●	Vendedor (Rol de usuario): Persona que ofrece los productos y servicios de construcción en la plataforma (enchapados, instalaciones, reparaciones). Este rol será asumido directamente por el emprendedor.
+●	Cliente (Rol de usuario): Persona que accede a la plataforma para consultar el catálogo de productos, solicitar servicios de instalación o realizar compras en línea.
+
+Del sistema.
+
+●	Administrar: Acción de agregar, modificar, eliminar y consultar la información de un objeto o usuario en el sistema.
+●	Administrador del Sistema: Responsable de mantener la plataforma operativa, actualizando productos, gestionando pedidos y garantizando el soporte técnico.
+●	Permiso: Parámetro que define si un usuario dispone de acceso a determinadas funciones o secciones del sistema.
+●	Pruebas: Proceso mediante el cual se verifica que la plataforma funciona correctamente, garantizando una navegación segura y estable.
+ 
+●	Rol: Conjunto de permisos y responsabilidades asignados a cada tipo de usuario (cliente, administrador).
+●	Usuario: Persona que puede acceder a la plataforma mediante un proceso de registro y autenticación (usuario y contraseña).
+●	Ancho de Banda: Capacidad de transferencia de datos en la red, expresada en bit/s, Kbit/s, Mbit/s o Gbit/s.
+●	Aplicación: Programa informático que permite al usuario realizar una tarea, en este caso, gestionar compras y servicios de construcción.
+●	Base de Datos: Conjunto de datos organizados y almacenados sistemáticamente (MySQL en este proyecto).
+●	Bootstrap: Framework de diseño frontend que facilita la creación de interfaces web responsivas y estéticamente atractivas mediante componentes reutilizables en HTML, CSS y JavaScript.
+●	Browser (Navegador): Aplicación que permite acceder y visualizar la plataforma web (Google Chrome, Firefox, Edge, Safari).
+●	CRUD: Acrónimo de Create, Read, Update, Delete (Crear, Leer, Actualizar, Borrar), operaciones básicas de gestión de datos.
+●	Dirección IP: Número que identifica de forma lógica a un dispositivo dentro de la red.
+
+●	Django: Framework de desarrollo web en Python que permite crear aplicaciones robustas, seguras y escalables mediante un enfoque de alto nivel.
+●	Hosting: Servicio en línea que permite almacenar y publicar la plataforma en Internet.
+
+●	HTML (HyperText Markup Language): Lenguaje de marcado para estructurar el contenido del sitio web.
+ 
+●	HTTP (HyperText Transfer Protocol): Protocolo utilizado para la transferencia de información en la web.
+●	JavaScript: Lenguaje de programación usado para agregar dinamismo e interactividad en la interfaz del usuario.
+●	Licencia MIT: Licencia de software abierta, comúnmente utilizada en librerías y frameworks de desarrollo.
+●	MySQL: Sistema de gestión de bases de datos relacional que almacenará la información de clientes, productos y pedidos.
+●	Python: Lenguaje de programación interpretado, versátil y multiplataforma, utilizado para el desarrollo de la lógica de negocio y la conexión con la base de datos en este proyecto.
+●	Django: Un marco web Python de alto nivel que fomenta el desarrollo rápido y el diseño limpio y pragmático.
+●	Servidor Web: Programa que implementa el protocolo HTTP y permite que los usuarios accedan al sitio.
+●	TCP/IP: Conjunto de protocolos que permiten la comunicación entre dispositivos en la red.
+
+●	URL (Uniform Resource Locator): Dirección utilizada para identificar recursos dentro de Internet.
+●	Web: Conjunto de páginas interconectadas que conforman el sitio accesible desde Internet.
+
+
+Otros.
+
+
+-	Ley 1581 de 2012: La Ley 1581 de 2012 establece el marco general de protección de datos
+
+personales en Colombia, fijando principios, derechos de los titulares, deberes de responsables y
+ 
+encargados, procedimientos para consultas/reclamos, mecanismos de vigilancia, sanciones y reglas sobre transferencias internacionales, bajo la supervisión de la SIC.
+-	Decreto 1377 de 2013: definiendo obligaciones prácticas para responsables y encargados en materia de autorización, tratamiento, derechos de los titulares, transferencias internacionales y responsabilidad demostrada ante la SIC.
+-	Ley 527 de 1999: Define el marco jurídico para el uso de mensajes de datos, comercio electrónico, firmas digitales y entidades de certificación en Colombia.
+
+Descripción general
+
+Perspectivas del producto.
+
+La plataforma GAVAT Construcciones Arquitectónicas es un producto diseñado para operar en entornos web, lo que permitirá su uso remoto, asincrónico y accesible desde cualquier dispositivo con conexión a Internet. El sistema funcionará de forma independiente, sin requerir interacción directa con sistemas externos, salvo las pasarelas de pago y los servicios de mensajería asociados a las entregas.
+El producto consta de una aplicación web principal, accesible desde navegadores modernos en computadores y dispositivos móviles, y estará estructurado en módulos que responden a las necesidades del negocio.
+
+Funciones del producto por roles.
+
+La plataforma GAVAT Construcciones Arquitectónicas permitirá realizar las siguientes funciones, organizadas por rol de usuario:
+ 
+Administrador del sistema (Emprendedor).
+
+●	Perfil: Persona encargada de gestionar la plataforma, actualizar productos, servicios y supervisar los pedidos.
+●	Acceso: Exclusivo con credenciales de administrador.
+
+●	Funciones:
+
+o	Gestión de cuentas de clientes: Permite agregar, modificar, activar, desactivar o suspender usuarios registrados. Se cuenta con un panel de administración que muestra la lista de clientes y ofrece opciones de edición de datos y permisos.
+o	Administración de productos y servicios: El administrador puede agregar, editar o eliminar elementos del catálogo, manteniendo actualizado el inventario y el portafolio disponible. El sistema ofrece un formulario para registrar nombre, descripción, precio, stock e imágenes, además de la opción de eliminar productos o servicios obsoletos.
+o	Gestión de instalaciones: Incluye la configuración de costos adicionales de mano de obra, la asignación de fechas de instalación y el seguimiento de su cumplimiento. El módulo integra un calendario y controles de estado para monitorear los servicios solicitados por los clientes.
+o	Gestión de pedidos: El administrador puede supervisar y actualizar el estado de los pedidos (pendiente, en proceso, entregado), incluyendo aquellos que requieren instalación. El panel muestra la información centralizada con opción de asignar entregas a servicios de mensajería.
+ 
+o	Gestión de comentarios: Se administra la sección de reseñas de productos y servicios para asegurar que los comentarios sean útiles, claros y respetuosos. El administrador cuenta con un listado de reseñas por producto con opciones para aprobar, editar, rechazar
+o eliminar, además de filtros por usuario, fecha o producto.
+
+o	Gestión de publicaciones: Permite crear, editar o eliminar publicaciones que muestren proyectos realizados. El formulario incluye título, descripción, imágenes, fecha y categoría. El contenido aprobado será visible para los clientes en la sección de novedades
+o portafolio.
+
+o	Gestión de envíos y logística: El administrador coordina la entrega de pedidos a través de un panel que integra los estados de los envíos (preparado, en tránsito, entregado) y la asignación a mensajerías como Servientrega o Didi.
+o	Revisión de estadísticas del sistema: Se ofrece un panel estadístico con métricas clave: usuarios activos, ventas realizadas, productos más solicitados, servicios más contratados, categorías más consultadas e ingresos totales. Esto apoya la toma de decisiones estratégicas.
+
+
+
+Cliente.
+
+●	Perfil: Persona interesada en adquirir productos de construcción y/o contratar servicios de instalación o reparación.
+●	Acceso: Requiere registro mediante formulario y autenticación (correo electrónico y contraseña).
+
+●	Funciones:
+ 
+o	Registro: El cliente puede registrarse en la plataforma mediante un formulario que solicita nombre de usuario, correo electrónico, número de teléfono y contraseña. Esto le permite acceder a todas las funciones del sistema.
+o	Iniciar sesión: El cliente ingresa a la plataforma a través de un formulario con usuario/email y contraseña, lo que le da acceso a su perfil, pedidos e historial de compras.
+o	Visualización del catálogo: El usuario puede explorar productos y servicios disponibles en una página que muestra imágenes, nombres, precios, descripciones y disponibilidad.
+o	Visualización de publicaciones: El usuario puede acceder a la sección de publicaciones generadas por el administrador, donde se muestran proyectos realizados. Cada publicación incluye título, descripción, imágenes y fecha, lo que permite al cliente estar actualizado e inspirado en posibles compras o contrataciones.
+o	Consulta por categorías: Para facilitar la búsqueda, el catálogo permite filtrar productos por categorías (materiales, herramientas, servicios), a través de un menú desplegable o barra de navegación con filtros activos.
+o	Carrito de compras: El cliente puede agregar productos al carrito, modificar cantidades, eliminar elementos y ver el costo total de la compra. Cada producto incluye un botón “Añadir al carrito” y el carrito refleja precio unitario, subtotal y total.
+o	Solicitud de instalación: Durante la compra, el cliente puede seleccionar si requiere instalación de un producto. Al activar la opción, el sistema suma automáticamente el costo adicional del servicio al total del carrito.
+ 
+o	Gestión de pedidos: Los clientes pueden consultar en todo momento el estado de sus pedidos y servicios solicitados, con actualizaciones en tiempo real (en preparación, en envío, completado).
+o	Comentarios y reseñas: El cliente puede dejar comentarios y calificar productos o servicios mediante un formulario con campos de opinión y puntuación (escala de 1 a 5). También puede consultar las reseñas de otros usuarios, que incluyen texto, puntuación y fecha.
+o	Métodos de pago y envío: La plataforma ofrece múltiples opciones de pago: Nequi, tarjetas de crédito/débito y pago contra entrega. En cuanto a logística, los envíos se realizan a través de Servientrega o aplicaciones de mensajería como Didi.
+o	Factura en línea: El cliente puede visualizar el detalle de sus compras en una sección de facturación que incluye listado de productos/servicios adquiridos, estado del pedido, subtotal, costos de envío, descuentos aplicados y total pagado.
+o	Notificaciones: El sistema mantiene informado al cliente sobre el estado de sus pedidos mediante notificaciones por correo electrónico, SMS o dentro de la aplicación (preparación, envío o entrega).
+
+
+
+Visitante (No registrado).
+
+●	Perfil: Usuario que accede por primera vez sin tener una cuenta registrada.
+
+●	Acceso: No requiere registro ni autorización.
+
+●	Funciones:
+ 
+o	Navegar por el sitio web y visualizar información general.
+
+o	Consultar el catálogo de productos y servicios de manera limitada.
+
+o	Conocer la misión, visión y objetivos del negocio.
+
+o	Decidir si desea registrarse como cliente para acceder a todas las funciones.
+
+
+ 
+Alcance
+
+
+Políticas reguladoras.
+●	Ley 1581 de 2012 .
+
+●	Decreto 1377 de 2013.
+
+●	Ley 527 de 1999.
+
+
+Limitaciones del hardware.
+
+●	Se requiere un servidor físico o servicio de hosting externo contratado por GAVAT.
+
+●	Los usuarios deben contar con conexión estable a Internet para acceder a la plataforma desde navegador web o aplicación móvil.
+
+Limitaciones del software.
+
+●	Integración con:
+
+o	Servidor Web Apache
+
+o	Sistema de Bases de Datos MySQL
+
+o	Frontend: HTML5, CSS3/Boostrap v.5.3 , JavaScript (ECMAScript 2024)
+
+o	Lenguajes backend: Python 3.13.7 /Django 5.2.5
+
+o	DNS configurado
+ 
+Funcionamiento Paralelo.
+
+●	No aplica para esta versión del proyecto.
+
+
+Funciones de Auditoría.
+
+●	No aplica para esta versión del proyecto.
+
+
+Funciones de Control.
+
+●	Control de permisos de usuario por rol.
+
+●	Validación de datos ingresados por los usuarios.
+
+●	Navegación restringida según permisos otorgados.
+
+
+Requisitos del Lenguaje.
+
+●	Toda la documentación del sistema y del usuario estará en español.
+
+●	El código fuente podrá incluir comentarios con términos técnicos en inglés.
+
+
+Protocolos Utilizados.
+
+●	Protocolos de comunicación: TCP/IP y HTTP.
+
+
+Requisitos de Fiabilidad.
+
+●	No aplica como condición directa, pero se realizan pruebas funcionales.
+
+
+Credibilidad de la Aplicación.
+●	Se realizarán pruebas funcionales y de consistencia de datos para validar los requerimientos y el rendimiento del sistema.
+ 
+Consideraciones de Seguridad.
+
+●	Autenticación obligatoria para usuarios (excepto visitantes).
+
+●	Acceso restringido a funciones según rol asignado.
+
+●	Uso de SSL/TLS (HTTPS) para navegación segura.
+
+
+Atención y Dependencias.
+
+●	No aplica en esta versión del proyecto.
+
+
+Interfaces Externas.
+
+●	Las conexiones necesarias para operar la plataforma se realizarán únicamente mediante:
+
+o	Servidor Web Apache
+
+o	Sistema de Nombres de Dominio (DNS)
+
+o	Sistema Gestor de Base de Datos (MySQL)
+
+●	La relación entre estos componentes será gestionada mediante sus archivos de configuración internos, sin depender de software de terceros.
+ 
+Requerimientos Funcionales y no Funcionales
+
+
+Requisitos funcionales del usuario.
+
+
+RF_Us_01 Registro del Usuario.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Us_01	Registro del usuario	26/08/2025	Esencial
+Descripción:	El usuario podrá registrarse en la plataforma GAVAT mediante un formulario que solicitará nombre completo, correo, número de teléfono y contraseña.
+Entrada	Fuente	Salida	Destino	Restricción
+Nombre de usuario, email, número de teléfono, número de
+cedula
+,contraseña.	Visitante	Registro de usuario, código único de identificación, sector asociado	Base de Datos	El número de teléfono no debe estar registrado
+previamente y debe ser válido.
+Proceso	1.	El usuario selecciona la opción “Registrarme” en la plataforma.
+2.	Se despliega un formulario con los campos requeridos: nombre de usuario, número de teléfono y contraseña.
+3.	El usuario completa la información solicitada.
+4.	El sistema valida que el teléfono no esté previamente registrado.
+5.	Si los datos son correctos, se almacena el registro en la base de datos y se crea un perfil único para el usuario.
+6.	El sistema confirma el registro y redirige a la pantalla de inicio de sesión.
+Efecto Colateral	Se genera un registro en la bitácora del sistema con la fecha, hora y datos básicos del nuevo usuario registrado.
+ 
+ 
+
+
+RF_Us_02 Ver catálogo de productos y servicios.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Us_02	Ver catálogo de productos y servicios	26/08/2025	Esencial
+Descripción:	El sistema permitirá al cliente visualizar el catálogo de productos y servicios ofrecidos por GAVAT. El usuario podrá explorar, comparar y seleccionar los elementos de su interés.
+Entrada	Fuente	Salida	Destino	Restricción
+Solicitud de visualización
+realizada por el cliente.	Sistema	Lista de
+productos y servicios con
+detalles (imagen, nombre, precio, descripción y disponibilidad)	Pantalla del usuario	El cliente debe estar registrado e iniciar sesión para acceder a todo el catálogo (los visitantes solo verán productos/servicios sin oportunidad de compra).
+Proceso	-	El cliente accede a la sección de catálogo.
+-	El sistema consulta la base de datos de los productos/servicios registrados.
+-		Se despliega la lista de productos y servicios con imagen, nombre, precio, descripción y disponibilidad.
+El cliente puede aplicar filtros (categoría, precio, ubicación).
+-		El cliente selecciona un producto o servicio para ver su información detallada.
+Efecto Colateral	Se registra el catálogo que ingresó el cliente.
+ 
+RF_Us_03 Agregar productos al carrito de compras.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Us_03	Agregar productos al carrito de
+Compras	26/08/2025	Esencial
+Descripción:	El sistema permitirá al cliente agregar productos y servicios al carrito de compras para organizarlos y adquirirlos en una sola transacción.
+Entrada	Fuente	Salida	Destino	Restricción
+Selección de
+productos/servicios por parte del cliente	Cliente	Lista de
+productos/servicios seleccionados con cantidad, precio unitario y total	Pantalla del carrito de
+compras	El cliente debe estar autenticado en el sistema para poder usar el carrito de compras y confirmar la compra.
+Proceso	-	El cliente selecciona un producto/servicio en el catálogo.
+-	Da clic en el botón “Añadir al carrito”.
+-	El sistema agrega el producto/servicio al carrito con su cantidad y precio.
+-	El cliente puede modificar cantidades o eliminar productos del carrito.
+-	El sistema recalcula automáticamente el precio total de la compra.
+Efecto Colateral	N/A
+ 
+RF_Us_04 Consultar productos por categorías.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_EST_04	Consultar productos por categorías	26/08/2025	Esencial
+Descripción:	El sistema permitirá al cliente hacer consultas organizadas por categorías, facilitando la búsqueda de productos y servicios disponibles en la plataforma.
+Entrada	Fuente	Salida	Destino	Restricción
+Selección de
+categoría o filtro por parte del
+cliente	Usuario	Lista de
+productos/servicios filtrados por
+categoría
+seleccionada	Pantalla de
+resultados de búsqueda	El cliente debe estar autenticado para poder acceder al
+detalle y añadir
+productos al carrito.
+Proceso	-	El cliente accede al menú desplegable o barra de navegación.
+-	Selecciona una categoría (ejemplo: vidrio, espejos, aluminio, otros, servicios)
+-	El sistema filtra según la categoría.
+-	Se muestran en pantalla los productos/servicios con su imagen, nombre, precio y disponibilidad.
+-	El cliente puede aplicar filtros adicionales (precio, disponibilidad, cantidad de mayor o menor o viceversa, entre otros).
+Efecto Colateral	El sistema registra en la bitácora las búsquedas realizadas, incluyendo la categoría seleccionada, ID del usuario, fecha y hora, para análisis de preferencias y mejoras en la plataforma.
+ 
+
+
+RF_Us_05 Comentar sobre los productos o servicios.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Us_05	Comentar sobre los productos o servicios	26/08/2025	Importante
+Descripción:	El sistema permitirá a los clientes dejar comentarios y calificaciones sobre los productos o servicios adquiridos, con el fin de ayudar a otros usuarios a tomar mejores decisiones de compra y mejorar la confianza en la plataforma.
+Entrada	Fuente	Salida	Destino	Restricción
+Comentario escrito y calificación
+numérica (1 a 5).	Cliente	Registro del comentario con puntuación	Base de Datos	-	Solo podrán comentar clientes.
+-	Los clientes debieron
+previamente comprar el producto.
+Proceso	-	El cliente accede a la página de detalle de un producto o servicio.
+-	Selecciona la opción “Comentar”/“Dejar reseña”.
+-	Ingresa su comentario y selecciona una calificación de 1 a 5.
+-	El sistema valida que el cliente esté autenticado y haya realizado una compra del producto o servicio
+-	Si la validación es correcta, el comentario se guarda en la base de datos y se muestra en la sección de reseñas.
+-	El administrador podrá moderar y gestionar los comentarios.
+Efecto Colateral	El sistema registrará en la bitácora el comentario realizado con la fecha, hora, ID de usuario y producto/servicio relacionado.
+ 
+RF_Us_06 Ver comentarios sobre los servicios.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Us_06	Ver comentarios sobre los servicios	26/08/2025	Importante
+Descripción:	El sistema permitirá a los clientes visualizar los comentarios y calificaciones
+realizadas por otros usuarios sobre los servicios o productos adquiridos, con el fin de brindar mayor confianza y ayudar en la toma de decisiones de compra.
+Entrada	Fuente	Salida	Destino	Restricción
+Solicitud del cliente para visualizar
+reseñas de un servicio o producto	Sistema	Listado de
+comentarios con autor, comentario, calificación y
+fecha	Interfaz de usuario	Se muestran 10 comentarios, si
+supera este número, aparecen botones de “siguientes” y “atrás”. Si no hay comentarios, aparece un mensaje.
+Proceso	-	El cliente accede a la página de detalle de un producto o servicio.
+-	El sistema consulta en la base de datos los comentarios asociados al producto/servicio.
+-	Se muestran los comentarios en orden cronológico o según relevancia, incluyendo texto, puntuación (1 a 5), fecha y autor.
+-	El cliente podrá aplicar filtros (por puntaje o fecha) si lo desea.
+Efecto Colateral	N/A
+ 
+RF_Us_07 Métodos de pago.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Us_07	Métodos de pago	26/08/2025	Esencial
+Descripción:	El sistema permitirá al cliente seleccionar entre diferentes métodos de pago seguros para completar sus compras dentro de la plataforma. Estos métodos incluirán
+opciones digitales como Nequi, tarjetas de crédito/débito, además de la opción de pago contra entrega.
+Entrada	Fuente	Salida	Destino	Restricción
+Datos de pago (monto, método de pago, confirmación)	Cliente	Confirmación de la transacción	Base de Datos y pasarela de pago	El pago sólo se completará si los
+datos son válidos y el sistema de la pasarela confirma la transacción.
+Proceso	-	El cliente selecciona los productos y procede al carrito de compras.
+-	El sistema muestra los métodos de pago disponibles.
+-	El cliente selecciona el método de pago deseado (Nequi, tarjeta, contra entrega).
+-	El sistema procesa la solicitud a través de la pasarela correspondiente.
+-	Si el pago es exitoso, se genera una confirmación y se actualiza el estado de la orden en la base de datos
+-	En caso de error, el sistema muestra un mensaje y permite reintentar.
+Efecto Colateral	El sistema registra en la bitácora el detalle de la transacción (ID de usuario,
+productos adquiridos, método de pago, fecha y hora). En caso de contra entrega, queda registrada la deuda pendiente hasta la confirmación de entrega.
+También, el sistema registra los productos y/o servicios comprados/solicitados y lo recopila en las estadísticas.
+ 
+RF_Us_08 Visualización de facturas.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Us_08	Visualización de Factura	26/08/2025	Esencial
+Descripción:	El sistema permitirá al cliente visualizar la factura generada después de realizar una compra. La factura contendrá el listado de productos y/o servicios adquiridos, junto con la información detallada del pedido, el estado actual de la transacción, y los
+costos asociados.
+Entrada	Fuente	Salida	Destino	Restricción
+ID de usuario, ID de compra	Sistema	Factura generada con datos de
+compra	Base de Datos	Solo los usuarios
+autenticados podrán acceder a sus facturas.
+Proceso	-	El cliente ingresa al sistema e ingresa a la sección “Mis Facturas”.
+-	El sistema recupera de la base de datos la información de las compras realizadas por ese usuario.
+-	Se genera en pantalla una factura con el detalle de productos, subtotal, costos de envío, adicionales (servicio) y total.
+-	La factura incluirá también el estado del pedido (pendiente, en camino, entregado).
+-	El usuario podrá consultar la factura en línea.
+Efecto
+Colateral	N/A
+ 
+RF_Us_9 Visualizar publicaciones.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Us_9	Visualizar publicaciones	26/08/2025	Esencial
+Descripción:	El usuario (cliente o visitante) podrá visualizar las publicaciones generadas por el administrador dentro de la plataforma GAVAT. Este módulo permitirá consultar los avances, logros y servicios publicados, con el fin de brindar información actualizada sobre la empresa y sus proyectos.
+Entrada	Fuente	Salida	Destino	Restricción
+Publicaciones (título, descripción, imágenes, fecha).	Base de datos (sistema)	Listado de
+publicaciones con posibilidad de ver detalles individuales.	Interfaz del
+cliente/visitante	Los usuarios solo podrán visualizar publicaciones.
+
+No podrán crear, editar ni eliminar publicaciones.
+Proceso	-	El usuario accede a la plataforma (con o sin autenticación).
+-	Selecciona la sección de publicaciones.
+-	El sistema consulta en la base de datos las publicaciones registradas.
+-	El sistema muestra el listado de publicaciones con información básica (título, imagen, fecha).
+-	El usuario puede seleccionar una publicación para visualizar su detalle completo (descripción, imágenes adicionales, fecha de publicación).
+Efecto Colateral	N/A
+ 
+RF_Us_10 Seguimiento de Pedidos
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Us_10	Seguimiento de Pedidos	26/08/2025	Alto
+Descripción:	El sistema permitirá al cliente rastrear en tiempo real el estado de sus pedidos desde la confirmación de compra hasta la entrega final, proporcionando visibilidad
+completa del proceso logístico.
+Entrada	Fuente	Salida	Destino	Restricción
+ID del pedido o acceso desde perfil de usuario	Cliente autenticado	Estado actual del pedido con línea de tiempo: Recibido → En preparación → En camino → Entregado	Pantalla del usuario	El cliente debe estar autenticado y solo
+puede ver sus propios pedidos.
+Proceso	El cliente accede a la sección "Mis Pedidos" desde su perfil.
+El sistema consulta la base de datos y muestra listado de pedidos con su estado actual.
+El cliente selecciona un pedido específico.
+El sistema despliega información detallada: estado actual, fecha estimada de entrega, transportadora asignada y número de guía (si aplica).
+Se muestra visualmente el progreso mediante una línea de tiempo con iconos.
+El cliente recibe notificaciones automáticas por correo cada vez que el estado cambia.
+Efecto Colateral	N/A
+ 
+RF_Us_11 Gestionar Perfil de Usuario
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Us_11	Gestionar Perfil de Usuario	26/08/2025	Alto
+Descripción:	El sistema permitirá al cliente visualizar y modificar su información personal, incluyendo datos de contacto, dirección de envío y contraseña, para mantener actualizada su cuenta en la plataforma.
+Entrada	Fuente	Salida	Destino	Restricción
+Datos actualizados: nombre, correo, teléfono, dirección de envío,
+contraseña actual y nueva contraseña (si aplica)	Cliente autenticado	Confirmación de actualización
+exitosa y datos modificados	Base de Datos	El cliente debe ingresar su
+contraseña actual para confirmar
+cambios sensibles. El correo y teléfono no deben estar
+registrados por otro usuario.
+Proceso	El cliente accede a la opción "Mi Perfil" desde el menú principal. El sistema muestra un formulario con los datos actuales del usuario.
+El cliente modifica los campos deseados (nombre, correo, teléfono, dirección).
+Si desea cambiar la contraseña, debe ingresar contraseña actual y nueva contraseña dos veces.
+El sistema valida que el correo/teléfono no estén duplicados en la base de datos.
+Si cambia contraseña, valida que la actual sea correcta y que la nueva cumpla requisitos de seguridad (mínimo 8 caracteres).
+El sistema actualiza la información en la base de datos.
+Se muestra mensaje de confirmación y se envía correo de notificación al usuario.
+Efecto Colateral	Se registra en la bitácora cada modificación del perfil, incluyendo qué campos fueron editados, ID de usuario, fecha y hora.
+ 
+RF_Us_12 Productos Favoritos
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Us_12	Productos Favoritos	26/08/2025	Medio
+Descripción:	Guardar productos favoritos para acceso rápido
+Entrada	Fuente	Salida	Destino	Restricción
+Selección de producto
+mediante botón "Agregar a
+Favoritos" o ícono de corazón	Cliente autenticado	Lista
+personalizada de productos
+favoritos con imagen, nombre, precio y disponibilidad	Base de Datos y pantalla de
+favoritos	El cliente debe estar autenticado. No hay límite de productos en favoritos.
+Proceso	El cliente navega por el catálogo o visualiza el detalle de un producto. Hace clic en el ícono de corazón o botón "Agregar a Favoritos".
+El sistema registra la asociación usuario-producto en la base de datos. El ícono cambia visualmente para indicar que está en favoritos.
+El cliente puede acceder a la sección "Mis Favoritos" desde su perfil.
+Se muestra listado completo con opción de eliminar productos de favoritos o agregarlos directamente al carrito.
+Si un producto favorito cambia de precio o entra en descuento, el sistema puede enviar notificación al cliente (opcional).
+Efecto Colateral	N/A
+ 
+
+
+Requisitos funcionales del administrador.
+
+RF_Ad_01 Inicio de Sesión de Administrador.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Ad_01	Inicio de Sesión de Administrador	26/08/2025	Esencial
+Descripción:	El sistema validará el nombre de usuario, número de teléfono y la contraseña de los administradores autorizados para permitir el ingreso al panel de control de la
+plataforma GAVAT. El acceso autenticado permitirá gestionar productos, usuarios, pedidos y configuraciones internas del sistema.
+Entrada	Fuente	Salida	Destino	Restricción
+Usuario y
+contraseña del administrador	Administrador	Registro de ingreso como administrador	Base de Datos	Solo usuarios con rol administrador podrán ingresar.
+Proceso	-	El administrador accede a la plataforma y selecciona la opción "Iniciar Sesión (Administrador)".
+-	Ingresa el nombre, el número celular y la contraseña en el formulario correspondiente.
+-	El sistema valida las credenciales contra la base de datos y comprueba el rol del usuario.
+-	Si la validación es correcta, se permite el ingreso al panel de administración.
+-	Si la validación falla, el sistema mostrará un mensaje de error indicando que las credenciales no son válidas.
+Efecto Colateral	El sistema registrará automáticamente en la bitácora la información del acceso del administrador, incluyendo ID de usuario, fecha y hora.
+ 
+RF_Ad_02 Gestión de cuentas de clientes.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Ad_02	Gestión de cuentas de clientes	26/08/2025	Esencial
+Descripción:	El administrador podrá gestionar las cuentas de los clientes de la plataforma GAVAT, lo que incluye activar, desactivar o modificar accesos y datos si es necesario. También ver su ingreso reciente y entre otros ítems.
+Entrada	Fuente	Salida	Destino	Restricción
+Solicitud de cambio de la cuenta(s) indicada(s).	Administrador	Actualización de los nuevos cambios.	Base de Datos	Solo administradores autorizados pueden realizar cambios.
+Proceso	-	El administrador ingresa al panel de administración.
+-	Selecciona la opción “Gestión de Cuentas”.
+-		Visualiza la lista de clientes registrados con sus datos básicos y estado de cuenta.
+-	Selecciona la cuenta a modificar.
+-	Aplica la acción requerida.
+-	El sistema actualiza la información en la base de datos.
+-	Se enviará un correo de actualización al cliente y al administrador.
+Efecto Colateral	Actualización inmediata de la cuenta del usuario modificado.
+ 
+RF_Ad_03 Gestión de productos del catálogo.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Ad_03	Gestión de productos del catálogo	26/08/2025	Esencial
+Descripción:	El administrador podrá agregar, editar o eliminar productos dentro del catálogo de
+la plataforma GAVAT, garantizando que el inventario y el portafolio disponible para los clientes estén siempre actualizados.
+Entrada	Fuente	Salida	Destino	Restricción
+Nombre, descripción, precio, stock, imagen,
+categoría	Administrador	Catálogo actualizado.	Base de Datos	Solo administradores autorizados pueden realizar cambios
+Proceso	-	El administrador accede al Panel de Productos.
+-	Selecciona la opción deseada: Agregar, Editar o Eliminar.
+-	Agregar: llenar el formulario con nombre, descripción, precio, stock, imagen y categoría.
+-	Editar: selecciona un producto existente, modifica los campos necesarios y guarda cambios.
+-	Eliminar: selecciona un producto existente y confirma la eliminación.
+-	El sistema valida la información (por ejemplo: que el precio sea numérico, que el stock sea mayor o igual a cero).
+-	El sistema actualiza la base de datos.
+-	El catálogo refleja los cambios en tiempo real para los clientes.
+Efecto Colateral	Actualización inmediata en la sección de productos.
+ 
+RF_Ad_04 Gestión de comentarios de clientes.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Ad_04	Gestión de comentarios de clientes	26/08/2025	Esencial
+Descripción:	El administrador podrá visualizar, aprobar, rechazar o eliminar comentarios y calificaciones realizados por los clientes sobre los productos y servicios. Esta función busca mantener la calidad de la interacción, evitando spam, lenguaje inapropiado o información falsa.
+Entrada	Fuente	Salida	Destino	Restricción
+Comentarios escritos por clientes con calificación (1-5).	Cliente	Lista de comentarios.	Base de datos	Solo el administrador podrá ejecutar estas acciones, con acceso autenticado.
+Proceso	-	El administrador inicia sesión en el sistema.
+-	Accede al panel de gestión de comentarios.
+-	Visualiza listado de reseñas organizadas por fecha, producto/servicio o cliente.
+-	Selecciona una opción, si es necesaria: eliminar comentario.
+-	El sistema actualiza la base de datos y refleja los cambios en la interfaz pública.
+Efecto Colateral	Actualización inmediata en la sección de comentarios del servicio/producto.
+ 
+RF_Ad_05 Gestión de Pedidos y Envíos
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Ad_05	Visualizador de lista de pedidos	26/08/2025	Esencial
+Descripción:	El sistema debe permitir al administrador gestionar una lista completa de todos los pedidos realizados por los clientes, mostrando información relevante de cada pedido y la cantidad total de pedidos en el sistema.
+Entrada	Fuente	Salida	Destino	Restricción
+Acceso al módulo de lista de pedidos.	Base de datos	El sistema debe mostrar una
+interfaz con los siguientes elementos:
+nombre del cliente, cantidad de productos y costo total del pedido.	Base de datos y módulo de notificaciones.	Solo usuarios con rol de administrador pueden acceder y modificar estados de envío.
+Proceso	-	El sistema consulta la base de datos
+-	Recupera información de pedidos, clientes y productos
+-	Calcula totales y cantidades
+-	El sistema muestra la lista paginada de pedidos
+-	Muestra: nombre cliente, cantidad productos, costo total
+-	Presenta el contador total de pedidos
+-	Habilita botón "Ver Factura" para cada pedido
+-	Cambiar estado del pedido
+-	Asignar guía de envío y transportadora
+-	Cancelar pedidos con justificación
+-	Generar factura en PDF
+-	Notificar automáticamente al cliente
+Efecto Colateral	
+ 
+
+
+
+
+
+
+
+
+RF_Ad_06 Gestión de publicaciones.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Ad_06	Gestión de publicaciones.	26/08/2025	Importante
+Descripción:	El administrador podrá gestionar las publicaciones de proyectos realizados dentro de la plataforma GAVAT. Este módulo permitirá crear, visualizar, editar y eliminar publicaciones, con el objetivo de mostrar avances, logros y servicios de la empresa a los clientes.
+Entrada	Fuente	Salida	Destino	Restricción
+Datos de la publicación (título, descripción, imágenes, fecha).	Formulario de creación/modificación de publicaciones.	Publicación registrada o
+actualizada en el sistema.	Base de datos y sección de
+publicaciones
+visibles para los usuarios.	Solo el administrador
+puede crear, editar o eliminar publicaciones.
+Proceso	-	El administrador inicia sesión en la plataforma.
+-	Accede al módulo de publicaciones.
+-	Visualiza la lista de publicaciones existentes.
+-	Puede crear una nueva publicación rellenando un formulario.
+-	Puede editar el contenido de una publicación ya registrada.
+-	Puede eliminar una publicación (con confirmación de acción).
+-	El sistema guarda los cambios y actualiza la base de datos.
+Efecto Colateral	Actualización inmediata en la sección de publicaciones visibles para clientes/usuarios.
+ 
+RF_Ad_07 Revisión de estadísticas de uso del sistema.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RF_Ad_07	Revisión de estadísticas de uso del sistema	26/08/2025	Importante
+Descripción:	El administrador podrá acceder a un panel de estadísticas dentro de la plataforma GAVAT, donde se mostrarán métricas clave del sistema. Este módulo permitirá
+analizar los productos más reseñados y/o comprados, las ventas y las categorías más consultadas, con el fin de facilitar la toma de decisiones estratégicas.
+Entrada	Fuente	Salida	Destino	Restricción
+Parámetros de
+consulta (fechas, categoría de análisis).	Base de datos del sistema.	Panel estadístico con métricas.	Interfaz de administrador.	Solo accesible para administradores autorizados.
+Proceso	-	El administrador accede al módulo de estadísticas desde el panel principal.
+-	Selecciona filtros de tiempo o categorías de análisis.
+-	El sistema procesa la información en la base de datos.
+-	Se muestran métricas en pantalla.
+Efecto Colateral	Registro en la bitácora del acceso al módulo de estadísticas, con ID de administrador, fecha y hora. Generación de reportes que quedan archivados para consulta posterior.
+ 
+Requerimientos No Funcionales
+
+RNF_01 Cantidad de usuarios Concurrentes.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RNF_01	Cantidad de usuarios Concurrentes	26/08/2025	Alta
+Descripción:	La plataforma GAVAT deberá soportar un número máximo de usuarios concurrentes de acuerdo con la capacidad de la infraestructura tecnológica.
+Dado que GAVAT es una plataforma en crecimiento, se proyecta un pico de carga de hasta 30 usuarios simultáneos en los primeros meses de operación.
+Se prevé una escalabilidad progresiva que permita alcanzar hasta 300 usuarios concurrentes en un periodo estimado de 12 a 18 meses, garantizando un desempeño estable y tiempos de respuesta óptimos sin comprometer la disponibilidad del sistema.
+Entrada	Fuente	Salida	Destino	Restricción
+N/A	Servicio de alojamiento en la nube	N/A	N/A	N/A
+Proceso	N/A
+Efecto Colateral	Si el número de usuarios conectados simultáneamente supera la capacidad definida, podrían presentarse problemas de rendimiento como lentitud en el sistema, tiempos de carga elevados o caída temporal de la plataforma.
+ 
+RNF_02 Cantidad de información a almacenar.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RNF_02	Cantidad de información a almacenar	26/08/2025	Esencial
+Descripción:	La cantidad de información que podrá ser almacenada dependerá de la capacidad de la infraestructura tecnológica contratada por GAVAT.
+Dado que la plataforma centraliza la oferta de un único proveedor (GAVAT), se
+estima un almacenamiento inicial de 20 GB, suficiente para gestionar registros de clientes y publicaciones iniciales.
+El sistema deberá contar con una arquitectura escalable y flexible que permita aumentar progresivamente la capacidad de almacenamiento, proyectando una capacidad de 100 GB durante los primeros tres años de operación, en función del crecimiento de clientes y la diversificación de productos.
+Entrada	Fuente	Salida	Destino	Restricción
+N/A	Servicio de alojamiento en la nube	N/A	N/A	N/A
+Proceso	N/A
+Efecto Colateral	En caso de no planificar adecuadamente la capacidad de almacenamiento, el
+sistema podría presentar fallos críticos de operación, como pérdida de rendimiento, errores de carga o interrupciones en los servicios fundamentales.
+ 
+RNF_03 Administración de la Base de Datos.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RNF_03	Administración de la Base de Datos	26/08/2025	Alta
+Descripción:	El sistema debe garantizar la correcta manipulación, acceso y gestión de la información mediante un motor de base de datos relacional, que permita registrar de forma estructurada los usuarios, pedidos, facturas, catálogo de productos y servicios, y datos logísticos.
+Dado que GAVAT es un proyecto en fase inicial con potencial de crecimiento, se implementará MySQL, motor que ofrecen buen rendimiento, seguridad, escalabilidad y bajo costo, adaptándose a un modelo centralizado en su primera etapa, con la opción de migrar a un esquema distribuido o en la nube en caso de requerirse.
+Entrada	Fuente	Salida	Destino	Restricción
+Solicitud de manipulación a la base de datos.	Servicio de alojamiento en la nube	Ejecución de consultas	Programas de la aplicación	N/A
+Proceso	Las consultas generadas por los diferentes módulos de la plataforma (clientes, carrito, pagos, facturación, logística) interactuaron con el motor de base de datos para realizar operaciones de inserción, actualización, eliminación y consulta de información.
+Efecto Colateral	Una administración deficiente de la base de datos podría ocasionar crecimiento descontrolado, consumo excesivo de recursos, duplicidad de datos y pérdida de rendimiento del sistema, afectando directamente la experiencia de los clientes.
+ 
+RNF_04 Sistema Operativo.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RNF_04	Sistema Operativo	26/08/2025	Alta
+Descripción:	La plataforma GAVAT debe ser compatible con servidores que utilicen sistemas operativo Linux, priorizando aquellos que ofrezcan mejor rendimiento, seguridad y menor costo de licenciamiento, como Linux Ubuntu Server, Debian, CentOS.
+El acceso a la plataforma por parte de clientes y administradores se realizará a
+través de navegadores web modernos (Google Chrome, Mozilla Firefox, Microsoft Edge, Safari), sin restricción del sistema operativo del usuario (Windows, macOS, Linux).
+Entrada	Fuente	Salida	Destino	Restricción
+N/A	Servicio de alojamiento en la nube	N/A	N/A	N/A
+Proceso	La aplicación debe ser independiente del sistema operativo del servidor, permitiendo una instalación flexible, despliegue en la nube y acceso
+multiplataforma desde cualquier dispositivo con conexión a internet.
+Efecto Colateral	N.A.
+ 
+RNF_05 Servidor Web.
+
+PLATAFORMA ASCA
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RNF_05	Servidor Web	26/08/2025	Alta
+Descripción:	La plataforma GAVAT deberá ejecutarse bajo un servidor web Apache por su estabilidad, amplia documentación y compatibilidad con frameworks como Django (Python), además de soportar integraciones con bases de datos MySQL.
+Entrada	Fuente	Salida	Destino	Restricción
+N/A	Servicio de alojamiento en la nube	N/A	N/A	N/A
+Proceso	N/A
+Efecto Colateral	N/A
+ 
+RNF_06 Disponibilidad del Sistema.
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RNF_06	Disponibilidad del Sistema	26/08/2025	Alta
+Descripción:	La plataforma GAVAT deberá estar disponible los 7 días de la semana, 24 horas al día (7x24). La disponibilidad mínima esperada será del 97% anual acumulado, lo cual equivale a un tiempo máximo de interrupción aproximado de 11 días al año. Dado que GAVAT operará como el único proveedor de servicios y productos dentro de su ecosistema, la continuidad del sistema es prioritaria. Inicialmente se
+implementará en un servidor en la nube (VPS o servicio administrado), con la posibilidad de migrar a infraestructura dedicada en caso de crecimiento.
+Entrada	Fuente	Salida	Destino	Restricción
+N/A	Servicio de alojamiento en la nube	N/A	N/A	N/A
+Proceso	N/A
+Efecto Colateral	Durante los periodos de indisponibilidad, los clientes, proveedores y
+administradores no podrán ingresar ni interactuar con la plataforma, lo que podría retrasar pedidos, gestión de servicios y actualizaciones de catálogo.
+ 
+RNF_07 Seguridad de contraseñas.
+
+
+PLATAFORMA GAVAT
+SRS – Especificación de Requerimientos
+Código:	Nombre	Fecha	Grado de Necesidad
+RNF_07	Seguridad de Contraseñas	26/08/2025	Alta
+Descripción:	Las contraseñas asociadas a los números telefónicos de los usuarios deberán ser encriptadas mediante algoritmos seguros (bcrypt o equivalentes) antes de ser
+almacenadas en la Base de Datos. Esto asegura que la información de acceso esté protegida contra intentos de robo o violación de seguridad.
+El sistema nunca deberá almacenar contraseñas en texto plano y deberá aplicar políticas básicas de seguridad como longitud mínima de 8 dígitos/caracteres.
+Entrada	Fuente	Salida	Destino	Restricción
+Contraseña de un usuario	Usuario	Contraseña encriptada	Base de Datos	Si el usuario no está registrado o la
+contraseña es incorrecta, se deniega el acceso
+Proceso	-	Cuando un usuario crea una cuenta en la plataforma, la contraseña ingresada se encripta antes de ser almacenada en la base de datos.
+-	Durante el inicio de sesión, el sistema encripta nuevamente la contraseña digitada y la compara con la versión almacenada.
+-	El sistema no guarda contraseñas en texto plano en ninguna circunstancia.
+Efecto Colateral	N.A.
+ 
+Referencias
+
+Material de apoyo para la elaboración del presente documento.
+
+Título del Documento	Descripción
+Standard IEEE 830-1998	Institute of Electrical and Electronics Engineers
+1_Propuesta de Proyecto - GAVAT	Nombre proyecto - Objetivo general - Objetivos específicos - Planteamiento del problema y pregunta problema - Alcance del
+proyecto - Justificación
+3_Recolección de información	Documento que contiene todo lo referente para saber los
+
+requisitos funcionales y no funcionales
+4_2_Historias de Usuario	As, I want to, so that y criterios de evaluación
+Recomendaciones Estructurales
+
+del SENA	Guía metodológica proporcionada en la formación para
+
+estructuración de SRS
+Descripción de Productos
+
+(Plataforma Web)	Documento de diseño funcional generado por Santiago Zamudio,
+
+Juan Coronado, Brian Ariza, Yai Jimenéz
+	
+	
+
