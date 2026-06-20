@@ -211,6 +211,7 @@ const obtenerComentariosProducto = async (req, res) => {
         },
         comentarios: comentarios.map(c => ({
           id: c.id,
+          usuarioId: c.usuarioId,
           autor: c.usuario.nombre,
           comentario: c.comentario,
           calificacion: c.calificacion,
