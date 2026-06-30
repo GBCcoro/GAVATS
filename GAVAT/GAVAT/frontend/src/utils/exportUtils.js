@@ -786,6 +786,259 @@ export const exportarUsuariosAExcel = async (usuarios) => {
 };
 
 /**
+ * Exportar facturas a PDF
+ */
+export const exportarFacturasAPDF = (facturas) => {
+  const doc = new jsPDF('landscape');
+  const startY = configurarPDF(doc, 'REPORTE DE FACTURAS');
+
+  const tableData = facturas.map(fact => [
+    fact.id,
+    fact.numero_factura || fact.numeroFactura || '-',
+    fact.cliente_nombre || fact.clienteNombre || fact.cliente?.nombre || '-',
+    fact.cliente_email || fact.clienteEmail || fact.cliente?.email || '-',
+    fact.estado || '-',
+    new Date(fact.fechaEmision || fact.createdAt || fact.fecha || Date.now()).toLocaleDateString('es-CO'),
+    `$${Number(fact.total || fact.monto || 0).toLocaleString('es-CO')}`
+  ]);
+
+  autoTable(doc, {
+    startY,
+    head: [['ID', 'Factura', 'Cliente', 'Email', 'Estado', 'Fecha', 'Total']],
+    body: tableData,
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [155, 89, 182], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [245, 245, 245] },
+    margin: { top: 10 }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 10;
+  doc.setFontSize(11);
+  doc.text(`Total de facturas: ${facturas.length}`, 14, finalY);
+  doc.text(`Emitidas: ${facturas.filter(f => f.estado === 'emitida').length}`, 14, finalY + 7);
+  doc.text(`Anuladas: ${facturas.filter(f => f.estado === 'anulada').length}`, 14, finalY + 14);
+
+  doc.save(`facturas_${Date.now()}.pdf`);
+};
+
+/**
+ * Exportar facturas a Excel
+ */
+export const exportarFacturasAExcel = async (facturas) => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Facturas');
+  const fecha = new Date().toLocaleDateString('es-CO', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  worksheet.mergeCells('A1:G1');
+  const tituloCell = worksheet.getCell('A1');
+  tituloCell.value = 'REPORTE DE FACTURAS';
+  tituloCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+  tituloCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF9B59B6' } };
+  tituloCell.alignment = { vertical: 'middle', horizontal: 'center' };
+  tituloCell.border = { top: { style: 'thick' }, bottom: { style: 'thick' }, left: { style: 'thick' }, right: { style: 'thick' } };
+  worksheet.getRow(1).height = 30;
+
+  worksheet.mergeCells('A2:G2');
+  const fechaCell = worksheet.getCell('A2');
+  fechaCell.value = `Generado: ${fecha}`;
+  fechaCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF555555' } };
+  fechaCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECF0F1' } };
+  fechaCell.alignment = { vertical: 'middle', horizontal: 'center' };
+  worksheet.getRow(2).height = 20;
+
+  const encabezados = ['ID', 'Factura', 'Cliente', 'Email', 'Estado', 'Fecha', 'Total'];
+  const headerRow = worksheet.getRow(4);
+  headerRow.values = encabezados;
+  headerRow.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF9B59B6' } };
+  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+  headerRow.height = 25;
+  headerRow.eachCell((cell) => {
+    cell.border = { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'thin' }, right: { style: 'thin' } };
+  });
+
+  let rowIndex = 5;
+  facturas.forEach(fact => {
+    const row = worksheet.getRow(rowIndex);
+    row.values = [
+      fact.id,
+      fact.numero_factura || fact.numeroFactura || '-',
+      fact.cliente_nombre || fact.clienteNombre || fact.cliente?.nombre || '-',
+      fact.cliente_email || fact.clienteEmail || fact.cliente?.email || '-',
+      fact.estado || '-',
+      new Date(fact.fechaEmision || fact.createdAt || fact.fecha || Date.now()).toLocaleDateString('es-CO'),
+      Number(fact.total || fact.monto || 0)
+    ];
+    row.alignment = { vertical: 'middle' };
+    row.eachCell((cell, colNumber) => {
+      if (colNumber === 7) {
+        cell.numFmt = '$#,##0';
+      }
+    });
+    rowIndex++;
+  });
+
+  rowIndex++;
+  worksheet.getRow(rowIndex).values = ['Total de facturas:', facturas.length];
+  worksheet.getRow(rowIndex).font = { bold: true };
+  rowIndex++;
+  worksheet.getRow(rowIndex).values = ['Emitidas:', facturas.filter(f => f.estado === 'emitida').length];
+  worksheet.getRow(rowIndex).font = { bold: true };
+  rowIndex++;
+  worksheet.getRow(rowIndex).values = ['Anuladas:', facturas.filter(f => f.estado === 'anulada').length];
+  worksheet.getRow(rowIndex).font = { bold: true };
+
+  worksheet.columns = [
+    { width: 8 },
+    { width: 18 },
+    { width: 26 },
+    { width: 26 },
+    { width: 14 },
+    { width: 16 },
+    { width: 14 }
+  ];
+
+  const bufferExcel = await workbook.xlsx.writeBuffer();
+  const blobExcel = new Blob([bufferExcel], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const urlExcel = window.URL.createObjectURL(blobExcel);
+  const aExcel = document.createElement('a');
+  aExcel.href = urlExcel;
+  aExcel.download = `facturas_${Date.now()}.xlsx`;
+  aExcel.click();
+  window.URL.revokeObjectURL(urlExcel);
+};
+
+/**
+ * Exportar comentarios a PDF
+ */
+export const exportarComentariosAPDF = (comentarios) => {
+  const doc = new jsPDF('landscape');
+  const startY = configurarPDF(doc, 'REPORTE DE COMENTARIOS');
+
+  const tableData = comentarios.map(coment => [
+    coment.id,
+    coment.usuario?.nombre || coment.autor || '-',
+    coment.producto?.nombre || '-',
+    coment.calificacion || '-',
+    coment.comentario || '-',
+    coment.estado ? 'Visible' : 'Oculto',
+    new Date(coment.fecha || coment.createdAt || Date.now()).toLocaleDateString('es-CO')
+  ]);
+
+  autoTable(doc, {
+    startY,
+    head: [['ID', 'Usuario', 'Producto', 'Calificación', 'Comentario', 'Estado', 'Fecha']],
+    body: tableData,
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [52, 152, 219], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [245, 245, 245] },
+    margin: { top: 10 }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 10;
+  doc.setFontSize(11);
+  doc.text(`Total de comentarios: ${comentarios.length}`, 14, finalY);
+  doc.text(`Visibles: ${comentarios.filter(c => c.estado === true).length}`, 14, finalY + 7);
+  doc.text(`Ocultos: ${comentarios.filter(c => c.estado === false).length}`, 14, finalY + 14);
+
+  doc.save(`comentarios_${Date.now()}.pdf`);
+};
+
+/**
+ * Exportar comentarios a Excel
+ */
+export const exportarComentariosAExcel = async (comentarios) => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Comentarios');
+  const fecha = new Date().toLocaleDateString('es-CO', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  worksheet.mergeCells('A1:G1');
+  const tituloCell = worksheet.getCell('A1');
+  tituloCell.value = 'REPORTE DE COMENTARIOS';
+  tituloCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+  tituloCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3498DB' } };
+  tituloCell.alignment = { vertical: 'middle', horizontal: 'center' };
+  tituloCell.border = { top: { style: 'thick' }, bottom: { style: 'thick' }, left: { style: 'thick' }, right: { style: 'thick' } };
+  worksheet.getRow(1).height = 30;
+
+  worksheet.mergeCells('A2:G2');
+  const fechaCell2 = worksheet.getCell('A2');
+  fechaCell2.value = `Generado: ${fecha}`;
+  fechaCell2.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF555555' } };
+  fechaCell2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECF0F1' } };
+  fechaCell2.alignment = { vertical: 'middle', horizontal: 'center' };
+  worksheet.getRow(2).height = 20;
+
+  const encabezadosComentarios = ['ID', 'Usuario', 'Producto', 'Calificación', 'Comentario', 'Estado', 'Fecha'];
+  const headerRowComentarios = worksheet.getRow(4);
+  headerRowComentarios.values = encabezadosComentarios;
+  headerRowComentarios.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRowComentarios.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3498DB' } };
+  headerRowComentarios.alignment = { vertical: 'middle', horizontal: 'center' };
+  headerRowComentarios.height = 25;
+  headerRowComentarios.eachCell((cell) => {
+    cell.border = { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'thin' }, right: { style: 'thin' } };
+  });
+
+  let rowIndexComentarios = 5;
+  comentarios.forEach(coment => {
+    const row = worksheet.getRow(rowIndexComentarios);
+    row.values = [
+      coment.id,
+      coment.usuario?.nombre || coment.autor || '-',
+      coment.producto?.nombre || '-',
+      coment.calificacion || '-',
+      coment.comentario || '',
+      coment.estado ? 'Visible' : 'Oculto',
+      new Date(coment.fecha || coment.createdAt || Date.now()).toLocaleDateString('es-CO')
+    ];
+    row.alignment = { vertical: 'middle' };
+    rowIndexComentarios++;
+  });
+
+  rowIndexComentarios++;
+  worksheet.getRow(rowIndexComentarios).values = ['Total de comentarios:', comentarios.length];
+  worksheet.getRow(rowIndexComentarios).font = { bold: true };
+  rowIndexComentarios++;
+  worksheet.getRow(rowIndexComentarios).values = ['Visibles:', comentarios.filter(c => c.estado === true).length];
+  worksheet.getRow(rowIndexComentarios).font = { bold: true };
+  rowIndexComentarios++;
+  worksheet.getRow(rowIndexComentarios).values = ['Ocultos:', comentarios.filter(c => c.estado === false).length];
+  worksheet.getRow(rowIndexComentarios).font = { bold: true };
+
+  worksheet.columns = [
+    { width: 8 },
+    { width: 22 },
+    { width: 22 },
+    { width: 12 },
+    { width: 40 },
+    { width: 12 },
+    { width: 16 }
+  ];
+
+  const bufferComentarios = await workbook.xlsx.writeBuffer();
+  const blobComentarios = new Blob([bufferComentarios], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const urlComentarios = window.URL.createObjectURL(blobComentarios);
+  const aComentarios = document.createElement('a');
+  aComentarios.href = urlComentarios;
+  aComentarios.download = `comentarios_${Date.now()}.xlsx`;
+  aComentarios.click();
+  window.URL.revokeObjectURL(urlComentarios);
+};
+
+/**
  * Exportar pedidos a Excel
  */
 export const exportarPedidosAExcel = async (pedidos) => {

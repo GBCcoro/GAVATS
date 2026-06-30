@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import adminService from '../../services/adminService';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { exportarFacturasAPDF, exportarFacturasAExcel } from '../../utils/exportUtils';
 
 const AdminFacturasPage = () => {
   useAuth();
@@ -20,6 +21,7 @@ const AdminFacturasPage = () => {
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [showDetalleModal, setShowDetalleModal] = useState(false);
   const [facturaSeleccionada, setFacturaSeleccionada] = useState(null);
+  const [tipoExportacion, setTipoExportacion] = useState('pdf');
   
   // Filtros
   const [filtros, setFiltros] = useState({
@@ -178,6 +180,31 @@ const AdminFacturasPage = () => {
         </div>
 
         <div className="action-groups">
+          <div className="export-actions">
+            <button
+              type="button"
+              className={`btn ${tipoExportacion === 'pdf' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => {
+                setTipoExportacion('pdf');
+                exportarFacturasAPDF(facturasFiltradas);
+              }}
+            >
+              <i className="bi bi-file-earmark-pdf"></i>
+              Exportar a PDF
+            </button>
+            <button
+              type="button"
+              className={`btn ${tipoExportacion === 'excel' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={async () => {
+                setTipoExportacion('excel');
+                await exportarFacturasAExcel(facturasFiltradas);
+              }}
+            >
+              <i className="bi bi-file-earmark-excel"></i>
+              Exportar a Excel
+            </button>
+          </div>
+
           <div className="nav-actions">
             <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/dashboard')}>
               <i className="bi bi-arrow-left"></i>

@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import pedidoService from '../services/pedidoService';
 import { exportarPedidosAPDF, exportarPedidosAExcel } from '../utils/exportUtils';
 
 function AdminPedidosPage() {
+  const navigate = useNavigate();
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tipoExportacion, setTipoExportacion] = useState('pdf');
   const [showDetalleModal, setShowDetalleModal] = useState(false);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
   const [filtros, setFiltros] = useState({
@@ -110,18 +113,47 @@ function AdminPedidosPage() {
   }
 
   return (
-    <div className="admin-container mt-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="admin-title">Gestión de Pedidos</h2>
-        <div className="btn-group">
-          <button className="btn-exportar" onClick={() => exportarPedidosAPDF(pedidosFiltrados)}>
-            <i className="bi bi-file-earmark-pdf me-1"></i> Exportar
-          </button>
-          <button className="btn-exportar dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
-          <ul className="dropdown-menu">
-            <li><button className="dropdown-item" onClick={() => exportarPedidosAPDF(pedidosFiltrados)}>PDF</button></li>
-            <li><button className="dropdown-item" onClick={() => exportarPedidosAExcel(pedidosFiltrados)}>Excel</button></li>
-          </ul>
+    <div className="admin-pedidos-page">
+      <div className="admin-toolbar">
+        <div className="admin-title">
+          <h1>
+            <i className="bi bi-bag-check"></i>
+            Gestión de Pedidos
+          </h1>
+          <p className="subtext">Revisa y administra pedidos de clientes</p>
+        </div>
+
+        <div className="action-groups">
+          <div className="export-actions">
+            <button
+              type="button"
+              className={`btn ${tipoExportacion === 'pdf' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => {
+                setTipoExportacion('pdf');
+                exportarPedidosAPDF(pedidosFiltrados);
+              }}
+            >
+              <i className="bi bi-file-earmark-pdf"></i>
+              Exportar a PDF
+            </button>
+            <button
+              type="button"
+              className={`btn ${tipoExportacion === 'excel' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={async () => {
+                setTipoExportacion('excel');
+                await exportarPedidosAExcel(pedidosFiltrados);
+              }}
+            >
+              <i className="bi bi-file-earmark-excel"></i>
+              Exportar a Excel
+            </button>
+          </div>
+          <div className="nav-actions">
+            <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/dashboard')}>
+              <i className="bi bi-arrow-left"></i>
+              Volver
+            </button>
+          </div>
         </div>
       </div>
 

@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import usuarioService from '../services/usuarioService';
 import { exportarUsuariosAPDF, exportarUsuariosAExcel } from '../utils/exportUtils';
 
 function AdminUsuariosPage() {
+  const navigate = useNavigate();
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando] = useState(false);
+  const [tipoExportacion, setTipoExportacion] = useState('pdf');
   const [usuarioActual, setUsuarioActual] = useState({
     id: null,
     nombre: '',
@@ -149,22 +152,50 @@ function AdminUsuariosPage() {
 
   return (
     <div className="admin-container mt-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="admin-title">Gestión de Usuarios</h2>
-        <div>
-          <div className="btn-group me-2">
-            <button className="btn-exportar" onClick={() => exportarUsuariosAPDF(usuariosFiltrados)}>
-              <i className="bi bi-file-earmark-pdf me-1"></i> Exportar
+      <div className="admin-toolbar">
+        <div className="admin-title">
+          <h1>
+            <i className="bi bi-people-fill"></i>
+            Gestión de Usuarios
+          </h1>
+          <p className="subtext">Administra los usuarios y roles del sistema</p>
+        </div>
+
+        <div className="action-groups">
+          <div className="export-actions">
+            <button
+              type="button"
+              className={`btn ${tipoExportacion === 'pdf' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => {
+                setTipoExportacion('pdf');
+                exportarUsuariosAPDF(usuariosFiltrados);
+              }}
+            >
+              <i className="bi bi-file-earmark-pdf"></i>
+              Exportar a PDF
             </button>
-            <button className="btn-exportar dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
-            <ul className="dropdown-menu">
-              <li><button className="dropdown-item" onClick={() => exportarUsuariosAPDF(usuariosFiltrados)}>PDF</button></li>
-              <li><button className="dropdown-item" onClick={() => exportarUsuariosAExcel(usuariosFiltrados)}>Excel</button></li>
-            </ul>
+            <button
+              type="button"
+              className={`btn ${tipoExportacion === 'excel' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={async () => {
+                setTipoExportacion('excel');
+                await exportarUsuariosAExcel(usuariosFiltrados);
+              }}
+            >
+              <i className="bi bi-file-earmark-excel"></i>
+              Exportar a Excel
+            </button>
           </div>
-          <button className="btn-nuevo" onClick={() => { limpiarFormulario(); setShowModal(true); }}>
-            <i className="bi bi-plus-circle"></i> Nuevo Usuario
-          </button>
+          <div className="nav-actions">
+            <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/dashboard')}>
+              <i className="bi bi-arrow-left"></i>
+              Volver
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => { limpiarFormulario(); setShowModal(true); }}>
+              <i className="bi bi-plus-circle"></i>
+              Nuevo Usuario
+            </button>
+          </div>
         </div>
       </div>
 
@@ -173,13 +204,10 @@ function AdminUsuariosPage() {
         <div className="filtros-header">
           <div className="d-flex justify-content-between align-items-center">
             <h5 className="mb-0"><i className="bi bi-funnel me-2"></i>Filtros</h5>
-            <button className="btn-limpiar-filtros" onClick={limpiarFiltros}>
-              <i className="bi bi-x-circle me-1"></i> Limpiar
-            </button>
           </div>
         </div>
         <div className="filtros-body">
-          <div className="row g-3">
+          <div className="row g-3 align-items-end">
             <div className="col-md-4">
               <label className="filtros-label">Buscar por nombre o email:</label>
               <div className="input-group">
@@ -198,14 +226,11 @@ function AdminUsuariosPage() {
                 <option value="cliente">Clientes</option>
               </select>
             </div>
-            <div className="col-md-4">
-              <label className="filtros-label">Filtrar por Estado:</label>
-              <select className="form-select admin-select" value={filtros.estado}
-                onChange={(e) => setFiltros({...filtros, estado: e.target.value})}>
-                <option value="todos">Todos los estados</option>
-                <option value="activo">Activos</option>
-                <option value="inactivo">Inactivos</option>
-              </select>
+            <div className="col-md-4 d-flex justify-content-end">
+              <button type="button" className="btn btn-outline-secondary btn-clear-filters" onClick={limpiarFiltros}>
+                <i className="bi bi-x-circle me-1"></i>
+                Limpiar filtros
+              </button>
             </div>
           </div>
           <div className="mt-3">

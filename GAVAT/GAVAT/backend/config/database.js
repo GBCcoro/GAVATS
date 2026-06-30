@@ -105,6 +105,51 @@ const testConnection = async () => {
 };
 
 /**
+ * Limpia registros huérfanos en tablas con claves foráneas antes de aplicar alteraciones.
+ * Esto evita que Sequelize falle al intentar añadir una FK cuando existen filas que apuntan a
+ * registros padres inexistentes en la base de datos.
+ */
+const cleanupOrphanedRelations = async () => {
+  const relations = [
+    { childTable: 'detalle_pedidos', childColumn: 'pedidoId', parentTable: 'pedidos' },
+    { childTable: 'detalle_pedidos', childColumn: 'productoId', parentTable: 'productos' },
+    { childTable: 'carritos', childColumn: 'usuarioId', parentTable: 'usuarios' },
+    { childTable: 'carritos', childColumn: 'productoId', parentTable: 'productos' },
+    { childTable: 'pedidos', childColumn: 'usuarioId', parentTable: 'usuarios' },
+    { childTable: 'subcategorias', childColumn: 'categoriaId', parentTable: 'categorias' },
+    { childTable: 'productos', childColumn: 'subcategoriaId', parentTable: 'subcategorias' },
+    { childTable: 'productos', childColumn: 'categoriaId', parentTable: 'categorias' },
+    { childTable: 'comentarios', childColumn: 'usuarioId', parentTable: 'usuarios' },
+    { childTable: 'comentarios', childColumn: 'productoId', parentTable: 'productos' },
+    { childTable: 'facturas', childColumn: 'pedido_id', parentTable: 'pedidos' }
+  ];
+
+  for (const relation of relations) {
+    try {
+      const deleteSql = `
+        DELETE child
+        FROM \`${relation.childTable}\` AS child
+        LEFT JOIN \`${relation.parentTable}\` AS parent
+          ON child.\`${relation.childColumn}\` = parent.id
+        WHERE child.\`${relation.childColumn}\` IS NOT NULL
+          AND parent.id IS NULL;
+      `;
+
+      const [result] = await sequelize.query(deleteSql);
+
+      if (result && result.affectedRows > 0) {
+        console.log(`🧹 Eliminados ${result.affectedRows} registros huérfanos en ${relation.childTable}.${relation.childColumn}`);
+      }
+    } catch (error) {
+      // Si una tabla no existe todavía, se ignora para no interrumpir el arranque.
+      if (!error.message.includes('doesn\'t exist')) {
+        console.warn(`⚠️ No fue posible limpiar ${relation.childTable}.${relation.childColumn}:`, error.message);
+      }
+    }
+  }
+};
+
+/**
  * Función para sincronizar los modelos de Sequelize con las tablas de la BD.
  * "Sincronizar" significa crear o modificar las tablas para que coincidan
  * con la estructura definida en los modelos (carpeta models/).
@@ -115,6 +160,10 @@ const testConnection = async () => {
  */
 const syncDatabase = async (force = false, alter = false) => {
   try {
+    if (alter) {
+      await cleanupOrphanedRelations();
+    }
+
     // sync() compara los modelos con las tablas en la BD y las ajusta.
     // { force: true } = DROP TABLE + CREATE TABLE (borra todo)
     // { alter: true } = ALTER TABLE (modifica columnas sin borrar datos)

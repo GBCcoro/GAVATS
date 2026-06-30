@@ -24,7 +24,7 @@ const Factura = sequelize.define('Factura', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'Pedidos',
+      model: 'pedidos',
       key: 'id'
     },
     onUpdate: 'CASCADE',

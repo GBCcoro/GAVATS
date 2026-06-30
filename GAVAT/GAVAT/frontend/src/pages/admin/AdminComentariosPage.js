@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import comentariosService from '../../services/comentariosService';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { exportarComentariosAPDF, exportarComentariosAExcel } from '../../utils/exportUtils';
 
 const AdminComentariosPage = () => {
   useAuth();
@@ -19,6 +20,7 @@ const AdminComentariosPage = () => {
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [showDetalleModal, setShowDetalleModal] = useState(false);
   const [comentarioSeleccionado, setComentarioSeleccionado] = useState(null);
+  const [tipoExportacion, setTipoExportacion] = useState('pdf');
   
   // Filtros
   const [filtros, setFiltros] = useState({
@@ -168,6 +170,31 @@ const AdminComentariosPage = () => {
         </div>
 
         <div className="action-groups">
+          <div className="export-actions">
+            <button
+              type="button"
+              className={`btn ${tipoExportacion === 'pdf' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => {
+                setTipoExportacion('pdf');
+                exportarComentariosAPDF(comentariosFiltrados);
+              }}
+            >
+              <i className="bi bi-file-earmark-pdf"></i>
+              Exportar a PDF
+            </button>
+            <button
+              type="button"
+              className={`btn ${tipoExportacion === 'excel' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={async () => {
+                setTipoExportacion('excel');
+                await exportarComentariosAExcel(comentariosFiltrados);
+              }}
+            >
+              <i className="bi bi-file-earmark-excel"></i>
+              Exportar a Excel
+            </button>
+          </div>
+
           <div className="nav-actions">
             <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/dashboard')}>
               <i className="bi bi-arrow-left"></i>
