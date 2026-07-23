@@ -8,7 +8,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -39,8 +38,6 @@ import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 function AppContent() {
-  const { user } = useAuth();
-
   return (
     <Router>
       <div className="d-flex flex-column min-vh-100">
