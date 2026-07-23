@@ -168,7 +168,7 @@ const LoginPage = () => {
       </Row>
 
       {/* Estilos personalizados usando variables globales */}
-      <style jsx>{`
+      <style>{`
         .login-card {
           background: var(--bg, #ffffff);
           border-radius: 1.5rem;

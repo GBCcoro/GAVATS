@@ -389,7 +389,7 @@ function AdminUsuariosPage() {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .admin-title {
           background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e));
           -webkit-background-clip: text;

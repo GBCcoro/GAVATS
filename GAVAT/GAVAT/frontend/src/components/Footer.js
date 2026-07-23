@@ -85,7 +85,7 @@ const Footer = memo(() => {
       </Container>
 
       {/* Estilos específicos para el footer (pueden moverse a un CSS global) */}
-      <style jsx>{`
+      <style>{`
         .bg-negativo {
           background-color: var(--bg-negativo, #192847);
         }

@@ -62,7 +62,10 @@ export const getImageUrl = (imagePath) => {
       ? `/${imagePath}`
       : `/uploads/${imagePath}`;
 
-  return `http://localhost:5000${normalizedPath}`;
+  const apiUrl = process.env.REACT_APP_API_URL?.replace(/\/$/, '') || '';
+  const backendOrigin = apiUrl ? apiUrl.replace(/\/api$/, '') : '';
+
+  return backendOrigin ? `${backendOrigin}${normalizedPath}` : normalizedPath;
 };
 
 /**

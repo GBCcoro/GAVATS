@@ -7,7 +7,7 @@
  */
 
 import React, { useState } from 'react';
-import { Container, Row, Col, Card, Button, Modal, Form, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Form, Alert } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import './PerfilPage.css';
 

@@ -10,7 +10,6 @@ import { Container, Card, Table, Badge, Button, Alert } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import pedidoService from '../services/pedidoService';
-import adminService from '../services/adminService';
 import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -232,7 +231,7 @@ const MisPedidosPage = () => {
       )}
 
       {/* Estilos personalizados usando variables globales */}
-      <style jsx>{`
+      <style>{`
         .pedidos-title {
           background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e));
           -webkit-background-clip: text;

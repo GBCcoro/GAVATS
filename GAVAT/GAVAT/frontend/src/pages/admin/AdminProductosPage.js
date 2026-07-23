@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /**
  * ============================================
  * ADMIN PRODUCTOS PAGE
@@ -8,7 +9,6 @@
 import React, { useEffect, useState, useMemo, useCallback, memo, useRef } from 'react';
 import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { getImageUrl } from '../../utils/helpers';
@@ -45,7 +45,6 @@ const ProductImage = memo(({ imagen, nombre }) => {
 ProductImage.displayName = 'ProductImage';
 
 const AdminProductosPage = () => {
-  const { isAdmin, isAuxiliar } = useAuth();
   const navigate = useNavigate();
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);

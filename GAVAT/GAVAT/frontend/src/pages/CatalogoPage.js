@@ -7,12 +7,10 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Container, Row, Col, Form, Button, Alert } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
 import catalogoService from '../services/catalogoService';
 import carritoService from '../services/carritoService';
 import ProductCard from '../components/ProductCard';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { useAuth } from '../context/AuthContext';
 
 const CatalogoPage = () => {
   const [productos, setProductos] = useState([]);
@@ -31,9 +29,6 @@ const CatalogoPage = () => {
     buscar: '',
     pagina: 1,
   });
-
-  const { isAuthenticated, isCliente } = useAuth();
-  const navigate = useNavigate();
 
   const fetchProductos = useCallback(async (filtrosActuales) => {
     setLoading(true);
@@ -317,7 +312,7 @@ const CatalogoPage = () => {
       </Row>
 
       {/* Estilos personalizados usando variables globales */}
-      <style jsx>{`
+      <style>{`
         .catalogo-title {
           background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e));
           -webkit-background-clip: text;

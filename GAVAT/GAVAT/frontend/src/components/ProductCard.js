@@ -82,7 +82,7 @@ const ProductCard = memo(({ producto, onAddToCart, showActions = true }) => {
       </Card.Body>
 
       {/* Estilos personalizados usando las variables globales */}
-      <style jsx>{`
+      <style>{`
         .product-card {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           border: none !important;

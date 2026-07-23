@@ -544,7 +544,7 @@ const AdminSubcategoriasPage = () => {
         </Form>
       </Modal>
 
-      <style jsx>{`
+      <style>{`
         :global(.subcategorias-modal-dialog) {
           max-height: calc(100vh - 2rem);
         }

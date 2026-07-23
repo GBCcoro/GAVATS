@@ -291,7 +291,7 @@ const ProductoDetallePage = () => {
         </Col>
       </Row>
 
-      <style jsx>{`
+      <style>{`
         .badge-stock-success {
           background-color: #198754;
           color: white;

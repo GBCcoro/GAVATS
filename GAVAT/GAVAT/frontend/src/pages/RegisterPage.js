@@ -239,7 +239,7 @@ const RegisterPage = () => {
       </Row>
 
       {/* Estilos personalizados usando variables globales */}
-      <style jsx>{`
+      <style>{`
         .register-card {
           background: var(--bg, #ffffff);
           border-radius: 1.5rem;

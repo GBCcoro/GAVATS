@@ -146,7 +146,7 @@ const NavigationBar = memo(() => {
       </Container>
 
       {/* Estilos personalizados usando las variables globales del proyecto */}
-      <style jsx>{`
+      <style>{`
         .custom-navbar {
           background-color: var(--bg-negativo, #192847);
           backdrop-filter: blur(10px);

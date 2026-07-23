@@ -14,14 +14,14 @@ import axios from 'axios';
  * Todas las peticiones se harán a esta URL base
  * Ejemplo: http://localhost:5000/api/productos
  */
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || '/api';
 
 /**
  * Crear instancia de axios con configuración base
  * Esta instancia se usará en todos los servicios de la aplicación
  */
 const apiClient = axios.create({
-  baseURL: API_URL,              // URL base del backend
+  baseURL: API_URL,              // URL base del backend (usa /api en producción si no hay variable)
   timeout: 30000,                // Timeout aumentado a 30 segundos
   headers: {
     'Content-Type': 'application/json', // Tipo de contenido por defecto

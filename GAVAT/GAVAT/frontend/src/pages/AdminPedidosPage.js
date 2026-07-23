@@ -318,7 +318,7 @@ function AdminPedidosPage() {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .admin-title { background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e)); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
         .btn-exportar { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 0.75rem; padding: 0.5rem 1rem; font-weight: 600; transition: all 0.3s; }
         .btn-exportar:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
