@@ -19,6 +19,11 @@
    - [2.1 Modelo Lógico](#21-modelo-lógico)
    - [2.2 Navegación por Módulos](#22-navegación-por-módulos)
 
+4. [FAQ](#4-faq)
+5. [ANEXOS](#5-anexos)
+6. [GLOSARIO](#6-glosario)
+7. [BIBLIOGRAFÍA Y REFERENCIAS](#7-bibliografía-y-referencias)
+
 ---
 
 # 1. AUXILIAR
@@ -606,6 +611,92 @@ El módulo de Auxiliar en GAVAT Construcciones Arquitectónicas constituye un si
 - **Calidad:** Moderación de contenidos y comentarios (sin eliminación)
 
 Todas las operaciones están protegidas mediante autenticación JWT. Las operaciones de eliminación están **excluidas completamente** del rol de auxiliar como medida de seguridad. La gestión de usuarios es **inaccesible** para este rol, garantizando que solo administradores pueden crear y modificar cuentas de usuario.
+
+---
+
+## 4. FAQ
+
+| Pregunta | Respuesta |
+|----------|-----------|
+| ¿Qué funciones puede realizar el auxiliar? | El auxiliar puede gestionar categorías, subcategorías, productos, pedidos, comentarios y facturas, pero no puede eliminar registros ni gestionar usuarios. |
+| ¿Puede el auxiliar eliminar productos? | No, la eliminación de productos está reservada exclusivamente al administrador. |
+| ¿Puede el auxiliar ver todos los pedidos? | Sí, el auxiliar puede consultar la lista completa de pedidos y ver detalles individuales de cada pedido. |
+| ¿Puede el auxiliar moderar comentarios? | Sí, el auxiliar puede cambiar el estado de visibilidad de los comentarios, pero no puede eliminarlos. |
+| ¿El auxiliar puede editar roles de usuario? | No, el auxiliar no tiene acceso a la gestión de usuarios ni puede editar roles. |
+| ¿Puedo descargar facturas como auxiliar? | Sí, el auxiliar puede consultar y descargar facturas en formato PDF. |
+| ¿El auxiliar puede activar o desactivar categorías? | Sí, puede activar o desactivar categorías, subcategorías y productos, pero no puede eliminarlos. |
+| ¿El auxiliar puede crear productos nuevos? | Sí, el auxiliar puede crear productos completos, incluyendo nombre, descripción, precio, stock, categoría y carga de imagen. |
+| ¿El auxiliar puede cambiar el estado de un pedido? | Sí, puede actualizar el estado de un pedido dentro del flujo de procesamiento disponible para su rol. |
+| ¿Existen restricciones de eliminación para el auxiliar? | Sí, el auxiliar no puede eliminar categorías, subcategorías, productos, comentarios ni usuarios. |
+
+## 5. ANEXOS
+
+### 5.1 Horario de atención
+- No especificado en el proyecto.  
+- El documento no contiene información de horarios de soporte para el rol de auxiliar.
+
+### 5.2 Correo de soporte
+- info@gavat.com  
+- Esta dirección aparece como contacto en el frontend del proyecto.
+
+### 5.3 Navegadores compatibles
+- Google Chrome
+- Mozilla Firefox
+- Microsoft Edge
+- Safari
+- Cualquier navegador moderno compatible con React 19 y Bootstrap 5
+- Configuración de compatibilidad tomada del `browserslist` de frontend: `>0.2%`, `not dead`, `not op_mini all`, `last 1 chrome version`, `last 1 firefox version`, `last 1 safari version`.
+
+### 5.4 Requisitos mínimos para utilizar la plataforma
+- Conexión estable a Internet.  
+- Navegador web moderno actualizado.  
+- Para desarrollo local: Node.js v14 o superior y el backend corriendo en `http://localhost:5000`.  
+- No se define hardware mínimo específico en los documentos del proyecto.
+
+### 5.5 Información complementaria
+- La plataforma utiliza autenticación por token JWT para las operaciones protegidas.  
+- El auxiliar opera con permisos limitados para evitar acciones destructivas en el sistema.  
+- No existe un horario de atención definido en los documentos del proyecto.  
+- El rol auxiliar no puede gestionar usuarios ni realizar eliminaciones. |
+
+## 6. GLOSARIO
+
+| Término | Definición |
+|---------|------------|
+| Administrador | Usuario con máximo nivel de control que gestiona categorías, productos, usuarios, pedidos y facturas. |
+| Auxiliar | Usuario con permisos limitados que apoya en la gestión operativa sin capacidad de eliminar datos críticos. |
+| Usuario | Persona que accede al sistema con un rol asignado. |
+| Producto | Artículo disponible para venta con atributos como nombre, descripción, precio, stock e imagen. |
+| Categoría | Agrupación principal de productos que facilita la organización del catálogo. |
+| Subcategoría | Agrupación secundaria dentro de una categoría que detalla mejor el tipo de producto. |
+| Pedido | Orden de compra que registra productos, cantidades, estado y datos de envío. |
+| Factura | Documento de facturación asociado a un pedido que contiene datos de la transacción. |
+| Comentario | Reseña o valoración que un cliente puede dejar sobre un producto comprado. |
+| Carrito de compras | Espacio temporal donde el usuario agrega productos antes de completar la compra. |
+| Token JWT | Credencial de acceso codificada que autoriza peticiones protegidas del usuario. |
+| Autenticación | Proceso de verificación de identidad mediante correo y contraseña. |
+| Rol | Definición del nivel de permisos de un usuario dentro del sistema. |
+| Estado del pedido | Fase en la que se encuentra un pedido (pendiente, pagado, en_proceso, enviado, entregado, cancelado). |
+| Integridad referencial | Restricción que evita eliminar registros relacionados en la base de datos. |
+| Backend | Parte del sistema que procesa la lógica y gestiona los datos. |
+| Frontend | Interfaz de usuario de la aplicación web. |
+| Stock | Cantidad disponible de un producto en inventario. |
+| Dashboard | Panel de control donde se muestran estadísticas y accesos rápidos. |
+| API | Conjunto de rutas y controladores que exponen funcionalidades del backend. |
+
+## 7. BIBLIOGRAFÍA Y REFERENCIAS
+
+| Referencia | Enlace / Nota |
+|-----------|----------------|
+| Manual de Usuario | Documento interno del proyecto |
+| Documento de Requisitos | Documento interno del proyecto |
+| Manual de Administrador | Documento interno del proyecto |
+| Desarrollo Frontend | Documento interno del proyecto |
+| Desarrollo Técnico | Documento interno del proyecto |
+| Manual de APIs | Documento interno del proyecto |
+| Pruebas Postman | Documento interno del proyecto |
+| Estado de Requerimientos | Documento interno del proyecto |
+| Plan de Trabajo | Documento interno del proyecto |
 
 ---
 

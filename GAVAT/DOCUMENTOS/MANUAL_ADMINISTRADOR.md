@@ -19,6 +19,11 @@
    - [2.1 Modelo Lógico](#21-modelo-lógico)
    - [2.2 Navegación por Módulos](#22-navegación-por-módulos)
 
+4. [FAQ](#4-faq)
+5. [ANEXOS](#5-anexos)
+6. [GLOSARIO](#6-glosario)
+7. [BIBLIOGRAFÍA Y REFERENCIAS](#7-bibliografía-y-referencias)
+
 ---
 
 # 1. ADMINISTRADOR
@@ -781,6 +786,93 @@ El módulo de Administrador en GAVAT Construcciones Arquitectónicas constituye 
 - **Calidad:** Moderación de contenidos y comentarios
 
 Todas las operaciones están protegidas mediante autenticación JWT y validaciones de integridad referencial, garantizando la consistencia y seguridad de la información en todo momento.
+
+---
+
+## 4. FAQ
+
+| Pregunta | Respuesta |
+|----------|-----------|
+| ¿Cómo inicio sesión como administrador? | Debes ingresar tu correo y contraseña en la página de login; el sistema verifica tu rol y genera un token JWT para acceso. |
+| ¿Qué puede hacer un administrador que no puede hacer un auxiliar? | El administrador puede eliminar usuarios, gestionar roles y eliminar categorías, subcategorías y productos, funciones que el auxiliar no puede realizar. |
+| ¿Puede el administrador cambiar el estado de un pedido? | Sí, el administrador puede cambiar el estado de cualquier pedido en el sistema, incluyendo pendiente, pagado, en_proceso, enviado, entregado y cancelado. |
+| ¿El administrador puede ver facturas? | Sí, puede consultar todas las facturas emitidas, ver detalles y descargar PDF. |
+| ¿Cómo se controla la eliminación de categorías? | El sistema verifica integridad referencial: no permite eliminar una categoría si contiene subcategorías o productos activos. |
+| ¿Qué información puede editar el administrador de un usuario? | Puede editar nombre, apellido, correo, rol, teléfono, dirección y estado de la cuenta, pero no puede ver la contraseña actual. |
+| ¿El administrador puede moderar comentarios? | Sí, puede marcar comentarios como visibles o no visibles y también eliminarlos si son inapropiados. |
+| ¿Qué ocurre si un producto no tiene stock? | El administrador puede desactivar o editar el stock del producto; el sistema no permitirá agregar al carrito productos sin stock disponible. |
+| ¿Puedo asignar un nuevo rol a un usuario existente? | Sí, el administrador puede actualizar el rol de cualquier usuario registrado en el sistema. |
+| ¿Cómo se protege la información del administrador? | Se utiliza autenticación JWT y validaciones en el backend para asegurar que solo usuarios con rol administrador accedan a estas funciones. |
+
+## 5. ANEXOS
+
+### 5.1 Horario de atención
+- No especificado en el proyecto.  
+- El documento no contiene información de horarios de soporte administrativo.
+
+### 5.2 Correo de soporte
+- info@gavat.com  
+- Esta dirección aparece como contacto en el frontend del proyecto.
+
+### 5.3 Navegadores compatibles
+- Google Chrome
+- Mozilla Firefox
+- Microsoft Edge
+- Safari
+- Cualquier navegador moderno compatible con React 19 y Bootstrap 5
+- Configuración de compatibilidad tomada del `browserslist` de frontend: `>0.2%`, `not dead`, `not op_mini all`, `last 1 chrome version`, `last 1 firefox version`, `last 1 safari version`.
+
+### 5.4 Requisitos mínimos para utilizar la plataforma
+- Conexión estable a Internet.  
+- Navegador web moderno actualizado.  
+- Para desarrollo local: Node.js v14 o superior y el backend corriendo en `http://localhost:5000`.  
+- No se define hardware mínimo específico en los documentos del proyecto.
+
+### 5.5 Información complementaria
+- La plataforma utiliza autenticación por token JWT para las operaciones protegidas.  
+- El administrador accede a funciones exclusivas no disponibles para los roles cliente o auxiliar.  
+- No existe un horario de atención definido en los documentos del proyecto.  
+- Las facturas se pueden generar y descargar en formato PDF.
+
+## 6. GLOSARIO
+
+| Término | Definición |
+|---------|------------|
+| Administrador | Usuario con máximo nivel de control que gestiona categorías, productos, usuarios, pedidos y facturas. |
+| Auxiliar | Usuario con permisos limitados que apoya en la gestión operativa sin capacidad de eliminar datos críticos. |
+| Usuario | Persona que accede al sistema con un rol asignado. |
+| Producto | Artículo disponible para venta con atributos como nombre, descripción, precio, stock e imagen. |
+| Categoría | Agrupación principal de productos que facilita la organización del catálogo. |
+| Subcategoría | Agrupación secundaria dentro de una categoría que detalla mejor el tipo de producto. |
+| Pedido | Orden de compra creada por un usuario, que registra productos, cantidades, estado y datos de envío. |
+| Factura | Documento de facturación asociado a un pedido que contiene detalles de la transacción. |
+| Comentario | Reseña o valoración que un cliente puede dejar sobre un producto comprado. |
+| Carrito de compras | Espacio temporal donde el usuario agrega productos antes de completar la compra. |
+| Token JWT | Credencial de acceso codificada que autoriza peticiones protegidas del usuario. |
+| Autenticación | Proceso de verificación de identidad mediante correo y contraseña. |
+| Rol | Definición del nivel de permisos de un usuario dentro del sistema. |
+| Estado del pedido | Fase en la que se encuentra un pedido (pendiente, pagado, en_proceso, enviado, entregado, cancelado). |
+| Integridad referencial | Restricción de bases de datos que evita eliminar registros relacionados. |
+| Backend | Parte del sistema que procesa la lógica, gestiona datos y responde a las peticiones de la aplicación. |
+| Frontend | Interfaz de usuario de la aplicación web, construida con React y Bootstrap. |
+| Stock | Cantidad disponible de un producto en inventario. |
+| Dashboard | Panel de control donde se muestran estadísticas y accesos rápidos. |
+| API | Conjunto de rutas y controladores que exponen funcionalidades del backend. |
+
+## 7. BIBLIOGRAFÍA Y REFERENCIAS
+
+| Referencia | Enlace / Nota |
+|-----------|----------------|
+| Manual de Usuario | Documento interno del proyecto |
+| Documento de Requisitos | Documento interno del proyecto |
+| Manual de Auxiliar | Documento interno del proyecto |
+| Manual de Usuario | Documento interno del proyecto |
+| Desarrollo Frontend | Documento interno del proyecto |
+| Desarrollo Técnico | Documento interno del proyecto |
+| Manual de APIs | Documento interno del proyecto |
+| Pruebas Postman | Documento interno del proyecto |
+| Estado de Requerimientos | Documento interno del proyecto |
+| Plan de Trabajo | Documento interno del proyecto |
 
 ---
 

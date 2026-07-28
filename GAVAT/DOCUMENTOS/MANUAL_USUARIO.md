@@ -19,6 +19,11 @@
    - [2.1 Modelo Lógico](#21-modelo-lógico)
    - [2.2 Navegación por Módulos](#22-navegación-por-módulos)
 
+4. [FAQ](#4-faq)
+5. [ANEXOS](#5-anexos)
+6. [GLOSARIO](#6-glosario)
+7. [BIBLIOGRAFÍA Y REFERENCIAS](#7-bibliografía-y-referencias)
+
 ---
 
 # 1. USUARIO
@@ -147,11 +152,11 @@ A continuación se presenta la lista completa de todas las acciones que el usuar
 
 ### 1.3.6 Visualización de Detalles de Producto
 - El usuario puede ver página detallada de un producto
-- El usuario puede visualizar imagen cowmpleta del producto
+- El usuario puede visualizar imagen completa del producto
 - El usuario puede leer descripción completa
 - El usuario puede ver precio unitario
 - El usuario puede ver cantidad en stock disponible
-- El usuario puede visualizar categoría y wwwsubcategoría del producto
+- El usuario puede visualizar categoría y subcategoría del producto
 - El usuario puede ver comentarios publicados sobre el producto
 - El usuario puede ver calificación promedio del producto
 
@@ -581,6 +586,93 @@ El modelo lógico del módulo de Usuario está estructurado en los siguientes m�
 | 14 | El comentario se crea y aparece visible inmediatamente |
 | 15 | Se muestra mensaje de éxito |
 | 16 | El comentario aparece en la lista (generalmente al inicio) |
+
+---
+
+## 4. FAQ
+
+| Pregunta | Respuesta |
+|----------|-----------|
+| ¿Cómo me registro en GAVAT? | Debes usar la página de registro e ingresar un email válido, contraseña, nombre, teléfono y dirección opcional. El sistema crea tu cuenta con rol cliente y genera un token JWT para iniciar sesión. |
+| ¿Qué hago si olvidé mi contraseña? | El proyecto actual no incluye recuperación automática de contraseña. Puedes cambiar la contraseña desde tu perfil si conoces la contraseña actual. |
+| ¿Puedo agregar cualquier producto al carrito? | Sí, puedes agregar productos activos al carrito. Si el producto ya está en el carrito, el sistema suma la nueva cantidad al existente siempre que no supere el stock disponible. |
+| ¿Cómo veo el estado de mis pedidos? | En la sección "Mis Pedidos" puedes consultar el historial de pedidos y ver el estado actual de cada uno, incluyendo pendientes, pagados, enviados, entregados o cancelados. |
+| ¿Puedo cancelar un pedido después de crearlo? | Sí, puedes cancelar un pedido solo si está en estado pendiente. No es posible cancelar pedidos que ya fueron pagados, enviados o entregados. |
+| ¿Puedo comentar cualquier producto? | No, solo puedes crear comentarios sobre productos que hayas comprado previamente. Esto garantiza que los comentarios sean realizados por compradores reales. |
+| ¿Qué navegadores son compatibles con la plataforma? | El proyecto está diseñado para navegadores modernos como Google Chrome, Mozilla Firefox, Microsoft Edge y Safari, siguiendo la configuración de compatibilidad de React y Bootstrap. |
+| ¿Qué hago si un producto no aparece en el catálogo? | Si un producto no aparece, puede deberse a que no está activo en el sistema o que no pertenece a la categoría o subcategoría seleccionada. |
+| ¿Cómo actualizo mis datos personales? | Puedes editar tu nombre, teléfono y dirección desde la página de perfil con el usuario autenticado. Los cambios se guardan mediante la ruta protegida de perfil. |
+| ¿Cómo contacto soporte si tengo un problema? | El proyecto incluye un correo de contacto en la interfaz: info@gavat.com. No hay horario de atención definido en los documentos del proyecto. |
+
+## 5. ANEXOS
+
+### 5.1 Horario de atención
+- No especificado en el proyecto.  
+- El documento no contiene información de horarios de soporte al usuario.
+
+### 5.2 Correo de soporte
+- info@gavat.com  
+- Esta dirección aparece en el pie de página del frontend como contacto de la plataforma.
+
+### 5.3 Navegadores compatibles
+- Google Chrome
+- Mozilla Firefox
+- Microsoft Edge
+- Safari
+- Cualquier navegador moderno compatible con React 19 y Bootstrap 5
+- Configuración de compatibilidad: `>0.2%`, `not dead`, `not op_mini all`, `last 1 chrome version`, `last 1 firefox version`, `last 1 safari version`.
+
+### 5.4 Requisitos mínimos para utilizar la plataforma
+- Conexión estable a Internet.  
+- Navegador web moderno actualizado.  
+- Para desarrollo local: Node.js v14 o superior y backend corriendo en `http://localhost:5000`.  
+- No se define hardware mínimo específico en los documentos del proyecto.
+
+### 5.5 Información complementaria
+- La plataforma utiliza autenticación por token JWT para las operaciones protegidas.  
+- El usuario debe iniciar sesión para acceder a carrito, pedidos y perfil.  
+- No existe en el proyecto actual un mecanismo de recuperación de contraseña por correo electrónico.  
+- El backend y frontend pueden ejecutarse localmente con las variables de entorno adecuadas: `REACT_APP_API_URL=http://localhost:5000/api`.
+
+## 6. GLOSARIO
+
+| Término | Definición |
+|---------|------------|
+| Usuario | Persona que accede a la plataforma y puede iniciar sesión para usar funcionalidades de cliente. |
+| Cliente | Usuario con rol de comprador que puede explorar productos, gestionar carrito y realizar pedidos. |
+| Administrador | Usuario con rol de gestión que administra productos, categorías, usuarios y pedidos desde el panel administrativo. |
+| Auxiliar | Usuario con rol intermedio que puede apoyar en la gestión de categorías, subcategorías, productos y pedidos sin acceso completo de administrador. |
+| Producto | Artículo disponible para venta en el catálogo, con datos como nombre, descripción, precio, stock e imagen. |
+| Categoría | Clasificación principal de productos que agrupa artículos similares. |
+| Subcategoría | División secundaria dentro de una categoría que organiza productos con mayor detalle. |
+| Carrito de compras | Espacio temporal donde el usuario agrupa productos antes de confirmar la compra. |
+| Pedido | Registro de compra creado a partir del carrito, que contiene los productos seleccionados, cantidades, estado y datos de envío. |
+| Detalle de pedido | Registro específico de cada producto dentro de un pedido, con cantidad, precio unitario y subtotal. |
+| Factura | Documento generado para registrar la información de facturación y el detalle de la transacción de un pedido. |
+| Comentario | Opinión o reseña que un cliente puede dejar sobre un producto que ha comprado. |
+| Autenticación | Proceso que verifica la identidad del usuario mediante email y contraseña para permitir el acceso a funciones protegidas. |
+| Token JWT | Credencial codificada que se usa para autorizar peticiones protegidas y mantener la sesión del usuario. |
+| Perfil | Conjunto de datos personales del usuario, como nombre, email, teléfono y dirección. |
+| Catálogo | Conjunto de productos disponibles para navegar, buscar y filtrar en la plataforma. |
+| Stock | Cantidad disponible de un producto. El sistema verifica stock antes de permitir agregar productos al carrito o generar pedidos. |
+| Checkout | Proceso final de compra donde el usuario confirma datos de envío, método de pago y completa el pedido. |
+| Historial de pedidos | Listado de compras anteriores del usuario con su estado y detalles de cada pedido. |
+| Método de pago | Forma de pago seleccionada por el usuario para completar un pedido, registrada en el proceso de compra. |
+
+## 7. BIBLIOGRAFÍA Y REFERENCIAS
+
+| Referencia | Enlace / Nota |
+|-----------|----------------|
+| Manual de Usuario | Documento interno del proyecto |
+| Documento de Requisitos | Documento interno del proyecto |
+| Manual de Administración | Documento interno del proyecto |
+| Manual de Auxiliar | Documento interno del proyecto |
+| Desarrollo Frontend | Documento interno del proyecto |
+| Desarrollo Técnico | Documento interno del proyecto |
+| Manual de APIs | Documento interno del proyecto |
+| Pruebas Postman | Documento interno del proyecto |
+| Estado de Requerimientos | Documento interno del proyecto |
+| Plan de Trabajo | Documento interno del proyecto |
 
 ---
 
