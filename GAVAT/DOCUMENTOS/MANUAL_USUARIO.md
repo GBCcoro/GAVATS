@@ -102,7 +102,6 @@ El usuario puede:
 - No puede crear cuentas de otros usuarios
 - No puede acceder a información de otros clientes
 
----
 
 ## 1.3 Funcionalidades
 
@@ -148,11 +147,11 @@ A continuación se presenta la lista completa de todas las acciones que el usuar
 
 ### 1.3.6 Visualización de Detalles de Producto
 - El usuario puede ver página detallada de un producto
-- El usuario puede visualizar imagen completa del producto
+- El usuario puede visualizar imagen cowmpleta del producto
 - El usuario puede leer descripción completa
 - El usuario puede ver precio unitario
 - El usuario puede ver cantidad en stock disponible
-- El usuario puede visualizar categoría y subcategoría del producto
+- El usuario puede visualizar categoría y wwwsubcategoría del producto
 - El usuario puede ver comentarios publicados sobre el producto
 - El usuario puede ver calificación promedio del producto
 
