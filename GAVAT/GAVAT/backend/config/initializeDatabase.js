@@ -26,12 +26,12 @@ require('dotenv').config();
 const initializeDatabase = async () => {
   try {
     console.log('\n╔════════════════════════════════════════════════╗');
-    console.log('║   🔧 INICIALIZANDO BASE DE DATOS GAVAT         ║');
+    console.log('║   🔧 INICIALIZANDO BASE DE DATOS gavat         ║');
     console.log('╚════════════════════════════════════════════════╝\n');
 
     // PASO 1: Crear la base de datos si no existe
     console.log('📦 Paso 1: Creando base de datos...');
-    const dbName = process.env.DB_NAME || 'GAVAT';
+    const dbName = process.env.DB_NAME || 'gavat';
     let connection;
     
     try {

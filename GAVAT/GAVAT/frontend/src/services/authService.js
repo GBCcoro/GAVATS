@@ -21,7 +21,7 @@ const authService = {
         localStorage.setItem('user', JSON.stringify(response.data.data.usuario));
       }
       
-      return response.data;
+      return response.data.data;
     } catch (error) {
       throw error.response?.data || { success: false, message: 'Error de conexión' };
     }
@@ -40,7 +40,7 @@ const authService = {
         localStorage.setItem('user', JSON.stringify(response.data.data.usuario));
       }
       
-      return response.data;
+      return response.data.data;
     } catch (error) {
       throw error.response?.data || { success: false, message: 'Error de conexión' };
     }

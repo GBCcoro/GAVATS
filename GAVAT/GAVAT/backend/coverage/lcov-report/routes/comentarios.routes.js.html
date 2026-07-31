@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>14/14</span>
+                <span class='fraction'>15/15</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>14/14</span>
+                <span class='fraction'>15/15</span>
             </div>
         
             
@@ -161,7 +161,15 @@
 <a name='L96'></a><a href='#L96'>96</a>
 <a name='L97'></a><a href='#L97'>97</a>
 <a name='L98'></a><a href='#L98'>98</a>
-<a name='L99'></a><a href='#L99'>99</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -189,22 +197,17 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -217,11 +220,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -244,7 +242,25 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -286,12 +302,13 @@ const {
   moderarComentario,
   toggleComentario,
   eliminarComentario,
+  obtenerTodosComentarios,
   obtenerComentariosPorUsuario
 } = require('../controllers/comentario.controller');
 &nbsp;
 // Importa middlewares de autenticación
 const { verificarAuth } = require('../middleware/auth');
-const { esAdministrador } = require('../middleware/checkRole');
+const { esAdminOAuxiliar, soloAdministrador } = require('../middleware/checkRole');
 &nbsp;
 /**
  * RUTAS CLIENTE (requieren autenticación)
@@ -336,25 +353,32 @@ router.get('/catalogo/productos/:productoId/comentarios', obtenerComentariosProd
  * Moderar un comentario (visible o no_visible)
  * Body: { estado: 'visible' | 'no_visible' } o { visible: true | false }
  */
-router.put('/admin/comentarios/:comentarioId/moderar', verificarAuth, esAdministrador, moderarComentario);
+router.put('/admin/comentarios/:comentarioId/moderar', verificarAuth, esAdminOAuxiliar, moderarComentario);
 &nbsp;
 /**
  * PATCH /api/admin/comentarios/:comentarioId/toggle
  * Alterna la visibilidad del comentario.
  */
-router.patch('/admin/comentarios/:comentarioId/toggle', verificarAuth, esAdministrador, toggleComentario);
+router.patch('/admin/comentarios/:comentarioId/toggle', verificarAuth, esAdminOAuxiliar, toggleComentario);
 &nbsp;
 /**
  * DELETE /api/admin/comentarios/:comentarioId
- * Eliminar un comentario
+ * Eliminar un comentario (solo administrador)
  */
-router.delete('/admin/comentarios/:comentarioId', verificarAuth, esAdministrador, eliminarComentario);
+router.delete('/admin/comentarios/:comentarioId', verificarAuth, soloAdministrador, eliminarComentario);
+&nbsp;
+/**
+ * GET /api/admin/comentarios
+ * Lista todos los comentarios de todos los usuarios.
+ * Query params opcionales: pagina, limite
+ */
+router.get('/admin/comentarios', verificarAuth, esAdminOAuxiliar, obtenerTodosComentarios);
 &nbsp;
 /**
  * GET /api/admin/comentarios/usuario/:usuarioId
  * Busca comentarios creados por un usuario específico.
  */
-router.get('/admin/comentarios/usuario/:usuarioId', verificarAuth, esAdministrador, obtenerComentariosPorUsuario);
+router.get('/admin/comentarios/usuario/:usuarioId', verificarAuth, esAdminOAuxiliar, obtenerComentariosPorUsuario);
 &nbsp;
 module.exports = router;
 &nbsp;</pre></td></tr></table></pre>
@@ -364,7 +388,7 @@ module.exports = router;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-04-16T13:20:34.863Z
+                at 2026-07-31T16:15:12.887Z
             </div>
         <script src="../prettify.js"></script>
         <script>
