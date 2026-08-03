@@ -23,6 +23,7 @@
 5. [ANEXOS](#5-anexos)
 6. [GLOSARIO](#6-glosario)
 7. [BIBLIOGRAFÍA Y REFERENCIAS](#7-bibliografía-y-referencias)
+8. [CONTINGENCIAS Y SOLUCIONES](#9-contingencias-y-soluciones)
 
 ---
 
@@ -775,6 +776,24 @@ El modelo lógico del módulo de Administrador está estructura en los siguiente
 | 4 | Se visualiza en gráficos o tablas resumen |
 
 ---
+
+## 9. CONTINGENCIAS Y SOLUCIONES
+
+La tabla siguiente resume las contingencias más comunes que pueden presentarse durante la instalación, configuración y operación del sistema GAVAT, basadas en la implementación actual del backend y del frontend. Las situaciones marcadas como “No verificado directamente en el código” dependen del entorno operativo del equipo donde se ejecute Node.js y MySQL.
+
+| Contingencia o problema | Posible causa | Consecuencia en el sistema | Solución recomendada |
+|---|---|---|---|
+| No es posible instalar dependencias del backend o del frontend | Node.js o npm no están instalados correctamente, o las carpetas de dependencias no han sido descargadas | Los comandos `npm install` o los scripts de arranque fallan y el proyecto no puede ejecutarse | Instalar Node.js LTS compatible con el proyecto, verificar `npm --version` y ejecutar `npm install` en el backend y en el frontend. |
+| El backend no inicia por variables de entorno incompletas | El archivo `.env` del backend no existe o carece de variables como `PORT`, `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` o `JWT_EXPIRES_IN` | El servidor puede arrancar con valores no esperados o fallar al intentar conectar a la base de datos o generar tokens | Crear o corregir el archivo `.env` del backend con las variables requeridas y reiniciar el servicio. |
+| No se puede conectar con MySQL | MySQL no está en ejecución, el puerto `3306` está ocupado o las credenciales del archivo `.env` son incorrectas | El backend no puede sincronizar modelos ni iniciar correctamente y las operaciones de negocio quedan bloqueadas | Verificar que MySQL/XAMPP esté activo, confirmar el puerto y las credenciales en `.env` y revisar los mensajes de conexión del servidor. |
+| El backend no arranca porque el puerto `5000` está ocupado | Otra aplicación o una instancia previa del backend ya está usando el puerto configurado | El servidor no queda disponible en `http://localhost:5000` y el frontend no podrá consumir la API | Cerrar la instancia anterior, cambiar el puerto en `.env` o liberar el puerto ocupado antes de reiniciar. |
+| El frontend no se comunica con el backend | La variable `REACT_APP_API_URL` apunta a una URL incorrecta, o el backend no está en ejecución | Las pantallas muestran errores de red o fallos al cargar productos, usuarios y pedidos | Ajustar `REACT_APP_API_URL` en el archivo `.env` del frontend a la URL real del backend y reiniciar el frontend. |
+| El frontend no inicia porque el puerto `3000` está ocupado | Otro proceso ya está utilizando el puerto por defecto de React | La aplicación no queda accesible en `http://localhost:3000` | Cerrar el proceso que ocupa el puerto o cambiar el puerto de ejecución del frontend. |
+| Fallan las peticiones protegidas por JWT | El token no se envía en el encabezado `Authorization`, ha expirado o la clave secreta `JWT_SECRET` no coincide con la configuración esperada | El sistema responde con errores `401 Unauthorized` y el usuario no puede ingresar ni consultar datos protegidos | Iniciar sesión nuevamente para obtener un token válido, verificar que el encabezado sea `Bearer <token>` y revisar la configuración de `JWT_SECRET` y `JWT_EXPIRES_IN`. |
+| No se pueden subir imágenes de productos | El archivo no tiene un tipo MIME permitido, supera el límite de tamaño configurado o no llega correctamente al middleware Multer | La creación o edición de productos con imagen falla y el usuario recibe un error de validación | Usar únicamente archivos de imagen con tipos `jpg`, `jpeg`, `png` o `gif`, mantener el tamaño dentro del límite configurado y enviar el archivo en el campo esperado por el formulario. |
+| No se generan facturas PDF | La librería `pdfkit` no está disponible, el directorio `facturas/` no puede escribirse o el proceso no tiene permisos de escritura | La factura puede crearse en base de datos, pero el PDF no queda disponible para descarga | Verificar que las dependencias del backend estén instaladas, revisar que exista el directorio `facturas/` y que el proceso de Node tenga permisos para escribir en él. |
+| No se guardan imágenes ni PDFs por problemas de permisos de carpeta | El usuario que ejecuta Node.js no tiene permisos de escritura sobre las carpetas `uploads/` o `facturas/`, o dichas carpetas no existen en el sistema | Las subidas de imágenes y la generación de PDFs fallan o quedan incompletas | Crear las carpetas necesarias y asignar permisos de escritura al usuario que ejecuta la aplicación. Esta contingencia no se verificó directamente en el código, ya que depende del sistema operativo y del entorno de ejecución. |
+| Cambios en variables de entorno no se reflejan inmediatamente | React y el backend cargan las variables al iniciar el proceso, por lo que los cambios no se aplican hasta reiniciar | El sistema sigue usando la configuración anterior y aparecen errores de conexión o rutas incorrectas | Reiniciar el proceso del backend y del frontend después de modificar los archivos `.env`. |
 
 ## Conclusión
 
