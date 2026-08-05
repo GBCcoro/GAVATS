@@ -50,8 +50,8 @@ const createDatabase = async () => {
     console.log('✅ Conexión a MySQL establecida\n');
     
     // Obtiene el nombre de la base de datos del .env (variable DB_NAME)
-    // Si no existe la variable, usa 'GAVAT' como nombre por defecto
-    const dbName = process.env.DB_NAME || 'GAVAT';
+    // Si no existe la variable, usa 'gavat' como nombre por defecto
+    const dbName = process.env.DB_NAME || 'gavat';
     console.log(`📦 Creando base de datos: ${dbName}...`);
     
     // Ejecuta la query SQL para crear la base de datos:

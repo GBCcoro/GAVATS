@@ -284,10 +284,11 @@ const startServer = async () => {
     // Esto se debe hacer ANTES de syncDatabase para que las FK se creen correctamente
     initAssociations();
     
-    // Determinar si se deben alterar las tablas existentes
-    // En desarrollo (NODE_ENV=development): alter=true → modifica columnas si cambiaron los modelos
-    // En producción: alter=false → NO toca la estructura de las tablas (protege los datos)
-    const alterTables = process.env.NODE_ENV === 'development';
+    // Determinar si se deben alterar las tablas existentes.
+    // Se deja deshabilitado por defecto para evitar errores de esquema en MySQL
+    // cuando hay tablas ya creadas con una estructura previa.
+    // Si se quiere habilitar explícitamente, definir DB_SYNC_ALTER=true.
+    const alterTables = process.env.DB_SYNC_ALTER === 'true';
     
     // syncDatabase(force, alter):
     //   force=false → NO borra las tablas existentes (true las borraría y recrearía, perdiendo datos)

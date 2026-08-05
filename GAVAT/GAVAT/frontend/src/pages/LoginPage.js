@@ -33,9 +33,9 @@ const LoginPage = () => {
     try {
       const response = await login(email, password);
 
-      if (response.data.usuario.rol === 'cliente') {
+      if (response.usuario.rol === 'cliente') {
         navigate('/catalogo');
-      } else if (response.data.usuario.rol === 'administrador' || response.data.usuario.rol === 'auxiliar') {
+      } else if (response.usuario.rol === 'administrador' || response.usuario.rol === 'auxiliar') {
         navigate('/admin/dashboard');
       }
     } catch (err) {

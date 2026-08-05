@@ -150,7 +150,7 @@ NODE_ENV=development         # Modo de ejecución (development/production)
 # BASE DE DATOS MYSQL
 DB_HOST=localhost            # Host de MySQL (localhost porque es local)
 DB_PORT=3306                 # Puerto de MySQL (3306 es el por defecto)
-DB_NAME=ecommerce_db         # Nombre de la base de datos (se crea automáticamente)
+DB_NAME=gavat               # Nombre de la base de datos (se crea automáticamente)
 DB_USER=root                 # Usuario de MySQL (root es el por defecto en XAMPP)
 DB_PASSWORD=                 # Contraseña de MySQL (vacía por defecto en XAMPP)
 

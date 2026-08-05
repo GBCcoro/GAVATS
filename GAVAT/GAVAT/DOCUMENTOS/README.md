@@ -92,7 +92,8 @@ El archivo `backend/.env` ya está configurado con valores por defecto:
 ```env
 PORT=5000
 DB_HOST=localhost
-DB_NAME=ecommerce_db
+DB_PORT=3306
+DB_NAME=gavat
 DB_USER=root
 DB_PASSWORD=
 JWT_SECRET=mi_clave_secreta_super_segura_2026

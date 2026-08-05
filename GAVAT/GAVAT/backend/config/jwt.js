@@ -30,22 +30,25 @@ require('dotenv').config();
  */
 const generateToken = (payload) => {
   try {
+    const secret = process.env.JWT_SECRET || 'mi_clave_secreta_super_segura_2026';
+    const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
+
+    if (!secret) {
+      throw new Error('JWT_SECRET no definido');
+    }
+
+    if (!expiresIn) {
+      throw new Error('JWT_EXPIRES_IN no definido');
+    }
+
     // jwt.sign() crea un nuevo token JWT y lo firma digitalmente.
     // Recibe 3 parámetros:
     const token = jwt.sign(
-      // 1. payload: objeto con los datos del usuario que se guardarán DENTRO del token.
-      //    Estos datos se pueden leer después al decodificar el token.
-      //    NO incluir datos sensibles como contraseñas (el token es decodificable).
       payload,
-      // 2. secret: clave secreta leída del .env (variable JWT_SECRET).
-      //    Esta clave se usa para "firmar" el token. Solo el servidor la conoce.
-      //    Si alguien modifica el token, la firma no coincidirá y será rechazado.
-      process.env.JWT_SECRET,
-      // 3. options: objeto con opciones adicionales.
-      //    expiresIn: tiempo de vida del token, leído del .env (variable JWT_EXPIRES_IN).
-      //    Ejemplos: '24h' (24 horas), '7d' (7 días), '1h' (1 hora).
-      //    Después de este tiempo, el token expira y el usuario debe hacer login de nuevo.
-      { expiresIn: process.env.JWT_EXPIRES_IN }
+      secret,
+      {
+        expiresIn,
+      }
     );
     
     // Retorna el token generado (cadena como: "eyJhbGciOiJIUzI1NiIs...")
