@@ -1,0 +1,357 @@
+ 
+MANUAL TÉCNICO
+PROYECTO: GAVAT Construcciones Arquitectónicas.
+ 
+ 
+
+INSTRUCCIONES PARA EL USO DE ESTE FORMATO
+
+
+
+1.	Este formato es una plantilla para la realización de Manuales de Usuario para Software.
+2.	La persona que haga uso de esta plantilla podrá eliminar o anexar apartados según sea su criterio.
+3.	Las letras de color azul son indicaciones que se aportan para la buena elaboración del documento, deben ser eliminadas. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+GAVAT Construcciones Arquitectónicas.
+
+
+
+
+MANUAL TÉCNICO 
+1.	Alcance
+El presente Manual Técnico define el alcance de la documentación correspondiente al sistema GAVAT Construcciones Arquitectónicas, proporcionando la información técnica necesaria para comprender la estructura, instalación, configuración, funcionamiento y mantenimiento de la aplicación.
+Este documento está dirigido principalmente a desarrolladores de software, administradores de sistemas, personal de soporte técnico e instructores encargados de la implementación, administración o evaluación del proyecto.
+El manual abarca la descripción de la arquitectura del sistema, los requerimientos de hardware y software, las herramientas empleadas durante el desarrollo, el proceso de instalación y configuración, la estructura de la base de datos, la administración de usuarios, los mecanismos de autenticación y autorización, así como las principales consideraciones técnicas para la operación y el mantenimiento de la plataforma.
+Para una correcta comprensión del contenido, se recomienda que el lector posea conocimientos básicos en desarrollo web, bases de datos relacionales, APIs REST, Node.js, React, Express, MySQL, control de versiones con Git y conceptos generales de arquitectura de software.
+Este documento se limita a la versión actual del proyecto GAVAT y únicamente documenta las funcionalidades, tecnologías y componentes implementados. No contempla módulos futuros, desarrollos experimentales ni características que no formen parte del sistema en su estado actual.
+
+1.1	Objetivos Específicos.
+
+Documentar la arquitectura, estructura y componentes técnicos del sistema GAVAT Construcciones Arquitectónicas.
+
+Describir los requerimientos de hardware y software necesarios para la instalación, configuración y correcto funcionamiento de la aplicación.
+
+Explicar las herramientas, tecnologías y dependencias utilizadas durante el desarrollo del proyecto.
+
+Proporcionar los procedimientos necesarios para la instalación, configuración y puesta en marcha del sistema.
+
+Documentar la estructura de la base de datos, la arquitectura del software y los mecanismos de autenticación y autorización implementados.
+
+Facilitar las actividades de mantenimiento, administración y futuras actualizaciones del sistema mediante una documentación técnica clara y organizada.
+
+Servir como documento de referencia para desarrolladores, administradores de sistemas y personal técnico encargado del soporte e implementación del proyecto
+
+
+2.	Alcance
+El presente Manual Técnico define el alcance de la documentación correspondiente al sistema GAVAT Construcciones Arquitectónicas, proporcionando la información necesaria para comprender su arquitectura, instalación, configuración, funcionamiento y mantenimiento.
+Este documento está dirigido a:
+•	Desarrolladores responsables del mantenimiento, evolución y ampliación del sistema.
+•	Personal técnico encargado de la instalación, configuración y administración de la aplicación.
+•	Administradores de sistemas que gestionen el entorno de ejecución del proyecto.
+•	Instructores y evaluadores que requieran verificar la implementación técnica del sistema.
+Conocimientos básicos en:
+•	Programación con JavaScript.
+•	Desarrollo de aplicaciones con Node.js
+•	Desarrollo de interfaces con React.
+•	Bases de datos relacionales utilizando MySQL.
+•	Sequelize ORM y gestión de modelos de datos.
+•	Consumo y desarrollo de APIs REST.
+•	Autenticación mediante JSON Web Token (JWT).
+•	Manejo de Git, npm y variables de entorno (.env).
+El presente documento se limita a la versión actual del proyecto y únicamente describe las funcionalidades, tecnologías y componentes que se encuentran implementados en el sistema. No contempla desarrollos futuros ni funcionalidades que no formen parte del proyecto GAVAT Construcciones Arquitectónicas.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3.	Requerimientos Técnicos
+En esta sección se describen los requerimientos mínimos de hardware y software necesarios para garantizar la correcta instalación, configuración y funcionamiento del sistema GAVAT Construcciones Arquitectónicas. Estos requerimientos corresponden al entorno de desarrollo y ejecución del proyecto, el cual está desarrollado con Node.js, Express, React y MySQL.
+
+Requerimientos Mínimos del Sistema
+Componente	Requerimiento Mínimo
+Procesador	Intel Core i3 de 2 núcleos o AMD equivalente.
+Memoria RAM	4 GB.
+Disco Duro	10 GB de espacio libre (preferiblemente en unidad SSD).
+Conectividad	Conexión de red local o acceso a Internet para la instalación de dependencias y pruebas del sistema.
+
+Recomendación: Para un mejor rendimiento durante el desarrollo y la ejecución simultánea del frontend, backend y la base de datos, se recomienda utilizar un equipo con procesador de cuatro (4) núcleos, 8 GB de memoria RAM y almacenamiento SSD.
+3.1	Requerimientos Mínimos de Software.
+	Privilegios de Administrador:	Si
+
+
+Requisito	Especificación
+Privilegios de Administrador	Sí. Son necesarios para instalar Node.js, MySQL, Git y demás herramientas requeridas por el proyecto.
+Sistema Operativo	Windows 10 o superior, Ubuntu 20.04 o superior, o macOS 11 o superior.
+Node.js	Versión 18 o superior.
+npm	Versión 9 o superior.
+MySQL	Versión 8.0 o superior.
+Visual Studio Code	Última versión disponible o cualquier IDE compatible con JavaScript.
+Navegador Web	Google Chrome, Microsoft Edge o Mozilla Firefox en su versión más reciente.
+Git	Última versión estable para la gestión del código fuente.
+ 
+
+
+
+4.	Herramientas Utilizadas para el Desarrollo.
+A continuación, se describen las principales herramientas empleadas durante el desarrollo del sistema GAVAT Construcciones Arquitectónicas, así como su función dentro del proyecto.
+4.1 Visual Studio Code
+Descripción: Editor de código fuente utilizado para el desarrollo del frontend y backend del sistema.
+Motivo por el cual fue utilizado: Permitió desarrollar, editar y organizar el código del proyecto, además de facilitar la depuración y el uso de extensiones para tecnologías como JavaScript, React y Node.js.
+4.2 Node.js
+Descripción: Entorno de ejecución de JavaScript utilizado para desarrollar aplicaciones del lado del servidor.
+Motivo por el cual fue utilizado: Permitió ejecutar el backend desarrollado con Express y administrar las dependencias necesarias para el funcionamiento del proyecto.
+4.3 Express.js
+Descripción: Framework para Node.js orientado al desarrollo de aplicaciones web y APIs REST.
+Motivo por el cual fue utilizado: Se utilizó para construir la API REST del sistema, gestionar las rutas, procesar las solicitudes HTTP y conectar el backend con la base de datos.
+4.4 React
+Descripción: Biblioteca de JavaScript para el desarrollo de interfaces de usuario.
+Motivo por el cual fue utilizado: Se empleó para construir el frontend del sistema, permitiendo desarrollar una interfaz dinámica, modular y de fácil mantenimiento.
+4.5 MySQL
+Descripción: Sistema de gestión de bases de datos relacional.
+Motivo por el cual fue utilizado: Se utilizó para almacenar y administrar la información del sistema, como usuarios, productos, categorías, pedidos, comentarios y facturas.
+4.6 Sequelize
+Descripción: ORM (Object Relational Mapping) para Node.js.
+Motivo por el cual fue utilizado: Permitió gestionar la comunicación entre la aplicación y la base de datos MySQL mediante modelos, relaciones y consultas estructuradas.
+4.7 Git y GitHub
+Descripción: Herramientas para el control de versiones y almacenamiento del código fuente.
+Motivo por el cual fue utilizado: Permitieron administrar los cambios realizados durante el desarrollo del proyecto y mantener un respaldo organizado del código.
+4.8 Bootstrap
+Descripción: Framework CSS para el diseño de interfaces web responsivas.
+Motivo por el cual fue utilizado: Se utilizó para diseñar una interfaz moderna, adaptable y con componentes reutilizables que mejoran la experiencia del usuario.
+4.9 Postman
+Descripción: Herramienta para realizar pruebas sobre servicios web y APIs REST.
+Motivo por el cual fue utilizado: Se empleó para verificar el funcionamiento de los endpoints del backend, validar las respuestas del servidor y realizar pruebas durante el desarrollo.
+
+
+5.	Instalación
+En este apartado se debe detallar el proceso, paso a paso, de la instalación, las recomendaciones y si se considera necesario, agregar capturas de pantalla para un mejor entendimiento
+.
+
+6.	Configuración
+En esta sección se describen las configuraciones necesarias para el correcto funcionamiento del sistema GAVAT Construcciones Arquitectónicas. Estas configuraciones permiten establecer la conexión con la base de datos, definir las variables de entorno, ejecutar el servidor backend y el frontend, y garantizar el adecuado funcionamiento de los mecanismos de autenticación y comunicación entre los diferentes componentes de la aplicación.
+6.1 Configuración de las variables de entorno
+El sistema utiliza archivos de configuración. env para almacenar parámetros necesarios para su funcionamiento, evitando que información sensible quede incluida directamente en el código fuente.
+Entre las variables configuradas se encuentran:
+Variable	Descripción
+DB_HOST	Dirección del servidor donde se encuentra la base de datos.
+DB_PORT	Puerto utilizado por MySQL.
+DB_NAME	Nombre de la base de datos del proyecto.
+DB_USER	Usuario de acceso a la base de datos.
+DB_PASSWORD	Contraseña del usuario de la base de datos.
+JWT_SECRET	Clave utilizada para generar y validar los tokens JWT.
+REACT_APP_API_URL	Dirección de la API consumida por el frontend.
+
+6.2 Configuración de la base de datos
+El sistema utiliza MySQL como gestor de base de datos y Sequelize como ORM para administrar la comunicación entre la aplicación y la base de datos.
+Antes de ejecutar el sistema se debe verificar que:
+•	La base de datos exista.
+•	Las credenciales configuradas en el archivo. env sean correctas.
+•	El servidor MySQL se encuentre en ejecución.
+•	La conexión entre la aplicación y la base de datos sea exitosa.
+6.3 Configuración del servidor Backend
+El backend está desarrollado con Node.js y Express.
+Durante su configuración se establecen aspectos como:
+•	Puerto de ejecución del servidor.
+•	Configuración de CORS.
+•	Procesamiento de solicitudes JSON.
+•	Manejo de archivos mediante Multer.
+•	Configuración de rutas de la API REST.
+•	Manejo centralizado de errores.
+6.4 Configuración del Frontend
+El frontend desarrollado en React consume la API REST del backend mediante la dirección configurada en la variable:
+REACT_APP_API_URL
+Esta configuración permite establecer la comunicación entre la interfaz de usuario y los servicios del servidor.
+6.5 Configuración de autenticación
+El sistema implementa autenticación mediante JSON Web Token (JWT).
+Después de iniciar sesión correctamente, el servidor genera un token que identifica al usuario autenticado. Este token es enviado en cada solicitud protegida y es validado por los middlewares de autenticación antes de permitir el acceso a los recursos del sistema.
+6.6 Comandos utilizados
+Durante el desarrollo y la ejecución del sistema se utilizan los siguientes comandos:
+Comando	Descripción	Cuándo utilizarlo
+npm install	Instala todas las dependencias del proyecto.	La primera vez que se descarga el proyecto o cuando se agregan nuevas dependencias.
+npm start	Ejecuta la aplicación en modo de desarrollo.	Para iniciar el backend o el frontend según la carpeta donde se ejecute.
+npm test	Ejecuta las pruebas configuradas en el proyecto.	Durante la verificación del funcionamiento del sistema, si existen pruebas implementadas.
+
+6.7 Recomendaciones de configuración
+Para garantizar el correcto funcionamiento del sistema se recomienda:
+•	Verificar que Node.js y MySQL se encuentren correctamente instalados.
+•	Configurar adecuadamente las variables de entorno antes de iniciar la aplicación.
+•	Mantener actualizadas las dependencias del proyecto.
+•	Verificar que el backend y el frontend utilicen la misma dirección de la API.
+•	Comprobar que la base de datos se encuentre disponible antes de ejecutar el servidor.
+•	No compartir información sensible contenida en los archivos. env.
+
+
+7.	Diseño de la Arquitectura Física.
+7.1 Descripción de la arquitectura física
+El sistema GAVAT Construcciones Arquitectónicas está basado en una arquitectura cliente-servidor de tres capas, compuesta por un frontend desarrollado en React, un backend implementado con Node.js y Express, y una base de datos MySQL administrada mediante Sequelize ORM.
+Durante el desarrollo, todos los componentes se ejecutan en un entorno local, comunicándose mediante el protocolo HTTP a través de los puertos configurados para cada servicio. El frontend consume los servicios REST del backend, mientras que este interactúa con la base de datos para realizar las operaciones de almacenamiento y consulta de la información.
+7.2 Nombre de los equipos
+Equipo	Descripción
+Equipo Cliente	Computador desde el cual el usuario accede a la aplicación mediante un navegador web.
+Servidor Frontend	Aplicación desarrollada en React encargada de la interfaz gráfica del sistema.
+Servidor Backend	Aplicación desarrollada con Node.js y Express que procesa la lógica de negocio y expone la API REST.
+Servidor de Base de Datos	Motor MySQL encargado del almacenamiento de la información del sistema.
+7.3 Ubicación física
+
+Elemento	Ubicación
+Frontend	Equipo del desarrollador (entorno local).
+Backend	Equipo del desarrollador (entorno local).
+Base de datos	Equipo del desarrollador (MySQL local).
+
+Nota: Durante el desarrollo del proyecto no se implementó un ambiente de producción; todos los componentes funcionan en un entorno local.
+7.4 Direcciones IP asignadas
+Componente	Dirección
+Frontend	http://localhost:3000 (o el puerto real de tu proyecto)
+Backend	http://localhost:5000 (o el puerto real que utiliza tu servidor)
+Base de datos	127.0.0.1 o localhost
+
+7.5 Puertos TCP/UDP necesarios
+
+Puertos y Protocolos de Red
+Servicio	Puerto	Protocolo
+Frontend React	3000	TCP
+Backend Express	5000	TCP
+MySQL	3306	TCP
+
+7.6 Dependencias con otros sistemas
+El funcionamiento del sistema depende de las siguientes tecnologías:
+•	React. 
+•	Node.js. 
+•	Express. 
+•	Sequelize ORM. 
+•	MySQL. 
+•	Axios. 
+•	JSON Web Token (JWT). 
+•	Multer. 
+•	Bootstrap. 
+7.7 Interrelación de conexión entre los equipos
+El flujo de comunicación del sistema es el siguiente:
+1.	El usuario accede a la aplicación desde un navegador web. 
+2.	El navegador carga el frontend desarrollado en React. 
+3.	El frontend envía solicitudes HTTP mediante Axios al backend. 
+4.	El backend procesa la solicitud utilizando Express y las reglas de negocio. 
+5.	Sequelize se comunica con MySQL para consultar o modificar la información. 
+6.	La base de datos devuelve los resultados al backend. 
+7.	El backend responde al frontend en formato JSON. 
+8.	El frontend presenta la información al usuario. 
+ 
+7.8 Arquitectura por niveles
+El sistema implementa una arquitectura por capas compuesta por:
+Capa	Función
+Presentación	Interfaz gráfica desarrollada en React.
+Lógica de negocio	Backend desarrollado con Node.js y Express.
+Acceso a datos	Sequelize ORM.
+Persistencia	Base de datos MySQL.
+
+
+8.	Usuarios
+En este capítulo se describen los diferentes tipos de usuarios involucrados en el funcionamiento del sistema GAVAT Construcciones Arquitectónicas, incluyendo los usuarios de la base de datos, del sistema operativo y los roles implementados dentro de la aplicación.
+8.1 Usuarios de Base de Datos
+El sistema utiliza MySQL como gestor de base de datos y Sequelize como ORM para administrar la información de la aplicación.
+Campo	Información
+Nombre del usuario	root
+Descripción / Propósito	Usuario utilizado por el backend para establecer la conexión con la base de datos MySQL y ejecutar las operaciones de consulta, inserción, actualización y eliminación de información.
+Grupos a los que pertenece	No aplica. El proyecto no define grupos específicos para el usuario de la base de datos.
+Privilegios generales a nivel de base de datos	Los privilegios dependen de la configuración local de MySQL. El proyecto no define permisos específicos dentro del código.
+Privilegios sobre objetos (tablas, vistas, triggers, etc.)	El proyecto accede a las tablas de la base de datos mediante Sequelize. No se implementan permisos específicos sobre tablas, vistas o triggers desde el código.
+Nota: El usuario root se encuentra configurado en el archivo de entorno (.env). Los privilegios reales dependen de la configuración del servidor MySQL.
+
+
+
+
+
+
+
+
+
+
+8.2 Usuarios del Sistema Operativo
+El proyecto no requiere un usuario específico del sistema operativo. La aplicación se ejecuta con el usuario que inicia los servicios del backend y frontend en el entorno de desarrollo.
+Campo	Información
+Nombre del usuario	Usuario local del sistema operativo (Windows/Linux).
+Descripción / Propósito	Ejecutar los servicios del backend, frontend y la base de datos durante el desarrollo y las pruebas del sistema.
+Grupos a los que pertenece	Depende de la configuración del sistema operativo. El proyecto no define grupos específicos.
+Privilegios sobre carpetas	Permisos de lectura sobre los archivos del proyecto y permisos de escritura sobre las carpetas uploads y facturas, utilizadas para almacenar imágenes y archivos PDF generados por la aplicación.
+
+Nota: El proyecto no define un usuario del sistema operativo específico; la ejecución depende del usuario que inicia los servicios de Node.js y MySQL.
+8.3 Usuarios de la Aplicación
+El sistema implementa tres roles de usuario, cada uno con permisos específicos para acceder a las diferentes funcionalidades de la aplicación.
+Rol: Administrador
+Campo	Información
+Nombre del usuario	Administrador
+Descripción / Propósito	Gestionar y administrar todos los módulos del sistema.
+Grupos a los que pertenece	Rol Administrador.
+Privilegios dentro de la aplicación	Acceso completo al panel administrativo, gestión de categorías, subcategorías, productos, usuarios, pedidos, comentarios y facturas.
+
+Rol: Auxiliar
+Campo	Información
+Nombre del usuario	Auxiliar
+Descripción / Propósito	Apoyar la gestión operativa del sistema con permisos limitados.
+Grupos a los que pertenece	Rol Auxiliar.
+Privilegios dentro de la aplicación	Puede gestionar productos, categorías, pedidos, comentarios y facturas, pero no tiene permisos para realizar operaciones restringidas como la gestión completa de usuarios o determinadas eliminaciones.
+
+Rol: Cliente
+Campo	Información
+Nombre del usuario	Cliente
+Descripción / Propósito	Usuario final que utiliza la plataforma para consultar productos y realizar compras.
+Grupos a los que pertenece	Rol Cliente.
+Privilegios dentro de la aplicación	Consultar el catálogo, administrar el carrito de compras, realizar pedidos, consultar facturas, gestionar su perfil y publicar comentarios sobre productos adquiridos.
+
+
+
+
+
+9.	Contingencias y soluciones.
+La tabla siguiente resume las principales contingencias que pueden presentarse durante la instalación, configuración y operación del sistema GAVAT Construcciones Arquitectónicas, así como sus posibles causas, consecuencias y soluciones recomendadas. La información se encuentra basada en la implementación actual del backend, frontend y base de datos del proyecto.
+
+Contingencia o problema	Posible causa	Consecuencia en el sistema	Solución recomendada
+No es posible instalar dependencias del backend o del frontend	Node.js o npm no están instalados correctamente, o las dependencias del proyecto no han sido descargadas.	Los comandos npm install o los scripts de arranque fallan y el proyecto no puede ejecutarse.	Instalar Node.js LTS compatible con el proyecto, verificar npm --version y ejecutar npm install en el backend y en el frontend.
+El backend no inicia por variables de entorno incompletas	El archivo. env del backend no existe o carece de variables como PORT, DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, JWT_SECRET o JWT_EXPIRES_IN.	El servidor puede arrancar con valores no esperados o fallar al intentar conectar a la base de datos o generar tokens.	Crear o corregir el archivo. env del backend con las variables requeridas y reiniciar el servicio.
+No se puede conectar con MySQL	MySQL no está en ejecución, el puerto 3306 está ocupado o las credenciales del archivo. env son incorrectas.	El backend no puede sincronizar los modelos ni iniciar correctamente y las operaciones de negocio quedan bloqueadas.	Verificar que MySQL/XAMPP esté activo, confirmar el puerto y las credenciales en. env y revisar los mensajes de conexión del servidor.
+El backend no arranca porque el puerto 5000 está ocupado	Otra aplicación o una instancia previa del backend ya está utilizando el puerto configurado.	El servidor no queda disponible en http://localhost:5000 y el frontend no podrá consumir la API.	Cerrar la instancia anterior, cambiar el puerto en .env o liberar el puerto ocupado antes de reiniciar.
+El frontend no se comunica con el backend	La variable REACT_APP_API_URL apunta a una URL incorrecta o el backend no está en ejecución.	Las pantallas muestran errores de red o fallos al cargar productos, usuarios y pedidos.	Ajustar REACT_APP_API_URL en el archivo. env del frontend a la URL real del backend y reiniciar el frontend.
+El frontend no inicia porque el puerto 3000 está ocupado	Otro proceso ya está utilizando el puerto por defecto de React.	La aplicación no queda accesible en http://localhost:3000.	Cerrar el proceso que ocupa el puerto o cambiar el puerto de ejecución del frontend.
+Fallan las peticiones protegidas por JWT	El token no se envía en el encabezado Authorization, ha expirado o la clave secreta JWT_SECRET no coincide con la configuración esperada.	El sistema responde con errores 401 Unauthorized y el usuario no puede ingresar ni consultar datos protegidos.	Iniciar sesión nuevamente para obtener un token válido, verificar que el encabezado sea Bearer <token> y revisar la configuración de JWT_SECRET y JWT_EXPIRES_IN.
+No se pueden subir imágenes de productos	El archivo no tiene un tipo MIME permitido, supera el límite de tamaño configurado o no llega correctamente al middleware Multer.	La creación o edición de productos con imagen falla y el usuario recibe un error de validación.	Usar únicamente archivos de imagen con tipos jpg, jpeg, png o gif, mantener el tamaño dentro del límite configurado y enviar el archivo en el campo esperado por el formulario.
+No se generan facturas PDF	La librería pdfkit no está disponible, el directorio facturas/ no puede escribirse o el proceso no tiene permisos de escritura.	La factura puede crearse en la base de datos, pero el PDF no queda disponible para descarga.	Verificar que las dependencias del backend estén instaladas, revisar que exista el directorio facturas/ y que el proceso de Node tenga permisos para escribir en él.
+No se guardan imágenes ni PDFs por problemas de permisos de carpeta	El usuario que ejecuta Node.js no tiene permisos de escritura sobre las carpetas uploads/ o facturas/, o dichas carpetas no existen en el sistema.	Las subidas de imágenes y la generación de PDFs fallan o quedan incompletas.	Crear las carpetas necesarias y asignar permisos de escritura al usuario que ejecuta la aplicación. (Nota: Esta contingencia depende del sistema operativo y del entorno de ejecución).
+Los cambios en variables de entorno no se reflejan inmediatamente	React y el backend cargan las variables al iniciar el proceso, por lo que los cambios no se aplican hasta reiniciar.	El sistema continúa utilizando la configuración anterior y pueden aparecer errores de conexión o rutas incorrectas.	Reiniciar el proceso del backend y del frontend después de modificar los archivos. env.
+
