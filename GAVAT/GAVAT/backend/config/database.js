@@ -160,6 +160,10 @@ const cleanupOrphanedRelations = async () => {
  */
 const syncDatabase = async (force = false, alter = false) => {
   try {
+    // Desabilitar restricciones de clave foránea temporalmente para evitar errores de FK
+    // cuando se crean las tablas en un orden no determinista
+    await sequelize.query('SET FOREIGN_KEY_CHECKS=0');
+
     if (alter) {
       await cleanupOrphanedRelations();
     }
@@ -169,6 +173,9 @@ const syncDatabase = async (force = false, alter = false) => {
     // { alter: true } = ALTER TABLE (modifica columnas sin borrar datos)
     // { } (sin opciones) = CREATE TABLE IF NOT EXISTS (solo crea si no existe)
     await sequelize.sync({ force, alter });
+    
+    // Volver a habilitar las restricciones de clave foránea
+    await sequelize.query('SET FOREIGN_KEY_CHECKS=1');
     
     // Muestra mensaje según el tipo de sincronización realizada
     if (force) {
@@ -182,6 +189,12 @@ const syncDatabase = async (force = false, alter = false) => {
     return true;
   } catch (error) {
     console.error('❌ Error al sincronizar la base de datos:', error.message);
+    // Asegurarse de que las restricciones de FK se vuelven a habilitar incluso si hay error
+    try {
+      await sequelize.query('SET FOREIGN_KEY_CHECKS=1');
+    } catch (fkError) {
+      console.error('⚠️ Advertencia: No se pudieron restaurar las restricciones de FK:', fkError.message);
+    }
     return false;
   }
 };
