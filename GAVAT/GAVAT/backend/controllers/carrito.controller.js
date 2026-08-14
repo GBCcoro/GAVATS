@@ -122,7 +122,7 @@ const agregarAlCarrito = async (req, res) => {
     
     // VALIDACIÓN 2: Verifica que la cantidad sea un número válido >= 1
     // parseInt convierte string a número entero: "3" -> 3
-    const cantidadNum = parseInt(cantidad);
+    const cantidadNum = Number.parseInt(cantidad);
     if (cantidadNum < 1) {
       return res.status(400).json({
         success: false,
