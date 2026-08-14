@@ -34,7 +34,7 @@ const cors = require('cors');
 // Importa 'path' desde Node.js (módulo nativo, no necesita npm install)
 // path proporciona utilidades para trabajar con rutas de archivos del sistema operativo
 // Se usa aquí para construir la ruta absoluta de la carpeta 'uploads/'
-const path = require('path');
+const path = require('node:path');
 
 // Ejecuta dotenv.config() para cargar las variables del archivo .env
 // Lee el archivo .env en la raíz del backend y las pone en process.env
@@ -65,10 +65,24 @@ const { runSeeders } = require('./seeders/adminSeeder');
 // 'app' es el objeto principal del servidor: se le agregan middlewares, rutas y se pone a escuchar
 const app = express();
 
+// Deshabilita el header X-Powered-By que revela la versión de Express (medida de seguridad)
+app.disable('x-powered-by');
+
 // Lee el puerto desde la variable de entorno PORT (.env) o usa 5000 como valor por defecto
 // process.env.PORT viene del archivo .env: PORT=5000
 // El operador || (OR) usa 5000 si PORT no está definido
 const PORT = process.env.PORT || 5000;
+
+const sanitizeForLog = (value) => {
+  if (value === null || value === undefined) {
+    return 'undefined';
+  }
+
+  return String(value)
+    .replace(/[\r\n\u2028\u2029]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+};
 
 // ==========================================
 // MIDDLEWARES GLOBALES
@@ -79,11 +93,11 @@ const PORT = process.env.PORT || 5000;
 // CORS → Configura qué dominios pueden hacer peticiones al backend
 // Sin este middleware, el navegador bloquea las peticiones del frontend (localhost:3000)
 // porque el backend está en un puerto diferente (localhost:5000)
-const allowedOrigins = [
+const allowedOrigins = new Set([
   ...(process.env.FRONTEND_URL || 'http://localhost:3000').split(',').map(url => url.trim()).filter(Boolean),
   'http://localhost:3001',
   'http://localhost:3002'
-].filter((value, index, self) => self.indexOf(value) === index);
+]);
 
 const isLocalhostOrigin = (origin) => {
   if (!origin) return false;
@@ -96,7 +110,7 @@ app.use(cors({
     if (!origin) {
       return callback(null, true);
     }
-    if (allowedOrigins.includes(origin) || (process.env.NODE_ENV === 'development' && isLocalhostOrigin(origin))) {
+    if (allowedOrigins.has(origin) || (process.env.NODE_ENV === 'development' && isLocalhostOrigin(origin))) {
       return callback(null, true);
     }
     return callback(new Error(`Origin ${origin} no autorizado por CORS`));
@@ -107,7 +121,7 @@ app.use(cors({
   credentials: true,
   
   // methods → lista de métodos HTTP que el frontend puede usar
-  // GET (leer), POST (crear), PUT (actualizar todo), DELETE (eliminar), PATCH (actualizar parcial)
+  // GET (leer), POST (crear), PUT (actualizar), DELETE (eliminar), PATCH (actualizar parcial)
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   
   // allowedHeaders → headers que el frontend puede enviar en las peticiones
@@ -142,8 +156,9 @@ if (process.env.NODE_ENV === 'development') {
   // app.use() con una función (req, res, next) es un middleware personalizado
   app.use((req, res, next) => {
     // Imprime el método HTTP (GET, POST, etc.) y la ruta de la petición
-    console.log(`📨 ${req.method} ${req.path}`);
-    
+    // Se sanitiza para prevenir log forging por inyección de saltos de línea
+    console.log(`📨 ${sanitizeForLog(req.method)} ${sanitizeForLog(req.path)}`);
+
     // next() → OBLIGATORIO en middlewares: pasa la petición al siguiente middleware/ruta
     // Sin next(), la petición se quedaría "colgada" aquí y el cliente nunca recibiría respuesta
     next();
@@ -242,8 +257,9 @@ app.use((req, res) => {
 // Si un controlador hace throw new Error() o next(error), llega aquí
 app.use((err, req, res, next) => {
   // Imprime el error en la consola del servidor para depuración
-  console.error('❌ Error:', err.message);
-  
+  // Se sanitiza para evitar inyección de nuevas líneas en los logs
+  console.error('❌ Error:', sanitizeForLog(err.message));
+
   // Manejo especial para errores de Multer (subida de archivos)
   // MulterError ocurre cuando: el archivo es muy grande, formato no permitido, etc.
   if (err.name === 'MulterError') {
@@ -269,7 +285,7 @@ app.use((err, req, res, next) => {
 // ==========================================
 
 /**
- * startServer() → Función asíncrona principal que arranca todo el backend
+ * startServer() → Función asíncrona principal que arranca el backend
  * Se ejecuta al final del archivo. Sigue estos pasos en orden:
  *   1. Prueba la conexión a MySQL (testConnection)
  *   2. Inicializa las asociaciones entre modelos (initAssociations)
@@ -368,7 +384,7 @@ process.on('unhandledRejection', (err) => {
 // ==========================================
 // INICIAR EL SERVIDOR
 // ==========================================
-// Llama a la función startServer() para comenzar todo el proceso de arranque
+// Llama a la función startServer() para comenzar el proceso de arranque
 // Esta es la línea que realmente "enciende" el servidor al ejecutar: node server.js
 // Solo se ejecuta cuando el archivo es corrido directamente, no cuando se importa en tests
 if (require.main === module) {
@@ -379,3 +395,4 @@ if (require.main === module) {
 // En los tests se hace: const request = require('supertest')(app) sin necesidad de app.listen()
 // module.exports → sistema de exportación de Node.js (CommonJS)
 module.exports = app;
+module.exports.sanitizeForLog = sanitizeForLog;

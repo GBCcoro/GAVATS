@@ -239,70 +239,90 @@ const crearSubcategoria = async (req, res) => {
  * Ruta: PUT /api/admin/subcategorias/:id
  * Body JSON: { nombre, descripcion, categoriaId, activo }
  */
+const validarCategoriaDestino = async (categoriaId, categoriaActual) => {
+  if (!categoriaId || categoriaId === categoriaActual) {
+    return null;
+  }
+
+  const nuevaCategoria = await Categoria.findByPk(categoriaId);
+
+  if (!nuevaCategoria) {
+    return {
+      status: 404,
+      message: `No existe una categoría con ID ${categoriaId}`
+    };
+  }
+
+  if (!nuevaCategoria.activo) {
+    return {
+      status: 400,
+      message: `La categoría "${nuevaCategoria.nombre}" está inactiva`
+    };
+  }
+
+  return null;
+};
+
+const validarNombreDuplicado = async (nombre, categoriaId, subcategoriaId) => {
+  if (!nombre || nombre === undefined) {
+    return null;
+  }
+
+  const subcategoriaConMismoNombre = await Subcategoria.findOne({
+    where: {
+      nombre,
+      categoriaId
+    }
+  });
+
+  if (subcategoriaConMismoNombre && subcategoriaConMismoNombre.id !== subcategoriaId) {
+    return {
+      status: 400,
+      message: `Ya existe una subcategoría con el nombre "${nombre}" en esta categoría`
+    };
+  }
+
+  return null;
+};
+
 const actualizarSubcategoria = async (req, res) => {
   try {
-    const { id } = req.params;   // ID desde la URL
+    const { id } = req.params;
     const { nombre, descripcion, categoriaId, activo } = req.body;
-    
-    // Busca la subcategoría por su ID
+
     const subcategoria = await Subcategoria.findByPk(id);
-    
+
     if (!subcategoria) {
       return res.status(404).json({
         success: false,
         message: 'Subcategoría no encontrada'
       });
     }
-    
-    // VALIDACIÓN: Si se cambia la categoría padre, verifica que la nueva exista y esté activa
-    if (categoriaId && categoriaId !== subcategoria.categoriaId) {
-      const nuevaCategoria = await Categoria.findByPk(categoriaId);
-      
-      if (!nuevaCategoria) {
-        return res.status(404).json({
-          success: false,
-          message: `No existe una categoría con ID ${categoriaId}`
-        });
-      }
-      
-      if (!nuevaCategoria.activo) {
-        return res.status(400).json({
-          success: false,
-          message: `La categoría "${nuevaCategoria.nombre}" está inactiva`
-        });
-      }
-    }
-    
-    // VALIDACIÓN: Si se cambia el nombre, verifica que no exista otra con ese nombre en la categoría.
-    // Usa la nueva categoría si se envió, o la actual.
-    if (nombre && nombre !== subcategoria.nombre) {
-      const categoriaFinal = categoriaId || subcategoria.categoriaId;
-      
-      const subcategoriaConMismoNombre = await Subcategoria.findOne({
-        where: { 
-          nombre,
-          categoriaId: categoriaFinal
-        }
+
+    const errorCategoria = await validarCategoriaDestino(categoriaId, subcategoria.categoriaId);
+    if (errorCategoria) {
+      return res.status(errorCategoria.status).json({
+        success: false,
+        message: errorCategoria.message
       });
-      
-      if (subcategoriaConMismoNombre) {
-        return res.status(400).json({
-          success: false,
-          message: `Ya existe una subcategoría con el nombre "${nombre}" en esta categoría`
-        });
-      }
     }
-    
-    // Actualiza SOLO los campos que se enviaron
+
+    const categoriaFinal = categoriaId || subcategoria.categoriaId;
+    const errorNombre = await validarNombreDuplicado(nombre, categoriaFinal, subcategoria.id);
+    if (errorNombre) {
+      return res.status(errorNombre.status).json({
+        success: false,
+        message: errorNombre.message
+      });
+    }
+
     if (nombre !== undefined) subcategoria.nombre = nombre;
     if (descripcion !== undefined) subcategoria.descripcion = descripcion;
     if (categoriaId !== undefined) subcategoria.categoriaId = categoriaId;
     if (activo !== undefined) subcategoria.activo = activo;
-    
-    // save() ejecuta UPDATE en la BD. También dispara hooks del modelo.
+
     await subcategoria.save();
-    
-    // Recarga con los datos de la categoría padre actualizados
+
     await subcategoria.reload({
       include: [{
         model: Categoria,
@@ -310,8 +330,7 @@ const actualizarSubcategoria = async (req, res) => {
         attributes: ['id', 'nombre']
       }]
     });
-    
-    // Responde con la subcategoría actualizada
+
     res.json({
       success: true,
       message: 'Subcategoría actualizada exitosamente',
@@ -319,10 +338,10 @@ const actualizarSubcategoria = async (req, res) => {
         subcategoria
       }
     });
-    
+
   } catch (error) {
     console.error('Error en actualizarSubcategoria:', error);
-    
+
     if (error.name === 'SequelizeValidationError') {
       return res.status(400).json({
         success: false,
@@ -330,7 +349,7 @@ const actualizarSubcategoria = async (req, res) => {
         errors: error.errors.map(e => e.message)
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Error al actualizar subcategoría',

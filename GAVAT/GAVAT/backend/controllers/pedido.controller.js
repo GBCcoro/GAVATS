@@ -135,7 +135,7 @@ const crearPedido = async (req, res) => {
       }
       
       // Suma al total del pedido: precioUnitario × cantidad
-      totalPedido += parseFloat(item.precioUnitario) * item.cantidad;
+      totalPedido += Number.parseFloat(item.precioUnitario) * item.cantidad;
     }
     
     // Si hubo errores de validación en algún producto, revierte y muestra todos los errores
@@ -171,7 +171,7 @@ const crearPedido = async (req, res) => {
         productoId: producto.id,                              // FK al producto
         cantidad: item.cantidad,                              // Cantidad solicitada
         precioUnitario: item.precioUnitario,                  // Precio al momento de la compra
-        subtotal: parseFloat(item.precioUnitario) * item.cantidad  // Subtotal de este item
+        subtotal: Number.parseFloat(item.precioUnitario) * item.cantidad  // Subtotal de este item
       }, { transaction: t });
       
       detallesPedido.push(detalle);   // Agrega al array de detalles
@@ -251,7 +251,7 @@ const getMisPedidos = async (req, res) => {
     if (estado) where.estado = estado;
     
     // Calcula el offset para paginación
-    const offset = (parseInt(pagina) - 1) * parseInt(limite);
+    const offset = (Number.parseInt(pagina, 10) - 1) * Number.parseInt(limite, 10);
     
     // Consulta pedidos con paginación.
     // findAndCountAll retorna { count: total, rows: registros }
@@ -268,7 +268,7 @@ const getMisPedidos = async (req, res) => {
           }]
         }
       ],
-      limit: parseInt(limite),
+      limit: Number.parseInt(limite, 10),
       offset,
       order: [['createdAt', 'DESC']]    // Más recientes primero
     });
@@ -280,9 +280,9 @@ const getMisPedidos = async (req, res) => {
         pedidos,
         paginacion: {
           total: count,
-          pagina: parseInt(pagina),
-          limite: parseInt(limite),
-          totalPaginas: Math.ceil(count / parseInt(limite))
+          pagina: Number.parseInt(pagina, 10),
+          limite: Number.parseInt(limite, 10),
+          totalPaginas: Math.ceil(count / Number.parseInt(limite, 10))
         }
       }
     });
@@ -483,7 +483,7 @@ const getAllPedidos = async (req, res) => {
     if (estado) where.estado = estado;           // Filtro por estado
     if (usuarioId) where.usuarioId = usuarioId;  // Filtro por usuario específico
     
-    const offset = (parseInt(pagina) - 1) * parseInt(limite);
+    const offset = (Number.parseInt(pagina, 10) - 1) * Number.parseInt(limite, 10);
     
     // Consulta todos los pedidos con datos del usuario y detalles
     const { count, rows: pedidos } = await Pedido.findAndCountAll({
@@ -504,7 +504,7 @@ const getAllPedidos = async (req, res) => {
           }]
         }
       ],
-      limit: parseInt(limite),
+      limit: Number.parseInt(limite, 10),
       offset,
       order: [['createdAt', 'DESC']]     // Más recientes primero
     });
@@ -516,9 +516,9 @@ const getAllPedidos = async (req, res) => {
         pedidos,
         paginacion: {
           total: count,
-          pagina: parseInt(pagina),
-          limite: parseInt(limite),
-          totalPaginas: Math.ceil(count / parseInt(limite))
+          pagina: Number.parseInt(pagina),
+          limite: Number.parseInt(limite),
+          totalPaginas: Math.ceil(count / Number.parseInt(limite))
         }
       }
     });
@@ -632,7 +632,7 @@ const getEstadisticasPedidos = async (req, res) => {
   try {
     const { Op, fn, col } = require('sequelize');
     const { desde, hasta, limite = 10 } = req.query;
-    const limiteNum = parseInt(limite, 10) || 10;
+    const limiteNum = Number.parseInt(limite, 10) || 10;
     const filtrosFecha = {};
 
     if (desde) {
@@ -803,31 +803,31 @@ const getEstadisticasPedidos = async (req, res) => {
         ventasUltimos30Dias: parseFloat(ventasUltimos30Dias).toFixed(2),
         pedidosPorEstado: pedidosPorEstadoRaw.map((p) => ({
           estado: p.estado,
-          cantidad: parseInt(p.getDataValue('cantidad')),
+          cantidad: Number.parseInt(p.getDataValue('cantidad'), 10),
           totalVentas: parseFloat(p.getDataValue('totalVentas') || 0).toFixed(2)
         })),
         ventasPorPeriodo: pedidosPorPeriodoRaw.map((item) => ({
           fecha: item.getDataValue('fecha'),
-          cantidadPedidos: parseInt(item.getDataValue('cantidadPedidos')),
+          cantidadPedidos: Number.parseInt(item.getDataValue('cantidadPedidos'), 10),
           totalVentas: parseFloat(item.getDataValue('totalVentas') || 0).toFixed(2)
         })),
         productosMasVendidos: productosMasVendidosRaw.map((item) => ({
           productoId: item.productoId,
           nombre: item.producto?.nombre || 'Producto desconocido',
-          unidadesVendidas: parseInt(item.getDataValue('unidadesVendidas')),
+          unidadesVendidas: Number.parseInt(item.getDataValue('unidadesVendidas'), 10),
           ventasTotales: parseFloat(item.getDataValue('ventasTotales') || 0).toFixed(2)
         })),
         categoriasTop: categoriasTopRaw.map((item) => ({
           categoriaId: item.getDataValue('categoriaId'),
           categoriaNombre: item.getDataValue('categoriaNombre'),
-          unidadesVendidas: parseInt(item.getDataValue('unidadesVendidas')),
+          unidadesVendidas: Number.parseInt(item.getDataValue('unidadesVendidas'), 10),
           ventasTotales: parseFloat(item.getDataValue('ventasTotales') || 0).toFixed(2)
         })),
         clientesTop: clientesTopRaw.map((item) => ({
           usuarioId: item.usuarioId,
           nombre: item.usuario?.nombre || 'Cliente desconocido',
           email: item.usuario?.email || null,
-          ordenes: parseInt(item.getDataValue('ordenes')),
+          ordenes: Number.parseInt(item.getDataValue('ordenes'), 10),
           totalComprado: parseFloat(item.getDataValue('totalComprado') || 0).toFixed(2)
         }))
       }

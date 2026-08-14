@@ -19,11 +19,11 @@ const Subcategoria = require('../models/Subcategoria');
 
 // 'path' es un módulo nativo de Node.js para manejar rutas de archivos.
 // Se usa para construir la ruta completa de las imágenes en el disco.
-const path = require('path');
+const path = require('node:path');
 
 // 'fs.promises' es el módulo nativo de Node.js para manejar archivos de forma asíncrona.
 // Se usa para eliminar imágenes del disco (unlink).
-const fs = require('fs').promises;
+const fs = require('node:fs').promises;
 
 /**
  * Obtener todos los productos (admin)
@@ -69,7 +69,7 @@ const getProductos = async (req, res) => {
     }
     
     // Calcula el offset para paginación (cuántos registros saltar)
-    const offset = (parseInt(pagina) - 1) * parseInt(limite);
+    const offset = (Number.parseInt(pagina) - 1) * Number.parseInt(limite);
     
     // Opciones completas de la consulta Sequelize
     const opciones = {
@@ -86,7 +86,7 @@ const getProductos = async (req, res) => {
           attributes: ['id', 'nombre']     // Solo trae id y nombre de la subcategoría
         }
       ],
-      limit: parseInt(limite),  // Máximo de registros
+      limit: Number.parseInt(limite),  // Máximo de registros
       offset,                   // Registros a saltar
       order: [['nombre', 'ASC']]  // Ordenar alfabéticamente A-Z
     };
@@ -101,9 +101,9 @@ const getProductos = async (req, res) => {
         productos,
         paginacion: {
           total: count,                     // Total de productos que coinciden
-          pagina: parseInt(pagina),
-          limite: parseInt(limite),
-          totalPaginas: Math.ceil(count / parseInt(limite))  // Redondea hacia arriba
+          pagina: Number.parseInt(pagina),
+          limite: Number.parseInt(limite),
+          totalPaginas: Math.ceil(count / Number.parseInt(limite))  // Redondea hacia arriba
         }
       }
     });
@@ -224,7 +224,7 @@ const crearProducto = async (req, res) => {
       });
     }
     // Verifica que la subcategoría pertenezca a la categoría seleccionada
-    if (subcategoria.categoriaId !== parseInt(categoriaId)) {
+    if (subcategoria.categoriaId !== Number.parseInt(categoriaId)) {
       return res.status(400).json({
         success: false,
         message: `La subcategoría "${subcategoria.nombre}" no pertenece a la categoría seleccionada`
@@ -232,14 +232,14 @@ const crearProducto = async (req, res) => {
     }
     
     // VALIDACIÓN 4: Precio debe ser mayor a 0
-    if (parseFloat(precio) <= 0) {
+    if (Number.parseFloat(precio) <= 0) {
       return res.status(400).json({
         success: false,
         message: 'El precio debe ser mayor a 0'
       });
     }
     // Stock no puede ser negativo
-    if (parseInt(stock) < 0) {
+    if (Number.parseInt(stock) < 0) {
       return res.status(400).json({
         success: false,
         message: 'El stock no puede ser negativo'
@@ -254,10 +254,10 @@ const crearProducto = async (req, res) => {
     const nuevoProducto = await Producto.create({
       nombre,
       descripcion: descripcion || null,            // Null si no se envía
-      precio: parseFloat(precio),                   // Convierte a número decimal
-      stock: parseInt(stock) || 0,                  // Convierte a entero, default 0
-      categoriaId: parseInt(categoriaId),           // FK a la tabla Categoria
-      subcategoriaId: parseInt(subcategoriaId),     // FK a la tabla Subcategoria
+      precio: Number.parseFloat(precio),                   // Convierte a número decimal
+      stock: Number.parseInt(stock) || 0,                  // Convierte a entero, default 0
+      categoriaId: Number.parseInt(categoriaId),           // FK a la tabla Categoria
+      subcategoriaId: Number.parseInt(subcategoriaId),     // FK a la tabla Subcategoria
       imagen,                                       // Buffer binario o null
       mimeType,                                     // Tipo MIME o null
       activo: true                                   // Se crea activo por defecto
@@ -327,7 +327,7 @@ const actualizarProducto = async (req, res) => {
     // VALIDACIÓN: Si se cambia la categoría, verifica que exista y esté activa
     if (categoriaId && categoriaId !== producto.categoriaId) {
       const categoria = await Categoria.findByPk(categoriaId);
-      if (!categoria || !categoria.activo) {
+      if (!categoria?.activo) {
         return res.status(400).json({
           success: false,
           message: 'Categoría inválida o inactiva'
@@ -339,7 +339,7 @@ const actualizarProducto = async (req, res) => {
     // y pertenezca a la categoría (nueva o actual)
     if (subcategoriaId && subcategoriaId !== producto.subcategoriaId) {
       const subcategoria = await Subcategoria.findByPk(subcategoriaId);
-      if (!subcategoria || !subcategoria.activo) {
+      if (!subcategoria?.activo) {
         return res.status(400).json({
           success: false,
           message: 'Subcategoría inválida o inactiva'
@@ -348,7 +348,7 @@ const actualizarProducto = async (req, res) => {
       
       // Usa la nueva categoría si se envió, o la actual del producto
       const catId = categoriaId || producto.categoriaId;
-      if (subcategoria.categoriaId !== parseInt(catId)) {
+      if (subcategoria.categoriaId !== Number.parseInt(catId)) {
         return res.status(400).json({
           success: false,
           message: 'La subcategoría no pertenece a la categoría seleccionada'
@@ -357,13 +357,13 @@ const actualizarProducto = async (req, res) => {
     }
     
     // Validaciones de precio y stock
-    if (precio && parseFloat(precio) <= 0) {
+    if (precio && Number.parseFloat(precio) <= 0) {
       return res.status(400).json({
         success: false,
         message: 'El precio debe ser mayor a 0'
       });
     }
-    if (stock && parseInt(stock) < 0) {
+    if (stock && Number.parseInt(stock) < 0) {
       return res.status(400).json({
         success: false,
         message: 'El stock no puede ser negativo'
@@ -388,10 +388,10 @@ const actualizarProducto = async (req, res) => {
     // Actualiza SOLO los campos que se enviaron (si no se envían, no cambian)
     if (nombre !== undefined) producto.nombre = nombre;
     if (descripcion !== undefined) producto.descripcion = descripcion;
-    if (precio !== undefined) producto.precio = parseFloat(precio);
-    if (stock !== undefined) producto.stock = parseInt(stock);
-    if (categoriaId !== undefined) producto.categoriaId = parseInt(categoriaId);
-    if (subcategoriaId !== undefined) producto.subcategoriaId = parseInt(subcategoriaId);
+    if (precio !== undefined) producto.precio = Number.parseFloat(precio);
+    if (stock !== undefined) producto.stock = Number.parseInt(stock);
+    if (categoriaId !== undefined) producto.categoriaId = Number.parseInt(categoriaId);
+    if (subcategoriaId !== undefined) producto.subcategoriaId = Number.parseInt(subcategoriaId);
     if (activo !== undefined) producto.activo = activo;
     
     // save() ejecuta UPDATE en la BD
@@ -540,7 +540,7 @@ const actualizarStock = async (req, res) => {
     }
     
     // Convierte la cantidad a número entero
-    const cantidadNum = parseInt(cantidad);
+    const cantidadNum = Number.parseInt(cantidad);
     if (cantidadNum < 0) {
       return res.status(400).json({
         success: false,
@@ -594,15 +594,31 @@ const actualizarStock = async (req, res) => {
     await producto.save();
     
     // Responde con el resultado de la operación
+    let mensajeOperacion;
+    if (operacion === 'aumentar') {
+      mensajeOperacion = 'aumentado';
+    } else if (operacion === 'reducir') {
+      mensajeOperacion = 'reducido';
+    } else {
+      mensajeOperacion = 'establecido';
+    }
+
+    let stockAnterior;
+    if (operacion === 'establecer') {
+      stockAnterior = null;
+    } else if (operacion === 'aumentar') {
+      stockAnterior = producto.stock - cantidadNum;
+    } else {
+      stockAnterior = producto.stock + cantidadNum;
+    }
+
     res.json({
       success: true,
-      // Ternario anidado para personalizar el mensaje según la operación
-      message: `Stock ${operacion === 'aumentar' ? 'aumentado' : operacion === 'reducir' ? 'reducido' : 'establecido'} exitosamente`,
+      message: `Stock ${mensajeOperacion} exitosamente`,
       data: {
         productoId: producto.id,
         nombre: producto.nombre,
-        // Calcula el stock anterior según la operación realizada (null para 'establecer')
-        stockAnterior: operacion === 'establecer' ? null : (operacion === 'aumentar' ? producto.stock - cantidadNum : producto.stock + cantidadNum),
+        stockAnterior,
         stockNuevo: producto.stock
       }
     });

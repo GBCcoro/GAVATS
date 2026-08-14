@@ -8,8 +8,8 @@
  */
 
 const PDFDocument = require('pdfkit');
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 /**
  * Crea el directorio de facturas si no existe
@@ -52,7 +52,7 @@ const generarFacturaPDF = (factura, saveToFile = true) => {
 
       // Configurar destino del PDF
       const facturasDir = ensureFacturasDir();
-      const nombreArchivo = `factura-${factura.numeroFactura.replace(/\//g, '-')}.pdf`;
+      const nombreArchivo = `factura-${factura.numeroFactura.replaceAll('/', '-')}.pdf`;
       const rutaPDF = path.join(facturasDir, nombreArchivo);
       
       let buffers = [];
@@ -150,13 +150,13 @@ const generarFacturaPDF = (factura, saveToFile = true) => {
         factura.detalles.forEach((detalle) => {
           const producto = detalle.nombre || detalle.productoNombre || 'Producto';
           const cantidad = detalle.cantidad || 1;
-          const precio = parseFloat(detalle.precioUnitario || detalle.precio || 0).toFixed(2);
+          const precio = Number.parseFloat(detalle.precioUnitario || detalle.precio || 0).toFixed(2);
           const subtotal = (cantidad * precio).toFixed(2);
 
           doc.text(producto, col1, currentRowY, { width: 260, ellipsis: true });
           doc.text(cantidad.toString(), col2, currentRowY);
-          doc.text(`$${parseFloat(precio).toLocaleString('es-CO')}`, col3, currentRowY);
-          doc.text(`$${parseFloat(subtotal).toLocaleString('es-CO')}`, col4, currentRowY);
+          doc.text(`$${Number.parseFloat(precio).toLocaleString('es-CO')}`, col3, currentRowY);
+          doc.text(`$${Number.parseFloat(subtotal).toLocaleString('es-CO')}`, col4, currentRowY);
 
           currentRowY += rowHeight;
         });
@@ -171,23 +171,23 @@ const generarFacturaPDF = (factura, saveToFile = true) => {
       // ==========================================
       doc.font('Helvetica-Bold').fontSize(9);
       
-      const subtotal = parseFloat(factura.subtotal).toFixed(2);
-      const impuesto = parseFloat(factura.impuesto).toFixed(2);
-      const total = parseFloat(factura.total).toFixed(2);
+      const subtotal = Number.parseFloat(factura.subtotal).toFixed(2);
+      const impuesto = Number.parseFloat(factura.impuesto).toFixed(2);
+      const total = Number.parseFloat(factura.total).toFixed(2);
 
       doc.text('SUBTOTAL:', 380, currentRowY);
-      doc.text(`$${parseFloat(subtotal).toLocaleString('es-CO')}`, 480, currentRowY);
+      doc.text(`$${Number.parseFloat(subtotal).toLocaleString('es-CO')}`, 480, currentRowY);
       currentRowY += 20;
 
       doc.text('IVA (19%):', 380, currentRowY);
-      doc.text(`$${parseFloat(impuesto).toLocaleString('es-CO')}`, 480, currentRowY);
+      doc.text(`$${Number.parseFloat(impuesto).toLocaleString('es-CO')}`, 480, currentRowY);
       currentRowY += 20;
 
       // Línea separadora antes del total
       doc.moveTo(380, currentRowY - 5).lineTo(550, currentRowY - 5).stroke();
 
       doc.fontSize(11).text('TOTAL A PAGAR:', 380, currentRowY);
-      doc.fontSize(12).text(`$${parseFloat(total).toLocaleString('es-CO')}`, 480, currentRowY);
+      doc.fontSize(12).text(`$${Number.parseFloat(total).toLocaleString('es-CO')}`, 480, currentRowY);
 
       // ==========================================
       // INFORMACIÓN DE PAGO
@@ -249,7 +249,7 @@ const generarFacturaPDF = (factura, saveToFile = true) => {
  */
 const obtenerRutaFactura = (numeroFactura) => {
   const facturasDir = ensureFacturasDir();
-  const nombreArchivo = `factura-${numeroFactura.replace(/\//g, '-')}.pdf`;
+  const nombreArchivo = `factura-${numeroFactura.replaceAll('/', '-')}.pdf`;
   return path.join(facturasDir, nombreArchivo);
 };
 
