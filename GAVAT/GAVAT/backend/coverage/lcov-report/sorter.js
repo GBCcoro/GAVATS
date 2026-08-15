@@ -1,4 +1,3 @@
-/* eslint-disable */
 var addSorting = (function() {
     'use strict';
     var cols,
@@ -37,8 +36,8 @@ var addSorting = (function() {
             searchRegex = null;
         }
 
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
+        // Use for-of for simple iteration over the HTMLCollection
+        for (const row of rows) {
             let isMatch = false;
 
             if (searchRegex) {
@@ -74,9 +73,9 @@ var addSorting = (function() {
         for (i = 0; i < colNodes.length; i += 1) {
             colNode = colNodes[i];
             col = {
-                key: colNode.getAttribute('data-col'),
-                sortable: !colNode.getAttribute('data-nosort'),
-                type: colNode.getAttribute('data-type') || 'string'
+                key: colNode.dataset.col,
+                sortable: !colNode.dataset.nosort,
+                type: colNode.dataset.type || 'string'
             };
             cols.push(col);
             if (col.sortable) {
@@ -99,7 +98,7 @@ var addSorting = (function() {
         for (i = 0; i < tableCols.length; i += 1) {
             colNode = tableCols[i];
             col = cols[i];
-            val = colNode.getAttribute('data-value');
+            val = colNode.dataset.value;
             if (col.type === 'number') {
                 val = Number(val);
             }
@@ -122,7 +121,13 @@ var addSorting = (function() {
             sorter = function(a, b) {
                 a = a.data[key];
                 b = b.data[key];
-                return a < b ? -1 : a > b ? 1 : 0;
+                if (a < b) {
+                    return -1;
+                }
+                if (a > b) {
+                    return 1;
+                }
+                return 0;
             },
             finalSorter = sorter,
             tableBody = document.querySelector('.coverage-summary tbody'),
@@ -138,7 +143,7 @@ var addSorting = (function() {
 
         for (i = 0; i < rowNodes.length; i += 1) {
             rows.push(rowNodes[i]);
-            tableBody.removeChild(rowNodes[i]);
+            rowNodes[i].remove();
         }
 
         rows.sort(finalSorter);

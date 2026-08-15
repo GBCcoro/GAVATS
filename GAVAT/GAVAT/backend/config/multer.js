@@ -13,7 +13,7 @@ const multer = require('multer');
 
 // Importa el módulo 'path' de Node.js (módulo nativo, no necesita instalación).
 // Provee utilidades para trabajar con rutas de archivos y directorios.
-const path = require('path');
+const path = require('node:path');
 
 // Carga las variables del archivo .env en process.env.
 require('dotenv').config();

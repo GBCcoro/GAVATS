@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const uploadsDir = path.join(__dirname, 'uploads');
 const defaultImagePath = path.join(uploadsDir, 'default.jpg');
