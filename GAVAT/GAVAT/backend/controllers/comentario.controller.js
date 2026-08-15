@@ -153,8 +153,8 @@ const crearComentario = async (req, res) => {
 const obtenerComentariosProducto = async (req, res) => {
   try {
     const { productoId } = req.params;
-    const pagina = parseInt(req.query.pagina) || 1;
-    const limite = Math.min(parseInt(req.query.limite) || 10, 20); // Máximo 20 comentarios
+    const pagina = Number.parseInt(req.query.pagina, 10) || 1;
+    const limite = Math.min(Number.parseInt(req.query.limite, 10) || 10, 20); // Máximo 20 comentarios
     const offset = (pagina - 1) * limite;
 
     // VALIDACIÓN: Producto existe
@@ -206,7 +206,7 @@ const obtenerComentariosProducto = async (req, res) => {
         producto: {
           id: producto.id,
           nombre: producto.nombre,
-          calificacionPromedio: parseFloat(calificacionPromedio),
+          calificacionPromedio: Number.parseFloat(calificacionPromedio),
           totalComentarios: comentariosVisibles.length
         },
         comentarios: comentarios.map(c => ({
@@ -587,8 +587,8 @@ const obtenerComentariosPorUsuario = async (req, res) => {
  */
 const obtenerTodosComentarios = async (req, res) => {
   try {
-    const pagina = parseInt(req.query.pagina, 10) || 1;
-    const limite = Math.min(parseInt(req.query.limite, 10) || 20, 50);
+    const pagina = Number.parseInt(req.query.pagina, 10) || 1;
+    const limite = Math.min(Number.parseInt(req.query.limite, 10) || 20, 50);
     const offset = (pagina - 1) * limite;
 
     const { count, rows: comentarios } = await Comentario.findAndCountAll({

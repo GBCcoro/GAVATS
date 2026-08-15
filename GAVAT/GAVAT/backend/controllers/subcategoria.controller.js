@@ -518,11 +518,11 @@ const getEstadisticasSubcategoria = async (req, res) => {
     
     // Variables acumuladoras para las estadísticas
     let valorTotalInventario = 0;   // Suma de (precio × stock) de cada producto
-    let stockTotal = 0;              // Suma de todo el stock
+    let stockTotal = 0;              // Suma de el stock
     
     // Recorre cada producto sumando al acumulador
     productos.forEach(producto => {
-      valorTotalInventario += parseFloat(producto.precio) * producto.stock;
+      valorTotalInventario += Number.parseFloat(producto.precio) * producto.stock;
       stockTotal += producto.stock;
     });
     

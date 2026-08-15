@@ -44,14 +44,16 @@ const getUsuarios = async (req, res) => {
     }
     
     // Calcula el offset para paginación (cuántos registros saltar)
-    const offset = (parseInt(pagina) - 1) * parseInt(limite);
+    const paginaNumero = Number.parseInt(pagina, 10);
+    const limiteNumero = Number.parseInt(limite, 10);
+    const offset = (paginaNumero - 1) * limiteNumero;
     
     // Consulta usuarios con paginación.
     // attributes.exclude: ['password'] → trae TODOS los campos EXCEPTO password (seguridad).
     const { count, rows: usuarios } = await Usuario.findAndCountAll({
       where,
       attributes: { exclude: ['password'] },   // Nunca enviar la contraseña al frontend
-      limit: parseInt(limite),
+      limit: limiteNumero,
       offset,
       order: [['createdAt', 'DESC']]            // Más recientes primero
     });
@@ -63,9 +65,9 @@ const getUsuarios = async (req, res) => {
         usuarios,
         paginacion: {
           total: count,
-          pagina: parseInt(pagina),
-          limite: parseInt(limite),
-          totalPaginas: Math.ceil(count / parseInt(limite))
+          pagina: paginaNumero,
+          limite: limiteNumero,
+          totalPaginas: Math.ceil(count / limiteNumero)
         }
       }
     });

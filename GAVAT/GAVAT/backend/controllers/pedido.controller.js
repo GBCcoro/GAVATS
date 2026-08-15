@@ -46,7 +46,7 @@ const Subcategoria = require('../models/Subcategoria');
  * 4. Crea el pedido y sus detalles
  * 5. Reduce el stock de cada producto
  * 6. Vacía el carrito
- * Todo dentro de una TRANSACCIÓN para garantizar consistencia.
+ *  dentro de una TRANSACCIÓN para garantizar consistencia.
  */
 const crearPedido = async (req, res) => {
   // Importa la instancia de sequelize desde config/database.js para usar transacciones.
@@ -160,21 +160,17 @@ const crearPedido = async (req, res) => {
     }, { transaction: t });          // Parte de la transacción
     
     // CREAR DETALLES DEL PEDIDO Y ACTUALIZAR STOCK
-    const detallesPedido = [];    // Array para guardar los detalles creados
-    
     for (const item of itemsCarrito) {
       const producto = item.producto;
       
       // Crea un registro en DetallePedido por cada producto del carrito
-      const detalle = await DetallePedido.create({
+      await DetallePedido.create({
         pedidoId: pedido.id,                                  // FK al pedido recién creado
         productoId: producto.id,                              // FK al producto
         cantidad: item.cantidad,                              // Cantidad solicitada
         precioUnitario: item.precioUnitario,                  // Precio al momento de la compra
         subtotal: Number.parseFloat(item.precioUnitario) * item.cantidad  // Subtotal de este item
       }, { transaction: t });
-      
-      detallesPedido.push(detalle);   // Agrega al array de detalles
       
       // Reduce el stock del producto según la cantidad comprada
       producto.stock -= item.cantidad;
@@ -189,7 +185,7 @@ const crearPedido = async (req, res) => {
     });
     
     // CONFIRMAR TRANSACCIÓN → ejecuta todos los cambios en la BD de forma permanente.
-    // Si algo hubiera fallado antes, t.rollback() habría revertido todo.
+    // Si algo hubiera fallado antes, t.rollback() habría revertido .
     await t.commit();
     
     // Recarga el pedido con sus relaciones para enviar la respuesta completa.

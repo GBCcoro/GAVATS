@@ -90,8 +90,8 @@ exports.crearFactura = async (req, res) => {
     }));
 
     // Calcular impuesto (19% en Colombia)
-    const subtotal = parseFloat(pedido.total) / 1.19; // Asumir que el total ya incluye IVA
-    const impuesto = pedido.total - subtotal;
+    const subtotal = Number.parseFloat(pedido.total) / 1.19; // Asumir que el total ya incluye IVA
+    const impuesto = Number.parseFloat(pedido.total) - subtotal;
 
     // Crear registro de factura en BD
     const factura = await Factura.create({
@@ -287,8 +287,9 @@ exports.listarFacturasUsuario = async (req, res) => {
   try {
     const usuarioId = req.usuario.id;
     const { page = 1, limit = 10 } = req.query;
-
-    const offset = (page - 1) * limit;
+    const pageNumber = Number.parseInt(page, 10);
+    const limitNumber = Number.parseInt(limit, 10);
+    const offset = (pageNumber - 1) * limitNumber;
 
     const { count, rows } = await Factura.findAndCountAll({
       include: [
@@ -300,8 +301,8 @@ exports.listarFacturasUsuario = async (req, res) => {
           required: true
         }
       ],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: limitNumber,
+      offset: Number.parseInt(offset, 10),
       order: [['fechaEmision', 'DESC']]
     });
 
@@ -309,9 +310,9 @@ exports.listarFacturasUsuario = async (req, res) => {
       success: true,
       data: {
         total: count,
-        pagina: parseInt(page),
-        limite: parseInt(limit),
-        totalPaginas: Math.ceil(count / limit),
+        pagina: pageNumber,
+        limite: limitNumber,
+        totalPaginas: Math.ceil(count / limitNumber),
         facturas: rows.map(f => ({
           id: f.id,
           numeroFactura: f.numeroFactura,
@@ -403,7 +404,9 @@ exports.verDetalleFactura = async (req, res) => {
 exports.listarFacturasAdmin = async (req, res) => {
   try {
     const { page = 1, limit = 20, estado } = req.query;
-    const offset = (page - 1) * limit;
+    const pageNumber = Number.parseInt(page, 10);
+    const limitNumber = Number.parseInt(limit, 10);
+    const offset = (pageNumber - 1) * limitNumber;
 
     const where = {};
     if (estado) {
@@ -420,8 +423,8 @@ exports.listarFacturasAdmin = async (req, res) => {
           include: [{ model: Usuario, as: 'usuario', attributes: ['nombre', 'email'] }]
         }
       ],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: limitNumber,
+      offset: Number.parseInt(offset, 10),
       order: [['fechaEmision', 'DESC']]
     });
 
@@ -429,9 +432,9 @@ exports.listarFacturasAdmin = async (req, res) => {
       success: true,
       data: {
         total: count,
-        pagina: parseInt(page),
-        limite: parseInt(limit),
-        totalPaginas: Math.ceil(count / limit),
+        pagina: pageNumber,
+        limite: limitNumber,
+        totalPaginas: Math.ceil(count / limitNumber),
         facturas: rows.map(f => ({
           id: f.id,
           numeroFactura: f.numeroFactura,

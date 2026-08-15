@@ -301,6 +301,139 @@ const crearProducto = async (req, res) => {
   }
 };
 
+const validarActualizacionProducto = async (producto, categoriaId, subcategoriaId) => {
+  const categoriaIdActual = categoriaId !== undefined && categoriaId !== null && categoriaId !== ''
+    ? Number.parseInt(categoriaId)
+    : producto.categoriaId;
+
+  if (categoriaId && categoriaId !== producto.categoriaId) {
+    const categoria = await Categoria.findByPk(categoriaId);
+    if (!categoria?.activo) {
+      return {
+        status: 400,
+        message: 'Categoría inválida o inactiva'
+      };
+    }
+  }
+
+  if (subcategoriaId && subcategoriaId !== producto.subcategoriaId) {
+    const subcategoria = await Subcategoria.findByPk(subcategoriaId);
+    if (!subcategoria?.activo) {
+      return {
+        status: 400,
+        message: 'Subcategoría inválida o inactiva'
+      };
+    }
+
+    if (subcategoria.categoriaId !== categoriaIdActual) {
+      return {
+        status: 400,
+        message: 'La subcategoría no pertenece a la categoría seleccionada'
+      };
+    }
+  }
+
+  return null;
+};
+
+const validarCampoNumerico = (valor, campo, mensaje) => {
+  if (valor === undefined || valor === null || valor === '') {
+    return null;
+  }
+
+  if (campo === 'precio' && Number.parseFloat(valor) <= 0) {
+    return {
+      status: 400,
+      message: mensaje
+    };
+  }
+
+  if (campo === 'stock' && Number.parseInt(valor) < 0) {
+    return {
+      status: 400,
+      message: mensaje
+    };
+  }
+
+  return null;
+};
+
+const validarCategoriaParaActualizacion = async (categoriaId, producto) => {
+  if (!categoriaId || categoriaId === producto.categoriaId) {
+    return null;
+  }
+
+  const categoria = await Categoria.findByPk(categoriaId);
+  if (!categoria?.activo) {
+    return {
+      status: 400,
+      message: 'Categoría inválida o inactiva'
+    };
+  }
+
+  return null;
+};
+
+const validarSubcategoriaParaActualizacion = async (subcategoriaId, categoriaId, producto) => {
+  if (!subcategoriaId || subcategoriaId === producto.subcategoriaId) {
+    return null;
+  }
+
+  const subcategoria = await Subcategoria.findByPk(subcategoriaId);
+  if (!subcategoria?.activo) {
+    return {
+      status: 400,
+      message: 'Subcategoría inválida o inactiva'
+    };
+  }
+
+  const catId = categoriaId || producto.categoriaId;
+  if (subcategoria.categoriaId !== Number.parseInt(catId)) {
+    return {
+      status: 400,
+      message: 'La subcategoría no pertenece a la categoría seleccionada'
+    };
+  }
+
+  return null;
+};
+
+const validarNumerosParaActualizacion = (precio, stock) => {
+  if (precio !== undefined && Number.parseFloat(precio) <= 0) {
+    return {
+      status: 400,
+      message: 'El precio debe ser mayor a 0'
+    };
+  }
+
+  if (stock !== undefined && Number.parseInt(stock) < 0) {
+    return {
+      status: 400,
+      message: 'El stock no puede ser negativo'
+    };
+  }
+
+  return null;
+};
+
+const reemplazarImagenProducto = async (producto, archivo) => {
+  if (!archivo) {
+    return;
+  }
+
+  if (producto.imagen && typeof producto.imagen === 'string' && !producto.imagen.startsWith('data:')) {
+    const rutaImagenAnterior = path.join(__dirname, '../uploads', producto.imagen);
+    try {
+      await fs.unlink(rutaImagenAnterior);
+    } catch (err) {
+      console.error('Error al eliminar imagen anterior:', err);
+    }
+  }
+
+  producto.imagen = archivo.buffer;
+  producto.mimeType = archivo.mimetype;
+};
+
 /**
  * Actualizar producto existente (admin)
  * 
@@ -311,81 +444,44 @@ const crearProducto = async (req, res) => {
  */
 const actualizarProducto = async (req, res) => {
   try {
-    const { id } = req.params;   // ID del producto desde la URL
+    const { id } = req.params;
     const { nombre, descripcion, precio, stock, categoriaId, subcategoriaId, activo } = req.body;
-    
-    // Busca el producto existente por su ID
+
     const producto = await Producto.findByPk(id);
-    
+
     if (!producto) {
       return res.status(404).json({
         success: false,
         message: 'Producto no encontrado'
       });
     }
-    
-    // VALIDACIÓN: Si se cambia la categoría, verifica que exista y esté activa
-    if (categoriaId && categoriaId !== producto.categoriaId) {
-      const categoria = await Categoria.findByPk(categoriaId);
-      if (!categoria?.activo) {
-        return res.status(400).json({
-          success: false,
-          message: 'Categoría inválida o inactiva'
-        });
-      }
-    }
-    
-    // VALIDACIÓN: Si se cambia la subcategoría, verifica que exista, esté activa
-    // y pertenezca a la categoría (nueva o actual)
-    if (subcategoriaId && subcategoriaId !== producto.subcategoriaId) {
-      const subcategoria = await Subcategoria.findByPk(subcategoriaId);
-      if (!subcategoria?.activo) {
-        return res.status(400).json({
-          success: false,
-          message: 'Subcategoría inválida o inactiva'
-        });
-      }
-      
-      // Usa la nueva categoría si se envió, o la actual del producto
-      const catId = categoriaId || producto.categoriaId;
-      if (subcategoria.categoriaId !== Number.parseInt(catId)) {
-        return res.status(400).json({
-          success: false,
-          message: 'La subcategoría no pertenece a la categoría seleccionada'
-        });
-      }
-    }
-    
-    // Validaciones de precio y stock
-    if (precio && Number.parseFloat(precio) <= 0) {
-      return res.status(400).json({
+
+    const errorCategoria = await validarCategoriaParaActualizacion(categoriaId, producto);
+    if (errorCategoria) {
+      return res.status(errorCategoria.status).json({
         success: false,
-        message: 'El precio debe ser mayor a 0'
+        message: errorCategoria.message
       });
     }
-    if (stock && Number.parseInt(stock) < 0) {
-      return res.status(400).json({
+
+    const errorSubcategoria = await validarSubcategoriaParaActualizacion(subcategoriaId, categoriaId, producto);
+    if (errorSubcategoria) {
+      return res.status(errorSubcategoria.status).json({
         success: false,
-        message: 'El stock no puede ser negativo'
+        message: errorSubcategoria.message
       });
     }
-    
-    // Si se subió una nueva imagen, reemplaza la anterior
-    if (req.file) {
-      // Si el producto ya tenía una imagen almacenada como archivo local, intenta eliminarla.
-      if (producto.imagen && typeof producto.imagen === 'string' && !producto.imagen.startsWith('data:')) {
-        const rutaImagenAnterior = path.join(__dirname, '../uploads', producto.imagen);
-        try {
-          await fs.unlink(rutaImagenAnterior);   // Elimina el archivo anterior
-        } catch (err) {
-          console.error('Error al eliminar imagen anterior:', err);
-        }
-      }
-      producto.imagen = req.file.buffer;
-      producto.mimeType = req.file.mimetype;
+
+    const errorNumerico = validarNumerosParaActualizacion(precio, stock);
+    if (errorNumerico) {
+      return res.status(errorNumerico.status).json({
+        success: false,
+        message: errorNumerico.message
+      });
     }
-    
-    // Actualiza SOLO los campos que se enviaron (si no se envían, no cambian)
+
+    await reemplazarImagenProducto(producto, req.file);
+
     if (nombre !== undefined) producto.nombre = nombre;
     if (descripcion !== undefined) producto.descripcion = descripcion;
     if (precio !== undefined) producto.precio = Number.parseFloat(precio);
@@ -393,19 +489,16 @@ const actualizarProducto = async (req, res) => {
     if (categoriaId !== undefined) producto.categoriaId = Number.parseInt(categoriaId);
     if (subcategoriaId !== undefined) producto.subcategoriaId = Number.parseInt(subcategoriaId);
     if (activo !== undefined) producto.activo = activo;
-    
-    // save() ejecuta UPDATE en la BD
+
     await producto.save();
-    
-    // Recarga el producto con sus relaciones actualizadas
+
     await producto.reload({
       include: [
         { model: Categoria, as: 'categoria', attributes: ['id', 'nombre'] },
         { model: Subcategoria, as: 'subcategoria', attributes: ['id', 'nombre'] }
       ]
     });
-    
-    // Responde con el producto actualizado
+
     res.json({
       success: true,
       message: 'Producto actualizado exitosamente',
@@ -413,11 +506,9 @@ const actualizarProducto = async (req, res) => {
         producto
       }
     });
-    
   } catch (error) {
     console.error('Error en actualizarProducto:', error);
-    
-    
+
     if (error.name === 'SequelizeValidationError') {
       return res.status(400).json({
         success: false,
@@ -425,7 +516,7 @@ const actualizarProducto = async (req, res) => {
         errors: error.errors.map(e => e.message)
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Error al actualizar producto',

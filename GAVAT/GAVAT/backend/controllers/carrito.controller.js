@@ -69,8 +69,8 @@ const getCarrito = async (req, res) => {
     let total = 0;
     // forEach recorre cada item del array
     itemsCarrito.forEach(item => {
-      // parseFloat convierte el precio (que puede ser string) a número decimal
-      total += parseFloat(item.precioUnitario) * item.cantidad;
+      // Number.parseFloat convierte el precio (que puede ser string) a número decimal
+      total += Number.parseFloat(item.precioUnitario) * item.cantidad;
     });
     
     // Responde con los items del carrito y un resumen
@@ -257,7 +257,7 @@ const actualizarItemCarrito = async (req, res) => {
     const { cantidad } = req.body;
     
     // Convierte la cantidad a número entero y valida que sea >= 1
-    const cantidadNum = parseInt(cantidad);
+    const cantidadNum = Number.parseInt(cantidad);
     if (cantidadNum < 1) {
       return res.status(400).json({
         success: false,
@@ -365,7 +365,7 @@ const eliminarItemCarrito = async (req, res) => {
 };
 
 /**
- * Vaciar todo el carrito
+ * Vaciar el carrito
  * 
  * Ruta: DELETE /api/cliente/carrito
  * Elimina TODOS los items del carrito del usuario autenticado.
@@ -405,5 +405,5 @@ module.exports = {
   agregarAlCarrito,         // POST /api/cliente/carrito - Agregar producto
   actualizarItemCarrito,    // PUT /api/cliente/carrito/:id - Cambiar cantidad
   eliminarItemCarrito,      // DELETE /api/cliente/carrito/:id - Quitar un item
-  vaciarCarrito             // DELETE /api/cliente/carrito - Vaciar todo
+  vaciarCarrito             // DELETE /api/cliente/carrito - Vaciar 
 };

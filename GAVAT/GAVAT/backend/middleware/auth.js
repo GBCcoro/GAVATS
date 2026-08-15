@@ -102,7 +102,7 @@ const verificarAuth = async (req, res, next) => {
     // Ejemplo: req.usuario.id, req.usuario.rol, req.usuario.nombre
     req.usuario = usuario;
     
-    // next() le dice a Express: "todo bien, continúa con el siguiente middleware o controlador"
+    // next() le dice a Express: " bien, continúa con el siguiente middleware o controlador"
     // Sin next(), la petición se quedaría colgada y nunca llegaría al controlador
     next();
     
@@ -151,25 +151,16 @@ const verificarAuthOpcional = async (req, res, next) => {
       return next();
     }
     
-    try {
-      // Intenta decodificar el token
-      const decoded = verifyToken(token);
-      
-      // Busca al usuario en la BD (sin password)
-      const usuario = await Usuario.findByPk(decoded.id, {
-        attributes: { exclude: ['password'] }
-      });
-      
-      // Solo adjunta el usuario si existe Y está activo
-      if (usuario && usuario.activo) {
-        req.usuario = usuario;         // Usuario autenticado disponible
-      } else {
-        req.usuario = null;            // Usuario no existe o está inactivo
-      }
-    } catch (error) {
-      // Token inválido o expirado → NO rechaza, simplemente continúa sin usuario
-      req.usuario = null;
-    }
+    // Intenta decodificar el token
+    const decoded = verifyToken(token);
+
+    // Busca al usuario en la BD (sin password)
+    const usuario = await Usuario.findByPk(decoded.id, {
+      attributes: { exclude: ['password'] }
+    });
+
+    // Solo adjunta el usuario si existe y está activo
+    req.usuario = usuario?.activo ? usuario : null;
     
     // Siempre continúa al siguiente middleware/controlador, haya o no usuario
     next();
