@@ -452,7 +452,7 @@ const cancelarPedido = async (req, res) => {
     });
     
   } catch (error) {
-    await t.rollback();    // Revierte todo si hay error
+    await t.rollback();    // Revierte si hay error
     console.error('Error en cancelarPedido:', error);
     res.status(500).json({
       success: false,
@@ -700,17 +700,6 @@ const getEstadisticasPedidos = async (req, res) => {
       }
     });
 
-    const ventasPorPeriodoRaw = await Pedido.findAll({
-      attributes: [
-        [fn('DATE', col('createdAt')), 'fecha'],
-        [fn('COUNT', col('id')), 'cantidadPedidos'],
-        [fn('SUM', col('total')), 'totalVentas']
-      ],
-      where: wherePedidos,
-      group: [fn('DATE', col('createdAt'))],
-      order: [[fn('DATE', col('createdAt')), 'ASC']]
-    });
-
     const productosMasVendidosRaw = await DetallePedido.findAll({
       attributes: [
         'productoId',
@@ -795,36 +784,36 @@ const getEstadisticasPedidos = async (req, res) => {
         pedidosHoy,
         pedidosUltimos30Dias,
         clientesActivosUltimos30Dias,
-        ventasTotales: parseFloat(ventasTotales).toFixed(2),
-        ventasUltimos30Dias: parseFloat(ventasUltimos30Dias).toFixed(2),
+        ventasTotales: Number.parseFloat(ventasTotales).toFixed(2),
+        ventasUltimos30Dias: Number.parseFloat(ventasUltimos30Dias).toFixed(2),
         pedidosPorEstado: pedidosPorEstadoRaw.map((p) => ({
           estado: p.estado,
           cantidad: Number.parseInt(p.getDataValue('cantidad'), 10),
-          totalVentas: parseFloat(p.getDataValue('totalVentas') || 0).toFixed(2)
+          totalVentas: Number.parseFloat(p.getDataValue('totalVentas') || 0).toFixed(2)
         })),
         ventasPorPeriodo: pedidosPorPeriodoRaw.map((item) => ({
           fecha: item.getDataValue('fecha'),
           cantidadPedidos: Number.parseInt(item.getDataValue('cantidadPedidos'), 10),
-          totalVentas: parseFloat(item.getDataValue('totalVentas') || 0).toFixed(2)
+          totalVentas: Number.parseFloat(item.getDataValue('totalVentas') || 0).toFixed(2)
         })),
         productosMasVendidos: productosMasVendidosRaw.map((item) => ({
           productoId: item.productoId,
           nombre: item.producto?.nombre || 'Producto desconocido',
           unidadesVendidas: Number.parseInt(item.getDataValue('unidadesVendidas'), 10),
-          ventasTotales: parseFloat(item.getDataValue('ventasTotales') || 0).toFixed(2)
+          ventasTotales: Number.parseFloat(item.getDataValue('ventasTotales') || 0).toFixed(2)
         })),
         categoriasTop: categoriasTopRaw.map((item) => ({
           categoriaId: item.getDataValue('categoriaId'),
           categoriaNombre: item.getDataValue('categoriaNombre'),
           unidadesVendidas: Number.parseInt(item.getDataValue('unidadesVendidas'), 10),
-          ventasTotales: parseFloat(item.getDataValue('ventasTotales') || 0).toFixed(2)
+          ventasTotales: Number.parseFloat(item.getDataValue('ventasTotales') || 0).toFixed(2)
         })),
         clientesTop: clientesTopRaw.map((item) => ({
           usuarioId: item.usuarioId,
           nombre: item.usuario?.nombre || 'Cliente desconocido',
           email: item.usuario?.email || null,
           ordenes: Number.parseInt(item.getDataValue('ordenes'), 10),
-          totalComprado: parseFloat(item.getDataValue('totalComprado') || 0).toFixed(2)
+          totalComprado: Number.parseFloat(item.getDataValue('totalComprado') || 0).toFixed(2)
         }))
       }
     });

@@ -16,8 +16,8 @@ const Footer = memo(() => {
         <Row>
           <Col md={4} className="mb-3">
             <h5 className="text-gold">
-              <i className="bi bi-shop me-2"></i>
-              GAVAT
+              <i className="bi bi-shop"></i>
+              <span className="ms-2">GAVAT</span>
             </h5>
             <p className="text-light opacity-75">
               Tu tienda en línea donde compras material para realizar cambios en tu casa. ¡Encuentra todo lo que necesitas para transformar tus espacios con estilo y calidad!
@@ -53,12 +53,10 @@ const Footer = memo(() => {
           <Col md={4} className="mb-3">
             <h6 className="text-gold">Contacto</h6>
             <p className="text-light opacity-75 mb-1">
-              <i className="bi bi-envelope me-2"></i>
-              info@gavat.com
+              <i className="bi bi-envelope me-2" /> info@gavat.com
             </p>
             <p className="text-light opacity-75 mb-1">
-              <i className="bi bi-telephone me-2"></i>
-              +57 300 123 4567
+              <i className="bi bi-telephone me-2" /> +57 300 123 4567
             </p>
             <div className="mt-3">
               <button type="button" className="social-icon me-3" aria-label="Facebook">

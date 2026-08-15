@@ -41,8 +41,7 @@ const NavigationBar = memo(() => {
             {(isAdmin || isAuxiliar) && (
               <NavDropdown title="Administración" id="admin-dropdown" className="nav-dropdown-custom">
                 <NavDropdown.Item as={Link} to="/admin/dashboard">
-                  <i className="bi bi-speedometer2 me-2"></i>
-                  Dashboard
+                  <i className="bi bi-speedometer2 me-2" /> Dashboard
                 </NavDropdown.Item>
                 <NavDropdown.Divider />
                 <NavDropdown.Item as={Link} to="/admin/categorias">
@@ -63,7 +62,8 @@ const NavigationBar = memo(() => {
                       </NavDropdown.Item>
                     )}
                     <NavDropdown.Item as={Link} to="/admin/facturas">
-                      <i className="bi bi-file-earmark-pdf me-2"></i>
+                      <i className="bi bi-file-earmark-pdf me-2" />
+                      {' '}
                       Facturas
                     </NavDropdown.Item>
                   </>
@@ -74,6 +74,7 @@ const NavigationBar = memo(() => {
                 </NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/admin/comentarios">
                   <i className="bi bi-chat-dots me-2"></i>
+                  {' '}
                   Comentarios
                 </NavDropdown.Item>
               </NavDropdown>
@@ -82,7 +83,8 @@ const NavigationBar = memo(() => {
 
           <Nav>
             <Nav.Link as={Link} to="/carrito" className="nav-link-custom">
-              <i className="bi bi-cart3 me-1"></i>
+              <i className="bi bi-cart3 me-1" />
+              {' '}
               Carrito
             </Nav.Link>
 
@@ -91,6 +93,7 @@ const NavigationBar = memo(() => {
                 {isCliente && (
                   <Nav.Link as={Link} to="/mis-pedidos" className="nav-link-custom">
                     <i className="bi bi-box-seam me-1"></i>
+                    {' '}
                     Mis Pedidos
                   </Nav.Link>
                 )}
@@ -98,11 +101,13 @@ const NavigationBar = memo(() => {
                 {(isAdmin || isAuxiliar) && (
                   <>
                     <Nav.Link as={Link} to="/catalogo" className="nav-link-custom text-gold">
-                      <i className="bi bi-shop me-1"></i>
+                      <i className="bi bi-shop"></i>
+                      {' '}
                       Ver Tienda
                     </Nav.Link>
                     <Nav.Link as={Link} to="/admin/mis-pedidos" className="nav-link-custom text-gold">
-                      <i className="bi bi-box-seam me-1"></i>
+                      <i className="bi bi-box-seam me-1" />
+                      {' '}
                       Mis Pedidos
                     </Nav.Link>
                   </>
@@ -125,6 +130,7 @@ const NavigationBar = memo(() => {
                   <NavDropdown.Divider />
                   <NavDropdown.Item onClick={handleLogout}>
                     <i className="bi bi-box-arrow-right me-2"></i>
+                    {' '}
                     Cerrar Sesión
                   </NavDropdown.Item>
                 </NavDropdown>
@@ -132,11 +138,13 @@ const NavigationBar = memo(() => {
             ) : (
               <>
                 <Nav.Link as={Link} to="/login" className="nav-link-custom">
-                  <i className="bi bi-box-arrow-in-right me-1"></i>
+                  <i className="bi bi-box-arrow-in-right me-1" />
+                  {' '}
                   Iniciar Sesión
                 </Nav.Link>
                 <Nav.Link as={Link} to="/register" className="nav-link-custom">
-                  <i className="bi bi-person-plus me-1"></i>
+                  <i className="bi bi-person-plus me-1" />
+                  {' '}
                   Registrarse
                 </Nav.Link>
               </>
