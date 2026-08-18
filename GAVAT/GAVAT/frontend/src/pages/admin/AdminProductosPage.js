@@ -85,14 +85,14 @@ const AdminProductosPage = () => {
         prod.descripcion?.toLowerCase().includes(busqueda.toLowerCase());
       
       // Filtro de categoría
-      const coincideCategoria = filtroCategoria === '' || prod.categoriaId === parseInt(filtroCategoria);
+      const coincideCategoria = filtroCategoria === '' || prod.categoriaId === Number.parseInt(filtroCategoria);
       
       // Filtro de subcategoría
-      const coincideSubcategoria = filtroSubcategoria === '' || prod.subcategoriaId === parseInt(filtroSubcategoria);
+      const coincideSubcategoria = filtroSubcategoria === '' || prod.subcategoriaId === Number.parseInt(filtroSubcategoria);
       
       // Filtro de precio
-      const min = precioMin === '' ? 0 : parseFloat(precioMin);
-      const max = precioMax === '' ? Infinity : parseFloat(precioMax);
+      const min = precioMin === '' ? 0 : Number.parseFloat(precioMin);
+      const max = precioMax === '' ? Infinity : Number.parseFloat(precioMax);
       const coincidePrecio = prod.precio >= min && prod.precio <= max;
       
       return coincideBusqueda && coincideCategoria && coincideSubcategoria && coincidePrecio;
@@ -121,6 +121,12 @@ const AdminProductosPage = () => {
   useEffect(() => {
     setPaginaActual(1);
   }, [busqueda, filtroCategoria, filtroSubcategoria, precioMin, precioMax]);
+
+  useEffect(() => {
+    if (totalPaginas > 0 && paginaActual > totalPaginas) {
+      setPaginaActual(totalPaginas);
+    }
+  }, [paginaActual, totalPaginas]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -210,7 +216,7 @@ const AdminProductosPage = () => {
     
     // Convertir a número para los campos de ID
     if ((name === 'categoriaId' || name === 'subcategoriaId') && value !== '') {
-      finalValue = parseInt(value, 10);
+      finalValue = Number.parseInt(value, 10);
     }
     
     setFormData({
@@ -239,8 +245,8 @@ const AdminProductosPage = () => {
       const formDataToSend = new FormData();
       formDataToSend.append('nombre', formData.nombre);
       formDataToSend.append('descripcion', formData.descripcion || '');
-      formDataToSend.append('precio', String(parseFloat(formData.precio)));
-      formDataToSend.append('stock', String(parseInt(formData.stock, 10)));
+      formDataToSend.append('precio', String(Number.parseFloat(formData.precio)));
+      formDataToSend.append('stock', String(Number.parseInt(formData.stock, 10)));
       formDataToSend.append('categoriaId', String(formData.categoriaId));
       formDataToSend.append('subcategoriaId', formData.subcategoriaId || '');
       formDataToSend.append('activo', String(formData.activo));
@@ -293,8 +299,8 @@ const AdminProductosPage = () => {
       await api.put(`/admin/productos/${producto.id}`, {
         nombre: producto.nombre,
         descripcion: producto.descripcion,
-        precio: parseFloat(producto.precio),
-        stock: parseInt(producto.stock),
+        precio: Number.parseFloat(producto.precio),
+        stock: Number.parseInt(producto.stock),
         categoriaId: producto.categoriaId,
         subcategoriaId: producto.subcategoriaId || null,
         imagen: producto.imagen,
@@ -328,7 +334,7 @@ const AdminProductosPage = () => {
 
   // Subcategorías para el formulario (basadas en categoría seleccionada en formData)
   const subcategoriasFiltradas = useMemo(() => {
-    return subcategorias.filter(sub => sub.categoriaId === parseInt(formData.categoriaId));
+    return subcategorias.filter(sub => sub.categoriaId === Number.parseInt(formData.categoriaId));
   }, [subcategorias, formData.categoriaId]);
 
   if (loading) {
@@ -340,7 +346,7 @@ const AdminProductosPage = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h1>
-            <i className="bi bi-box-seam me-2"></i>
+            <i className="bi bi-box-seam me-2"></i>{' '}
             Gestión de Productos
           </h1>
           <p className="text-muted mb-0">
@@ -368,7 +374,7 @@ const AdminProductosPage = () => {
                   exportarProductosAPDF(productosFiltrados);
                 }}
               >
-                <i className="bi bi-file-earmark-pdf me-2"></i>
+                <i className="bi bi-file-earmark-pdf me-2"></i>{' '}
                 Exportar a PDF
               </Dropdown.Item>
               <Dropdown.Item 
@@ -378,16 +384,16 @@ const AdminProductosPage = () => {
                 }}
               >
                 <i className="bi bi-file-earmark-excel me-2"></i>
-                Exportar a Excel
+                {' '}Exportar a Excel
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
           <button type="button" className="btn btn-dark me-2" onClick={() => navigate('/admin/dashboard')}>
-            <i className="bi bi-arrow-left me-1"></i>
+            <i className="bi bi-arrow-left me-1"></i>{' '}
             Volver
           </button>
           <button type="button" className="btn btn-dark" onClick={() => handleShowModal()}>
-            <i className="bi bi-plus-circle me-1"></i>
+            <i className="bi bi-plus-circle me-1"></i>{' '}
             Nuevo Producto
           </button>
         </div>
@@ -403,7 +409,7 @@ const AdminProductosPage = () => {
       <Card className="mb-4">
         <Card.Body>
           <h5 className="mb-3">
-            <i className="bi bi-funnel me-2"></i>
+            <i className="bi bi-funnel me-2"></i>{' '}
             Filtros
           </h5>
           <Row className="g-3">
@@ -449,7 +455,7 @@ const AdminProductosPage = () => {
                 >
                   <option value="">Todas las subcategorías</option>
                   {filtroCategoria && subcategorias
-                    .filter(s => s.categoriaId === parseInt(filtroCategoria) && s.activo)
+                    .filter(s => s.categoriaId === Number.parseInt(filtroCategoria, 10) && s.activo)
                     .map((sub) => (
                       <option key={sub.id} value={sub.id}>{sub.nombre}</option>
                     ))
@@ -495,7 +501,7 @@ const AdminProductosPage = () => {
                   setPaginaActual(1);
                 }}
               >
-                <i className="bi bi-arrow-clockwise me-1"></i>
+                <i className="bi bi-arrow-clockwise me-1"></i>{' '}
                 Limpiar filtros
               </button>
             </Col>
@@ -526,8 +532,16 @@ const AdminProductosPage = () => {
                 </td>
               </tr>
               ) : (
-                productosPaginados.map((prod) => (
-                  <tr key={prod.id}>
+                productosPaginados.map((prod) => {
+                  let stockBadgeBg = 'danger';
+                  if (prod.stock > 10) {
+                    stockBadgeBg = 'success';
+                  } else if (prod.stock > 0) {
+                    stockBadgeBg = 'warning';
+                  }
+
+                  return (
+                    <tr key={prod.id}>
                     <td className="align-middle">{prod.id}</td>
                     <td className="align-middle">
                       <ProductImage imagen={prod.imagen} nombre={prod.nombre} />
@@ -541,7 +555,7 @@ const AdminProductosPage = () => {
                     </td>
                     <td className="align-middle">{formatearPrecio(prod.precio)}</td>
                     <td className="align-middle">
-                      <Badge bg={prod.stock > 10 ? 'success' : prod.stock > 0 ? 'warning' : 'danger'}>
+                      <Badge bg={stockBadgeBg}>
                         {prod.stock}
                       </Badge>
                     </td>
@@ -575,8 +589,9 @@ const AdminProductosPage = () => {
                         <i className="bi bi-trash"></i>
                       </Button>
                     </td>
-                  </tr>
-                ))
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </Table>
@@ -584,8 +599,8 @@ const AdminProductosPage = () => {
         <Card.Footer className="text-muted">
           <div className="d-flex justify-content-between align-items-center">
             <small>
-              <i className="bi bi-file-text me-1"></i>
-              Mostrando <strong>{indiceInicio + 1}-{Math.min(indiceFin, productosFiltrados.length)}</strong> de <strong>{productosFiltrados.length}</strong> producto{productosFiltrados.length !== 1 ? 's' : ''}
+              <i className="bi bi-file-text me-1"></i>{' '}
+              Mostrando <strong>{productosFiltrados.length === 0 ? '0-0' : `${indiceInicio + 1}-${Math.min(indiceFin, productosFiltrados.length)}`}</strong> de <strong>{productosFiltrados.length}</strong> producto{productosFiltrados.length !== 1 ? 's' : ''}
             </small>
             
             {/* Controles de paginación */}

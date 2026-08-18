@@ -41,7 +41,7 @@ const register = async (req, res) => {
     
     // VALIDACIÓN 2: Verifica que el email tenga un formato válido usando una expresión regular.
     // La regex valida: texto@texto.texto (estructura básica de un email)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,

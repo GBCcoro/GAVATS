@@ -60,7 +60,6 @@
   left: 0;
   right: 0;
   bottom: 0;
-  pointer-events: none;
   background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23ffffff" fill-opacity="0.1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
   background-size: cover;
 }
@@ -228,11 +227,29 @@ img {
   animation: fadeIn 0.6s ease-out;
 }
 
+.protected-route-spinner {
+  color: var(--bs-gold, #f5c271);
+  width: 3rem;
+  height: 3rem;
+  border-width: 0.25rem;
+}
+
+.protected-route-loading {
+  min-height: 100vh;
+  width: 100%;
+}
+
+.protected-route-message {
+  font-family: var(--font-roboto);
+}
+
 /* Alert improvements */
 .alert {
   border-radius: 0.75rem;
-  border: none;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid transparent;
 }
 
 /* Forzar aceleración de hardware */
@@ -245,11 +262,6 @@ img {
 .table * {
   animation: none !important;
   transition: none !important;
-}
-
-/* Optimizar rendering de filas */
-.table tbody tr {
-  contain: layout style;
 }
 
 .App-logo {
@@ -419,7 +431,7 @@ img {
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  color: white;
+  color: #fff;
 }
 
 .dashboard-card-primary,
@@ -489,7 +501,7 @@ img {
 
 .admin-panel-header-primary {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  color: var(--fnt-light);
 }
 
 .admin-panel-header h5 {
@@ -711,13 +723,6 @@ img {
 .badge-danger {
   background: #dc3545;
   color: #ffffff;
-}
-
-.alert {
-  padding: 1rem 1.25rem;
-  border-radius: 0.75rem;
-  margin-bottom: 1.25rem;
-  border: 1px solid transparent;
 }
 
 .alert-success {

@@ -163,6 +163,21 @@ const AdminFacturasPage = () => {
     return estados[estado] || 'secondary';
   };
 
+  const handleCloseDetalleModal = () => setShowDetalleModal(false);
+
+  useEffect(() => {
+    if (!showDetalleModal) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        handleCloseDetalleModal();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showDetalleModal]);
+
   if (loading) {
     return <LoadingSpinner message="Cargando facturas..." />;
   }
@@ -172,7 +187,7 @@ const AdminFacturasPage = () => {
       <div className="admin-toolbar">
         <div className="admin-title">
           <h1>
-            <i className="bi bi-file-earmark-pdf"></i>
+            <i className="bi bi-file-earmark-pdf"></i>{' '}
             Gestión de Facturas
           </h1>
           <p className="subtext">Consulta, descarga y gestiona facturas</p>
@@ -188,7 +203,7 @@ const AdminFacturasPage = () => {
                 exportarFacturasAPDF(facturasFiltradas);
               }}
             >
-              <i className="bi bi-file-earmark-pdf"></i>
+              <i className="bi bi-file-earmark-pdf"></i>{' '}
               Exportar a PDF
             </button>
             <button
@@ -199,14 +214,14 @@ const AdminFacturasPage = () => {
                 await exportarFacturasAExcel(facturasFiltradas);
               }}
             >
-              <i className="bi bi-file-earmark-excel"></i>
+              <i className="bi bi-file-earmark-excel"></i>{' '}
               Exportar a Excel
             </button>
           </div>
 
           <div className="nav-actions">
             <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-              <i className="bi bi-arrow-left"></i>
+              <i className="bi bi-arrow-left"></i>{' '}
               Volver
             </button>
           </div>
@@ -221,16 +236,17 @@ const AdminFacturasPage = () => {
 
       <section className="admin-card">
         <div className="admin-card-header">
-          <i className="bi bi-funnel"></i>
+          <i className="bi bi-funnel"></i>{' '}
           <strong>Filtros</strong>
         </div>
         <div className="admin-card-body">
           <div className="form-grid">
             <div className="form-group">
-              <label>Buscar</label>
+              <label htmlFor="busqueda">Buscar</label>
               <div className="input-group">
                 <span className="input-icon"><i className="bi bi-search"></i></span>
                 <input
+                  id="busqueda"
                   type="text"
                   className="form-control"
                   placeholder="Buscar por número, cliente o email..."
@@ -241,8 +257,9 @@ const AdminFacturasPage = () => {
             </div>
 
             <div className="form-group">
-              <label>Estado</label>
+              <label htmlFor="estado">Estado</label>
               <select
+                id="estado"
                 className="form-select"
                 value={filtros.estado}
                 onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
@@ -261,7 +278,7 @@ const AdminFacturasPage = () => {
                 className="btn btn-outline-secondary full-width"
                 onClick={() => setFiltros({ busqueda: '', estado: 'todos' })}
               >
-                <i className="bi bi-x-circle"></i>
+                <i className="bi bi-x-circle"></i>{' '}
                 Limpiar filtros
               </button>
             </div>
@@ -353,7 +370,7 @@ const AdminFacturasPage = () => {
           <div className="admin-pagination">
             <div>
               <small className="text-muted">
-                <i className="bi bi-file-text"></i>
+                <i className="bi bi-file-text"></i>{' '}
                 Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> - Mostrando <strong>{facturasPaginadas.length}</strong> de <strong>{facturasFiltradas.length}</strong> registros
               </small>
             </div>
@@ -380,11 +397,20 @@ const AdminFacturasPage = () => {
 
       {/* MODAL DETALLE FACTURA */}
       {showDetalleModal && facturaSeleccionada && (
-        <div className="modal-overlay" onClick={() => setShowDetalleModal(false)}>
-          <div className="modal-dialog" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
+        <dialog
+          className="modal-overlay"
+          onCancel={handleCloseDetalleModal}
+          aria-label="Cerrar modal"
+          open
+        >
+          <div
+            className="modal-dialog"
+            style={{ maxWidth: '700px' }}
+            aria-labelledby="detalle-factura-title"
+          >
             <div className="modal-header">
-              <h2>Detalle de Factura</h2>
-              <button type="button" className="close-button" onClick={() => setShowDetalleModal(false)}>
+              <h2 id="detalle-factura-title">Detalle de Factura</h2>
+              <button type="button" className="close-button" onClick={handleCloseDetalleModal}>
                 &times;
               </button>
             </div>
@@ -471,7 +497,7 @@ const AdminFacturasPage = () => {
               )}
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn btn-outline-secondary" onClick={() => setShowDetalleModal(false)}>
+              <button type="button" className="btn btn-outline-secondary" onClick={handleCloseDetalleModal}>
                 Cerrar
               </button>
               <button 
@@ -492,7 +518,7 @@ const AdminFacturasPage = () => {
               )}
             </div>
           </div>
-        </div>
+        </dialog>
       )}
     </div>
   );

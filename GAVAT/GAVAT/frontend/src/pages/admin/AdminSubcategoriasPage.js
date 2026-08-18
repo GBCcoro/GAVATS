@@ -50,13 +50,13 @@ const AdminSubcategoriasPage = () => {
         const busqueda = filtros.busqueda.toLowerCase();
         const categoria = categorias.find(c => c.id === sub.categoriaId);
         const coincide = sub.nombre.toLowerCase().includes(busqueda) ||
-                        (sub.descripcion && sub.descripcion.toLowerCase().includes(busqueda)) ||
-                        (categoria && categoria.nombre.toLowerCase().includes(busqueda));
+                        (sub.descripcion?.toLowerCase().includes(busqueda)) ||
+                        (categoria?.nombre?.toLowerCase().includes(busqueda));
         if (!coincide) return false;
       }
       
       // Filtro por categoría
-      if (filtros.categoriaId !== 'todas' && sub.categoriaId !== parseInt(filtros.categoriaId)) {
+      if (filtros.categoriaId !== 'todas' && sub.categoriaId !== Number.parseInt(filtros.categoriaId)) {
         return false;
       }
       
@@ -218,7 +218,7 @@ const AdminSubcategoriasPage = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h1>
-            <i className="bi bi-folder2 me-2"></i>
+            <i className="bi bi-folder2 me-2"></i>{' '}
             Gestión de Subcategorías
           </h1>
           <p className="text-muted mb-0">Administra las subcategorías de productos</p>
@@ -246,7 +246,7 @@ const AdminSubcategoriasPage = () => {
                   exportarSubcategoriasAPDF(subcategoriasFiltradas, categorias);
                 }}
               >
-                <i className="bi bi-file-earmark-pdf me-2"></i>
+                <i className="bi bi-file-earmark-pdf me-2"></i>{' '}
                 Exportar a PDF
               </Dropdown.Item>
               <Dropdown.Item 
@@ -255,17 +255,17 @@ const AdminSubcategoriasPage = () => {
                   await exportarSubcategoriasAExcel(subcategoriasFiltradas, categorias);
                 }}
               >
-                <i className="bi bi-file-earmark-excel me-2"></i>
+                <i className="bi bi-file-earmark-excel me-2"></i>{' '}
                 Exportar a Excel
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
           <button type="button" className="btn btn-dark me-2" onClick={() => navigate('/admin/dashboard')}>
-            <i className="bi bi-arrow-left me-1"></i>
+            <i className="bi bi-arrow-left me-1"></i>{' '}
             Volver
           </button>
           <button type="button" className="btn btn-dark" onClick={() => handleShowModal()}>
-            <i className="bi bi-plus-circle me-1"></i>
+            <i className="bi bi-plus-circle me-1"></i>{' '}
             Nueva Subcategoría
           </button>
         </div>
@@ -281,7 +281,7 @@ const AdminSubcategoriasPage = () => {
       <Card className="mb-3">
         <Card.Header className="bg-light">
           <h5 className="mb-0">
-            <i className="bi bi-funnel me-2"></i>
+            <i className="bi bi-funnel me-2"></i>{' '}
             Filtros
           </h5>
         </Card.Header>
@@ -330,7 +330,7 @@ const AdminSubcategoriasPage = () => {
                 onClick={() => setFiltros({ busqueda: '', categoriaId: 'todas', estado: 'todos' })}
               >
                 <i className="bi bi-x-circle me-1"></i>
-                Limpiar
+                {' '}Limpiar
               </button>
             </Col>
           </Row>
@@ -417,7 +417,7 @@ const AdminSubcategoriasPage = () => {
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <small className="text-muted">
-                  <i className="bi bi-file-text me-1"></i>
+                  <i className="bi bi-file-text me-1"></i>{' '}
                   Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> - Mostrando <strong>{subcategoriasPaginadas.length}</strong> de <strong>{subcategoriasFiltradas.length}</strong> registros
                 </small>
               </div>

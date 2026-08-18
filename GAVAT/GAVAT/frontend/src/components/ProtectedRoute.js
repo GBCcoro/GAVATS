@@ -8,24 +8,17 @@ const ProtectedRoute = ({ children, requireAdmin = false, adminOnly = false }) =
   // Mientras carga, mostrar loading con estilos personalizados
   if (loading) {
     return (
-      <div 
-        className="d-flex justify-content-center align-items-center bg-positiva"
-        style={{ minHeight: '100vh', width: '100%' }}
-      >
+      <div className="d-flex justify-content-center align-items-center bg-positiva protected-route-loading">
         <div className="text-center">
-          <div 
-            className="spinner-border mb-3" 
+          <div
+            className="spinner-border mb-3 protected-route-spinner"
             role="status"
-            style={{ 
-              color: 'var(--bs-gold, #f5c271)',
-              width: '3rem',
-              height: '3rem',
-              borderWidth: '0.25rem'
-            }}
+            aria-live="polite"
+            aria-label="Cargando"
           >
             <span className="visually-hidden">Cargando...</span>
           </div>
-          <p className="text-dark" style={{ fontFamily: 'var(--font-roboto)' }}>
+          <p className="text-dark protected-route-message">
             Verificando acceso...
           </p>
         </div>
