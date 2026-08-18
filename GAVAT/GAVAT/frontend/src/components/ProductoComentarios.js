@@ -58,6 +58,14 @@ const ProductoComentarios = ({ productoId, onComentarioCreado }) => {
     cargarComentarios();
   }, [cargarComentarios]);
 
+  const normalizarCalificacion = (valor) => {
+    const numero = Number.parseInt(valor, 10);
+    if (Number.isNaN(numero)) {
+      return 5;
+    }
+    return Math.min(5, Math.max(1, numero));
+  };
+
   const handleCrearComentario = async (e) => {
     e.preventDefault();
     
@@ -66,14 +74,17 @@ const ProductoComentarios = ({ productoId, onComentarioCreado }) => {
       return;
     }
 
-    if (!textoComentario.trim()) {
+    const textoLimpio = textoComentario.trim();
+    if (!textoLimpio) {
       setMensaje({ tipo: 'warning', texto: 'Escribe un comentario antes de enviar' });
       return;
     }
 
+    const calificacionNormalizada = normalizarCalificacion(calificacion);
+
     setEnviando(true);
     try {
-      await comentariosService.crearComentario(productoId, parseInt(calificacion), textoComentario);
+      await comentariosService.crearComentario(productoId, calificacionNormalizada, textoLimpio);
       setMensaje({ tipo: 'success', texto: 'Comentario creado exitosamente' });
       setTextoComentario('');
       setCalificacion(5);
@@ -113,17 +124,20 @@ const ProductoComentarios = ({ productoId, onComentarioCreado }) => {
       return;
     }
 
-    if (!textoEdicion.trim()) {
+    const textoLimpio = textoEdicion.trim();
+    if (!textoLimpio) {
       setMensaje({ tipo: 'warning', texto: 'Escribe un comentario antes de guardar' });
       return;
     }
+
+    const calificacionNormalizada = normalizarCalificacion(calificacionEdicion);
 
     setGuardandoEdicion(true);
     try {
       await comentariosService.editarComentario(
         comentarioEditando.id,
-        parseInt(calificacionEdicion, 10),
-        textoEdicion
+        calificacionNormalizada,
+        textoLimpio
       );
       setMensaje({ tipo: 'success', texto: 'Comentario actualizado exitosamente' });
       cerrarEdicionComentario();
@@ -200,7 +214,7 @@ const ProductoComentarios = ({ productoId, onComentarioCreado }) => {
               onClick={() => setShowFormulario(true)}
               className="btn-crear-comentario"
             >
-              <i className="bi bi-pencil-square me-2"></i>
+              <i className="bi bi-pencil-square me-2" aria-hidden="true"></i>{' '}
               Escribir un comentario
             </Button>
           ) : null}
@@ -270,7 +284,7 @@ const ProductoComentarios = ({ productoId, onComentarioCreado }) => {
 
       {!isAuthenticated && (
         <Alert variant="info">
-          <i className="bi bi-info-circle me-2"></i>
+          <i className="bi bi-info-circle me-2"></i>{' '}
           <strong>Debes iniciar sesión</strong> para comentar productos
         </Alert>
       )}
@@ -279,7 +293,7 @@ const ProductoComentarios = ({ productoId, onComentarioCreado }) => {
       <div className="comentarios-lista">
         {comentarios.length === 0 ? (
           <div className="alert alert-info">
-            <i className="bi bi-chat-left-dots me-2"></i>
+            <i className="bi bi-chat-left-dots me-2"></i>{' '}
             No hay comentarios aún. ¡Sé el primero en comentar!
           </div>
         ) : (
@@ -304,7 +318,7 @@ const ProductoComentarios = ({ productoId, onComentarioCreado }) => {
                     size="sm"
                     onClick={() => abrirEdicionComentario(comentario)}
                   >
-                    <i className="bi bi-pencil-square me-2"></i>
+                    <i className="bi bi-pencil-square me-2"></i>{' '}
                     Editar
                   </Button>
                   <Button
@@ -313,7 +327,7 @@ const ProductoComentarios = ({ productoId, onComentarioCreado }) => {
                     onClick={() => handleEliminarComentario(comentario)}
                     disabled={eliminandoComentarioId === comentario.id}
                   >
-                    <i className="bi bi-trash me-2"></i>
+                    <i className="bi bi-trash me-2"></i>{' '}
                     {eliminandoComentarioId === comentario.id ? 'Eliminando...' : 'Eliminar'}
                   </Button>
                 </div>

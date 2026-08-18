@@ -61,8 +61,8 @@ const ProductoDetallePage = () => {
     if (valor === '') {
       setCantidad('');
     } else {
-      const num = parseInt(valor, 10);
-      if (!isNaN(num)) {
+      const num = Number.parseInt(valor, 10);
+      if (!Number.isNaN(num)) {
         if (num < 1) {
           setCantidad('');
         } else if (num > maxStock) {
@@ -107,7 +107,7 @@ const ProductoDetallePage = () => {
       <Container className="py-4 text-center">
         <h2>Producto no encontrado</h2>
         <Button onClick={() => navigate('/catalogo')} className="mt-3">
-          <i className="bi bi-arrow-left me-2"></i>
+          <i className="bi bi-arrow-left me-2"></i>{' '}
           Volver al catálogo
         </Button>
       </Container>
@@ -174,7 +174,7 @@ const ProductoDetallePage = () => {
               </Badge>
             ) : (
               <Badge className="badge-stock-danger" style={{ fontSize: '0.95rem', padding: '0.5rem 1rem' }}>
-                <i className="bi bi-x-circle me-1"></i>
+                <i className="bi bi-x-circle me-1"></i>{' '}
                 Sin stock
               </Badge>
             )}
@@ -237,14 +237,14 @@ const ProductoDetallePage = () => {
               onClick={() => navigate('/login')}
               variant="info"
             >
-              <i className="bi bi-box-arrow-right me-2"></i>
+              <i className="bi bi-box-arrow-right me-2"></i>{' '}
               Inicia sesión para comprar
             </Button>
           )}
 
           {producto.stock === 0 && (
             <Button className="w-100" size="lg" disabled variant="secondary">
-              <i className="bi bi-ban me-2"></i>
+              <i className="bi bi-ban me-2"></i>{' '}
               Producto no disponible
             </Button>
           )}
@@ -285,7 +285,7 @@ const ProductoDetallePage = () => {
             variant="outline-secondary"
             onClick={() => navigate('/catalogo')}
           >
-            <i className="bi bi-arrow-left me-2"></i>
+            <i className="bi bi-arrow-left me-2"></i>{' '}
             Volver al catálogo
           </Button>
         </Col>

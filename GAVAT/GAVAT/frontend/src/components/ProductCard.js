@@ -69,7 +69,8 @@ const ProductCard = memo(({ producto, onAddToCart, showActions = true }) => {
             className="btn-add-to-cart w-100"
             onClick={handleAddToCart}
           >
-            <i className="bi bi-cart-plus me-2"></i>
+            <i className="bi bi-cart-plus" />
+            {' '}
             Agregar al carrito
           </Button>
         )}

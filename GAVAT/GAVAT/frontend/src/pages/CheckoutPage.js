@@ -13,6 +13,49 @@ import carritoService from '../services/carritoService';
 import pedidoService from '../services/pedidoService';
 import LoadingSpinner from '../components/LoadingSpinner';
 
+const OrderSummary = ({ items, total, formatearPrecio }) => (
+  <Card className="resumen-card sticky-top resumen-card-sticky">
+    <Card.Header className="resumen-card-header">
+      <h5 className="mb-0">Resumen del Pedido</h5>
+    </Card.Header>
+    <Card.Body>
+      <ListGroup variant="flush" className="mb-3">
+        {items.map((item) => (
+          <ListGroup.Item key={item.id} className="resumen-item px-0">
+            <div className="d-flex justify-content-between align-items-center">
+              <div className="flex-grow-1">
+                <div className="fw-bold">{item.producto?.nombre || item.nombre}</div>
+                <small className="text-muted">
+                  Cantidad: {item.cantidad} x {formatearPrecio(item.precioUnitario || item.precio)}
+                </small>
+              </div>
+              <div className="fw-bold">
+                {formatearPrecio((item.precioUnitario || item.precio) * item.cantidad)}
+              </div>
+            </div>
+          </ListGroup.Item>
+        ))}
+      </ListGroup>
+
+      <hr className="resumen-hr" />
+
+      <div className="d-flex justify-content-between mb-2">
+        <span>Subtotal:</span>
+        <span>{formatearPrecio(total)}</span>
+      </div>
+      <div className="d-flex justify-content-between mb-2">
+        <span>Envío:</span>
+        <span className="text-muted">Gratis</span>
+      </div>
+      <hr className="resumen-hr" />
+      <div className="d-flex justify-content-between mb-0">
+        <strong className="fs-5">Total:</strong>
+        <strong className="resumen-total fs-4">{formatearPrecio(total)}</strong>
+      </div>
+    </Card.Body>
+  </Card>
+);
+
 const CheckoutPage = () => {
   const [carrito, setCarrito] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,7 +77,7 @@ const CheckoutPage = () => {
       const response = await carritoService.getCarrito();
       const carritoData = response.data || response.carrito;
       
-      if (!carritoData || !carritoData.items || carritoData.items.length === 0) {
+      if (!carritoData?.items?.length) {
         setMensaje({ 
           tipo: 'warning', 
           texto: 'Tu carrito está vacío' 
@@ -135,12 +178,12 @@ const CheckoutPage = () => {
   }
 
   const items = carrito?.items || [];
-  const total = parseFloat(carrito?.resumen?.total || 0);
+  const total = Number.parseFloat(carrito?.resumen?.total || 0);
 
   return (
     <Container className="py-4">
       <h1 className="checkout-title mb-4">
-        <i className="bi bi-credit-card me-2"></i>
+        <i className="bi bi-credit-card me-2" aria-hidden="true" />{' '}
         Finalizar Compra
       </h1>
 
@@ -249,13 +292,11 @@ const CheckoutPage = () => {
                   >
                     {procesando ? (
                       <>
-                        <span className="spinner-border spinner-border-sm me-2" />
-                        Procesando...
+                        <span className="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Procesando...
                       </>
                     ) : (
                       <>
-                        <i className="bi bi-check-circle me-2"></i>
-                        Confirmar Pedido
+                        <i className="bi bi-check-circle me-2" aria-hidden="true"></i>Confirmar Pedido
                       </>
                     )}
                   </Button>
@@ -264,8 +305,7 @@ const CheckoutPage = () => {
                     onClick={() => navigate('/carrito')}
                     disabled={procesando}
                   >
-                    <i className="bi bi-arrow-left me-2"></i>
-                    Volver al Carrito
+                    <i className="bi bi-arrow-left me-2" aria-hidden="true"></i>Volver al Carrito
                   </Button>
                 </div>
               </Form>
@@ -274,46 +314,7 @@ const CheckoutPage = () => {
         </Col>
 
         <Col lg={4}>
-          <Card className="resumen-card sticky-top" style={{ top: '20px' }}>
-            <Card.Header className="resumen-card-header">
-              <h5 className="mb-0">Resumen del Pedido</h5>
-            </Card.Header>
-            <Card.Body>
-              <ListGroup variant="flush" className="mb-3">
-                {items.map((item) => (
-                  <ListGroup.Item key={item.id} className="resumen-item px-0">
-                    <div className="d-flex justify-content-between align-items-center">
-                      <div className="flex-grow-1">
-                        <div className="fw-bold">{item.producto?.nombre || item.nombre}</div>
-                        <small className="text-muted">
-                          Cantidad: {item.cantidad} x {formatearPrecio(item.precioUnitario || item.precio)}
-                        </small>
-                      </div>
-                      <div className="fw-bold">
-                        {formatearPrecio((item.precioUnitario || item.precio) * item.cantidad)}
-                      </div>
-                    </div>
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
-
-              <hr className="resumen-hr" />
-
-              <div className="d-flex justify-content-between mb-2">
-                <span>Subtotal:</span>
-                <span>{formatearPrecio(total)}</span>
-              </div>
-              <div className="d-flex justify-content-between mb-2">
-                <span>Envío:</span>
-                <span className="text-muted">Gratis</span>
-              </div>
-              <hr className="resumen-hr" />
-              <div className="d-flex justify-content-between mb-0">
-                <strong className="fs-5">Total:</strong>
-                <strong className="resumen-total fs-4">{formatearPrecio(total)}</strong>
-              </div>
-            </Card.Body>
-          </Card>
+          <OrderSummary items={items} total={total} formatearPrecio={formatearPrecio} />
         </Col>
       </Row>
 
@@ -332,6 +333,9 @@ const CheckoutPage = () => {
           overflow: hidden;
           background: var(--bg, #ffffff);
           box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+        }
+        .resumen-card-sticky {
+          top: 20px;
         }
         .checkout-card-header, .resumen-card-header {
           background: var(--bg-positiva, #DBE1ED);

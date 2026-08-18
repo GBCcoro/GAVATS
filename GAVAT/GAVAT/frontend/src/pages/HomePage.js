@@ -55,16 +55,14 @@ const HomePage = () => {
                   to="/catalogo"
                   className="btn btn-hero-primary"
                 >
-                  <i className="bi bi-grid me-2"></i>
-                  Ver Catálogo
+                  <i className="bi bi-grid me-2"></i>Ver Catálogo
                 </Link>
                 {!isAuthenticated && (
                   <Link 
                     to="/register"
                     className="btn btn-hero-outline"
                   >
-                    <i className="bi bi-person-plus me-2"></i>
-                    Registrarse
+                    <i className="bi bi-person-plus me-2"></i>Registrarse
                   </Link>
                 )}
               </div>
@@ -170,8 +168,7 @@ const HomePage = () => {
               <h3 className="fw-bold mb-3">Únete a GAVAT hoy</h3>
               <p className="text-muted mb-4">Regístrate gratis y comienza a recibir ofertas exclusivas en tu correo.</p>
               <Link to="/register" className="btn btn-gold-solid">
-                <i className="bi bi-person-plus me-2"></i>
-                Crear Cuenta Gratis
+                <i className="bi bi-person-plus me-2"></i>Crear Cuenta Gratis
               </Link>
             </Card.Body>
           </Card>

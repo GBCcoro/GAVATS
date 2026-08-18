@@ -102,18 +102,18 @@ const CarritoPage = () => {
   }
 
   const items = carrito?.items || [];
-  const total = parseFloat(carrito?.resumen?.total || carrito?.total || 0);
+  const total = Number.parseFloat(carrito?.resumen?.total || carrito?.total || 0);
 
   return (
     <Container className="py-4">
       <h1 className="carrito-title mb-4">
-        <i className="bi bi-cart me-2"></i>
+        <i className="bi bi-cart me-2"></i>{' '}
         Mi Carrito
       </h1>
 
       {!isAuthenticated && (
         <Alert variant="info" className="carrito-alert-info mb-4">
-          <i className="bi bi-info-circle me-2"></i>
+          <i className="bi bi-info-circle me-2"></i>{' '}
           Puedes agregar productos sin iniciar sesión. Al momento de pagar deberás crear una cuenta o iniciar sesión.
         </Alert>
       )}
@@ -131,7 +131,7 @@ const CarritoPage = () => {
             <h3 className="mt-3">Tu carrito está vacío</h3>
             <p className="text-muted">Agrega productos para comenzar tu compra</p>
             <Button as={Link} to="/catalogo" className="btn-ir-catalogo">
-              <i className="bi bi-shop me-2"></i>
+              <i className="bi bi-shop me-2"></i>{' '}
               Ir al Catálogo
             </Button>
           </Card.Body>
@@ -151,7 +151,7 @@ const CarritoPage = () => {
                     size="sm"
                     onClick={handleVaciarCarrito}
                   >
-                    <i className="bi bi-trash me-1"></i>
+                    <i className="bi bi-trash me-1"></i>{' '}
                     Vaciar carrito
                   </Button>
                 </div>
@@ -260,12 +260,12 @@ const CarritoPage = () => {
                   size="lg"
                   onClick={handleProcederPago}
                 >
-                  <i className="bi bi-credit-card me-2"></i>
+                  <i className="bi bi-credit-card me-2"></i>{' '}
                   {isAuthenticated ? 'Proceder al Pago' : 'Iniciar Sesión para Pagar'}
                 </Button>
 
                 <Button as={Link} to="/catalogo" className="btn-seguir-comprando w-100">
-                  <i className="bi bi-arrow-left me-2"></i>
+                  <i className="bi bi-arrow-left me-2"></i>{' '}
                   Seguir Comprando
                 </Button>
               </Card.Body>

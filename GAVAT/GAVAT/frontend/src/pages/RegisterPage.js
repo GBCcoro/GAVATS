@@ -88,7 +88,7 @@ const RegisterPage = () => {
             <Card.Body className="p-5">
               <div className="text-center mb-4">
                 <h2 className="register-title">
-                  <i className="bi bi-person-plus me-2"></i>
+                  <i className="bi bi-person-plus me-2"></i>{' '}
                   Crear Cuenta
                 </h2>
                 <p className="register-subtitle">Regístrate para empezar a comprar</p>
@@ -98,7 +98,7 @@ const RegisterPage = () => {
 
               {tieneCarrito && (
                 <Alert variant="success" className="register-alert-success mb-3">
-                  <i className="bi bi-cart-check me-2"></i>
+                  <i className="bi bi-cart-check me-2"></i>{' '}
                   Tu carrito se sincronizará automáticamente al crear tu cuenta
                 </Alert>
               )}
@@ -212,12 +212,12 @@ const RegisterPage = () => {
                 >
                   {loading ? (
                     <>
-                      <span className="spinner-border spinner-border-sm me-2" />
+                      <span className="spinner-border spinner-border-sm me-2" />{' '}
                       Registrando...
                     </>
                   ) : (
                     <>
-                      <i className="bi bi-person-plus me-2"></i>
+                      <i className="bi bi-person-plus me-2"></i>{' '}
                       Crear Cuenta
                     </>
                   )}
@@ -229,7 +229,7 @@ const RegisterPage = () => {
               <div className="text-center">
                 <p className="mb-2">¿Ya tienes cuenta?</p>
                 <Link to="/login" className="register-link-outline">
-                  <i className="bi bi-box-arrow-in-right me-2"></i>
+                  <i className="bi bi-box-arrow-in-right me-2"></i>{' '}
                   Iniciar Sesión
                 </Link>
               </div>

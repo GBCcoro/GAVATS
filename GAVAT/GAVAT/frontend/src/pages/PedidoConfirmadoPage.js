@@ -151,7 +151,7 @@ const PedidoConfirmadoPage = () => {
           <Card className="mb-4">
             <Card.Header className="bg-white">
               <h5 className="mb-0">
-                <i className="bi bi-box-seam me-2"></i>
+                <i className="bi bi-box-seam me-2"></i>{' '}
                 Productos del Pedido
               </h5>
             </Card.Header>
@@ -208,7 +208,7 @@ const PedidoConfirmadoPage = () => {
           <Card className="mb-4">
             <Card.Header className="bg-white">
               <h5 className="mb-0">
-                <i className="bi bi-truck me-2"></i>
+                <i className="bi bi-truck me-2"></i>{' '}
                 Información de Envío
               </h5>
             </Card.Header>
@@ -261,21 +261,21 @@ const PedidoConfirmadoPage = () => {
                   variant="primary"
                   onClick={() => navigate('/mis-pedidos')}
                 >
-                  <i className="bi bi-list-ul me-2"></i>
+                  <i className="bi bi-list-ul me-2"></i>{' '}
                   Ver Mis Pedidos
                 </Button>
                 <Button
                   variant="outline-primary"
                   onClick={handleImprimir}
                 >
-                  <i className="bi bi-printer me-2"></i>
+                  <i className="bi bi-printer me-2"></i>{' '}
                   Imprimir Comprobante
                 </Button>
                 <Button
                   variant="outline-secondary"
                   onClick={() => navigate('/catalogo')}
                 >
-                  <i className="bi bi-arrow-left me-2"></i>
+                  <i className="bi bi-arrow-left me-2"></i>{' '}
                   Seguir Comprando
                 </Button>
               </div>

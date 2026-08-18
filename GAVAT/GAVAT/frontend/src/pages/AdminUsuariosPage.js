@@ -84,6 +84,7 @@ function AdminUsuariosPage() {
       alert('Usuario eliminado exitosamente');
       cargarUsuarios();
     } catch (error) {
+      console.error('Error al eliminar usuario:', error);
       alert('Error al eliminar usuario');
     }
   };
@@ -93,6 +94,7 @@ function AdminUsuariosPage() {
       await usuarioService.cambiarEstado(usuario.id);
       cargarUsuarios();
     } catch (error) {
+      console.error('Error al cambiar estado del usuario:', error);
       alert('Error al cambiar estado del usuario');
     }
   };
@@ -143,9 +145,11 @@ function AdminUsuariosPage() {
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '50vh' }}>
-        <div className="spinner-border" style={{ color: 'var(--bs-gold, #f5c271)' }} role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </div>
+        <output>
+          <div className="spinner-border" style={{ color: 'var(--bs-gold, #f5c271)' }}>
+            <span className="visually-hidden">Cargando...</span>
+          </div>
+        </output>
       </div>
     );
   }
@@ -155,7 +159,7 @@ function AdminUsuariosPage() {
       <div className="admin-toolbar">
         <div className="admin-title">
           <h1>
-            <i className="bi bi-people-fill"></i>
+            <i className="bi bi-people-fill" aria-hidden="true"></i>{' '}
             Gestión de Usuarios
           </h1>
           <p className="subtext">Administra los usuarios y roles del sistema</p>
@@ -171,7 +175,7 @@ function AdminUsuariosPage() {
                 exportarUsuariosAPDF(usuariosFiltrados);
               }}
             >
-              <i className="bi bi-file-earmark-pdf"></i>
+              <i className="bi bi-file-earmark-pdf" aria-hidden="true"></i>{' '}
               Exportar a PDF
             </button>
             <button
@@ -182,17 +186,17 @@ function AdminUsuariosPage() {
                 await exportarUsuariosAExcel(usuariosFiltrados);
               }}
             >
-              <i className="bi bi-file-earmark-excel"></i>
+              <i className="bi bi-file-earmark-excel" aria-hidden="true"></i>{' '}
               Exportar a Excel
             </button>
           </div>
           <div className="nav-actions">
             <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-              <i className="bi bi-arrow-left"></i>
+              <i className="bi bi-arrow-left" aria-hidden="true"></i>{' '}
               Volver
             </button>
             <button type="button" className="btn btn-primary" onClick={() => { limpiarFormulario(); setShowModal(true); }}>
-              <i className="bi bi-plus-circle"></i>
+              <i className="bi bi-plus-circle" aria-hidden="true"></i>{' '}
               Nuevo Usuario
             </button>
           </div>
@@ -203,22 +207,22 @@ function AdminUsuariosPage() {
       <div className="filtros-card mb-4">
         <div className="filtros-header">
           <div className="d-flex justify-content-between align-items-center">
-            <h5 className="mb-0"><i className="bi bi-funnel me-2"></i>Filtros</h5>
+            <h5 className="mb-0"><i className="bi bi-funnel me-2" aria-hidden="true"></i>{' '}Filtros</h5>
           </div>
         </div>
         <div className="filtros-body">
           <div className="row g-3 align-items-end">
             <div className="col-md-4">
-              <label className="filtros-label">Buscar por nombre o email:</label>
+              <label htmlFor="buscarUsuario" className="filtros-label">Buscar por nombre o email:</label>
               <div className="input-group">
                 <span className="input-group-text bg-gold-light"><i className="bi bi-search"></i></span>
-                <input type="text" className="form-control admin-input" placeholder="Escriba para buscar..."
+                <input id="buscarUsuario" type="text" className="form-control admin-input" placeholder="Escriba para buscar..."
                   value={filtros.busqueda} onChange={(e) => setFiltros({...filtros, busqueda: e.target.value})} />
               </div>
             </div>
             <div className="col-md-4">
-              <label className="filtros-label">Filtrar por Rol:</label>
-              <select className="form-select admin-select" value={filtros.rol}
+              <label htmlFor="filtrarRol" className="filtros-label">Filtrar por Rol:</label>
+              <select id="filtrarRol" className="form-select admin-select" value={filtros.rol}
                 onChange={(e) => setFiltros({...filtros, rol: e.target.value})}>
                 <option value="todos">Todos los roles</option>
                 <option value="administrador">Administradores</option>
@@ -228,14 +232,14 @@ function AdminUsuariosPage() {
             </div>
             <div className="col-md-4 d-flex justify-content-end">
               <button type="button" className="btn btn-outline-secondary btn-clear-filters" onClick={limpiarFiltros}>
-                <i className="bi bi-x-circle me-1"></i>
+                <i className="bi bi-x-circle me-1" aria-hidden="true"></i>{' '}
                 Limpiar filtros
               </button>
             </div>
           </div>
           <div className="mt-3">
             <span className="badge-registros">
-              <i className="bi bi-people-fill me-1"></i>
+              <i className="bi bi-people-fill me-1" aria-hidden="true"></i>{' '}
               {usuariosFiltrados.length} registro(s) encontrado(s)
             </span>
           </div>
@@ -265,14 +269,14 @@ function AdminUsuariosPage() {
                     </span></td>
                     <td>
                       <div className="btn-group btn-group-sm">
-                        <button className="btn-action edit" onClick={() => handleEditar(usuario)} title="Editar">
+                        <button type="button" className="btn-action edit" onClick={() => handleEditar(usuario)} title="Editar">
                           <i className="bi bi-pencil"></i>
                         </button>
-                        <button className={`btn-action toggle ${usuario.activo ? 'deactivate' : 'activate'}`}
+                        <button type="button" className={`btn-action toggle ${usuario.activo ? 'deactivate' : 'activate'}`}
                           onClick={() => handleToggleActivo(usuario)} title={usuario.activo ? 'Desactivar' : 'Activar'}>
                           <i className={`bi ${usuario.activo ? 'bi-toggle-on' : 'bi-toggle-off'}`}></i>
                         </button>
-                        <button className="btn-action delete" onClick={() => handleEliminar(usuario.id)} title="Eliminar">
+                        <button type="button" className="btn-action delete" onClick={() => handleEliminar(usuario.id)} title="Eliminar">
                           <i className="bi bi-trash"></i>
                         </button>
                       </div>
@@ -291,24 +295,24 @@ function AdminUsuariosPage() {
           <div className="d-flex justify-content-between align-items-center">
             <div>
               <small className="text-muted">
-                <i className="bi bi-file-text me-1"></i>
+                <i className="bi bi-file-text me-1" />{' '}
                 Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> - Mostrando <strong>{usuariosPaginados.length}</strong> de <strong>{usuariosFiltrados.length}</strong> registros
               </small>
             </div>
             <div className="btn-group">
-              <button className="btn-paginacion" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
+              <button type="button" className="btn-paginacion" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
                 <i className="bi bi-chevron-bar-left"></i>
               </button>
-              <button className="btn-paginacion" onClick={() => setPaginaActual(p => p-1)} disabled={paginaActual === 1}>
+              <button type="button" className="btn-paginacion" onClick={() => setPaginaActual(p => p-1)} disabled={paginaActual === 1}>
                 <i className="bi bi-chevron-left me-1"></i> Anterior
               </button>
-              <button className="btn-paginacion active" disabled>
+              <button type="button" className="btn-paginacion active" disabled>
                 {paginaActual} / {totalPaginas}
               </button>
-              <button className="btn-paginacion" onClick={() => setPaginaActual(p => p+1)} disabled={paginaActual === totalPaginas}>
+              <button type="button" className="btn-paginacion" onClick={() => setPaginaActual(p => p+1)} disabled={paginaActual === totalPaginas}>
                 Siguiente <i className="bi bi-chevron-right ms-1"></i>
               </button>
-              <button className="btn-paginacion" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
+              <button type="button" className="btn-paginacion" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
                 <i className="bi bi-chevron-bar-right"></i>
               </button>
             </div>
@@ -322,48 +326,48 @@ function AdminUsuariosPage() {
           <div className="modal-container modal-lg">
             <div className="modal-header-custom">
               <h5>{editando ? 'Editar Usuario' : 'Nuevo Usuario'}</h5>
-              <button className="btn-close-custom" onClick={() => { setShowModal(false); limpiarFormulario(); }}>×</button>
+              <button type="button" className="btn-close-custom" onClick={() => { setShowModal(false); limpiarFormulario(); }}>×</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body-custom">
                 <div className="row">
                   <div className="col-md-4 mb-3">
-                    <label className="form-label fw-bold">Nombre</label>
-                    <input type="text" className="admin-input w-100" value={usuarioActual.nombre}
+                    <label htmlFor="usuario-nombre" className="form-label fw-bold">Nombre</label>
+                    <input id="usuario-nombre" type="text" className="admin-input w-100" value={usuarioActual.nombre}
                       onChange={(e) => setUsuarioActual({...usuarioActual, nombre: e.target.value})} />
                   </div>
                   <div className="col-md-4 mb-3">
-                    <label className="form-label fw-bold">Apellido</label>
-                    <input type="text" className="admin-input w-100" value={usuarioActual.apellido}
+                    <label htmlFor="usuario-apellido" className="form-label fw-bold">Apellido</label>
+                    <input id="usuario-apellido" type="text" className="admin-input w-100" value={usuarioActual.apellido}
                       onChange={(e) => setUsuarioActual({...usuarioActual, apellido: e.target.value})} />
                   </div>
                   <div className="col-md-4 mb-3">
-                    <label className="form-label fw-bold">Email *</label>
-                    <input type="email" className="admin-input w-100" value={usuarioActual.email}
+                    <label htmlFor="usuario-email" className="form-label fw-bold">Email *</label>
+                    <input id="usuario-email" type="email" className="admin-input w-100" value={usuarioActual.email}
                       onChange={(e) => setUsuarioActual({...usuarioActual, email: e.target.value})} required />
                   </div>
                 </div>
                 <div className="row">
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-bold">Contraseña {editando ? '(dejar vacío para no cambiar)' : '*'}</label>
-                    <input type="password" className="admin-input w-100" value={usuarioActual.password}
+                    <label htmlFor="usuario-password" className="form-label fw-bold">Contraseña {editando ? '(dejar vacío para no cambiar)' : '*'}</label>
+                    <input id="usuario-password" type="password" className="admin-input w-100" value={usuarioActual.password}
                       onChange={(e) => setUsuarioActual({...usuarioActual, password: e.target.value})} required={!editando} />
                   </div>
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-bold">Teléfono</label>
-                    <input type="text" className="admin-input w-100" value={usuarioActual.telefono}
+                    <label htmlFor="usuario-telefono" className="form-label fw-bold">Teléfono</label>
+                    <input id="usuario-telefono" type="text" className="admin-input w-100" value={usuarioActual.telefono}
                       onChange={(e) => setUsuarioActual({...usuarioActual, telefono: e.target.value})} />
                   </div>
                 </div>
                 <div className="mb-3">
-                  <label className="form-label fw-bold">Dirección</label>
-                  <textarea className="admin-input w-100" rows="2" value={usuarioActual.direccion}
+                  <label htmlFor="usuario-direccion" className="form-label fw-bold">Dirección</label>
+                  <textarea id="usuario-direccion" className="admin-input w-100" rows="2" value={usuarioActual.direccion}
                     onChange={(e) => setUsuarioActual({...usuarioActual, direccion: e.target.value})}></textarea>
                 </div>
                 <div className="row">
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-bold">Rol *</label>
-                    <select className="admin-select w-100" value={usuarioActual.rol}
+                    <label htmlFor="usuario-rol" className="form-label fw-bold">Rol *</label>
+                    <select id="usuario-rol" className="admin-select w-100" value={usuarioActual.rol}
                       onChange={(e) => setUsuarioActual({...usuarioActual, rol: e.target.value})} required>
                       <option value="cliente">Cliente</option>
                       <option value="auxiliar">Auxiliar</option>
@@ -371,8 +375,8 @@ function AdminUsuariosPage() {
                     </select>
                   </div>
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-bold">Estado *</label>
-                    <select className="admin-select w-100" value={usuarioActual.activo}
+                    <label htmlFor="usuario-activo" className="form-label fw-bold">Estado *</label>
+                    <select id="usuario-activo" className="admin-select w-100" value={usuarioActual.activo}
                       onChange={(e) => setUsuarioActual({...usuarioActual, activo: e.target.value === 'true'})}>
                       <option value="true">Activo</option>
                       <option value="false">Inactivo</option>

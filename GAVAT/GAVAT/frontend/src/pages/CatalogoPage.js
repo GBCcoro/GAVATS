@@ -146,10 +146,96 @@ const CatalogoPage = () => {
     };
   }, []);
 
+  const renderProductosContent = () => {
+    if (loading) {
+      return <LoadingSpinner message="Cargando productos..." />;
+    }
+
+    if (productos.length > 0) {
+      return (
+        <>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <p className="text-muted mb-0">
+              Mostrando {productos.length} de {paginacion.total} productos
+            </p>
+            <p className="text-muted mb-0">
+              Página {paginacion.pagina} de {paginacion.totalPaginas}
+            </p>
+          </div>
+          <Row className="g-4">
+            {productos.map((producto) => (
+              <Col key={producto.id} sm={6} lg={4}>
+                <ProductCard
+                  producto={producto}
+                  onAddToCart={handleAddToCart}
+                />
+              </Col>
+            ))}
+          </Row>
+
+          {paginacion.totalPaginas > 1 && (
+            <div className="d-flex justify-content-center mt-4">
+              <Button
+                className="btn-paginacion"
+                disabled={paginacion.pagina === 1}
+                onClick={() => handlePageChange(paginacion.pagina - 1)}
+              >
+                <i className="bi bi-chevron-left"></i>{' '}Anterior
+              </Button>
+
+              <div className="d-flex align-items-center mx-3">
+                {Array.from({ length: Math.min(5, paginacion.totalPaginas) }, (_, i) => {
+                  let pageNum;
+                  if (paginacion.totalPaginas <= 5) {
+                    pageNum = i + 1;
+                  } else if (paginacion.pagina <= 3) {
+                    pageNum = i + 1;
+                  } else if (paginacion.pagina >= paginacion.totalPaginas - 2) {
+                    pageNum = paginacion.totalPaginas - 4 + i;
+                  } else {
+                    pageNum = paginacion.pagina - 2 + i;
+                  }
+
+                  return (
+                    <Button
+                      key={pageNum}
+                      className={paginacion.pagina === pageNum ? 'btn-paginacion-active' : 'btn-paginacion'}
+                      onClick={() => handlePageChange(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <Button
+                className="btn-paginacion"
+                disabled={paginacion.pagina === paginacion.totalPaginas}
+                onClick={() => handlePageChange(paginacion.pagina + 1)}
+              >
+                Siguiente{' '}<i className="bi bi-chevron-right"></i>
+              </Button>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    return (
+      <div className="text-center py-5">
+        <i className="bi bi-inbox display-1 text-muted"></i>
+        <h4 className="mt-3">No se encontraron productos</h4>
+        <p className="text-muted">
+          Intenta cambiar los filtros de búsqueda
+        </p>
+      </div>
+    );
+  };
+
   return (
     <Container className="py-4">
       <h1 className="catalogo-title mb-4">
-        <i className="bi bi-grid me-2"></i>
+        <i className="bi bi-grid me-2"></i>{' '}
         Catálogo de Productos
       </h1>
 
@@ -164,7 +250,7 @@ const CatalogoPage = () => {
         <Col md={3} className="mb-4">
           <div className="filtros-card p-3 rounded">
             <h5 className="filtros-title mb-3">
-              <i className="bi bi-funnel me-2"></i>
+              <i className="bi bi-funnel me-2"></i>{' '}
               Filtros
             </h5>
 
@@ -221,7 +307,7 @@ const CatalogoPage = () => {
                 className="btn-limpiar-filtros w-100"
                 onClick={handleLimpiarFiltros}
               >
-                <i className="bi bi-x-circle me-2"></i>
+                <i className="bi bi-x-circle me-2"></i>{' '}
                 Limpiar Filtros
               </Button>
             </Form>
@@ -229,86 +315,7 @@ const CatalogoPage = () => {
         </Col>
 
         {/* Grid de productos */}
-        <Col md={9}>
-          {loading ? (
-            <LoadingSpinner message="Cargando productos..." />
-          ) : productos.length > 0 ? (
-            <>
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <p className="text-muted mb-0">
-                  Mostrando {productos.length} de {paginacion.total} productos
-                </p>
-                <p className="text-muted mb-0">
-                  Página {paginacion.pagina} de {paginacion.totalPaginas}
-                </p>
-              </div>
-              <Row className="g-4">
-                {productos.map((producto) => (
-                  <Col key={producto.id} sm={6} lg={4}>
-                    <ProductCard
-                      producto={producto}
-                      onAddToCart={handleAddToCart}
-                    />
-                  </Col>
-                ))}
-              </Row>
-
-              {/* Paginación */}
-              {paginacion.totalPaginas > 1 && (
-                <div className="d-flex justify-content-center mt-4">
-                  <Button
-                    className="btn-paginacion"
-                    disabled={paginacion.pagina === 1}
-                    onClick={() => handlePageChange(paginacion.pagina - 1)}
-                  >
-                    <i className="bi bi-chevron-left"></i> Anterior
-                  </Button>
-                  
-                  <div className="d-flex align-items-center mx-3">
-                    {Array.from({ length: Math.min(5, paginacion.totalPaginas) }, (_, i) => {
-                      let pageNum;
-                      if (paginacion.totalPaginas <= 5) {
-                        pageNum = i + 1;
-                      } else if (paginacion.pagina <= 3) {
-                        pageNum = i + 1;
-                      } else if (paginacion.pagina >= paginacion.totalPaginas - 2) {
-                        pageNum = paginacion.totalPaginas - 4 + i;
-                      } else {
-                        pageNum = paginacion.pagina - 2 + i;
-                      }
-                      
-                      return (
-                        <Button
-                          key={pageNum}
-                          className={paginacion.pagina === pageNum ? 'btn-paginacion-active' : 'btn-paginacion'}
-                          onClick={() => handlePageChange(pageNum)}
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                  
-                  <Button
-                    className="btn-paginacion"
-                    disabled={paginacion.pagina === paginacion.totalPaginas}
-                    onClick={() => handlePageChange(paginacion.pagina + 1)}
-                  >
-                    Siguiente <i className="bi bi-chevron-right"></i>
-                  </Button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-5">
-              <i className="bi bi-inbox display-1 text-muted"></i>
-              <h4 className="mt-3">No se encontraron productos</h4>
-              <p className="text-muted">
-                Intenta cambiar los filtros de búsqueda
-              </p>
-            </div>
-          )}
-        </Col>
+        <Col md={9}>{renderProductosContent()}</Col>
       </Row>
 
       {/* Estilos personalizados usando variables globales */}

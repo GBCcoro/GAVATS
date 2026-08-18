@@ -117,7 +117,7 @@ const MisPedidosPage = () => {
       document.body.appendChild(link);
       link.click();
       window.URL.revokeObjectURL(url);
-      document.body.removeChild(link);
+      link.remove();
       
       setMensaje({ tipo: 'success', texto: 'Factura descargada exitosamente' });
     } catch (error) {
@@ -138,11 +138,11 @@ const MisPedidosPage = () => {
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1 className="pedidos-title">
-          <i className="bi bi-box-seam me-2"></i>
+          <i className="bi bi-box-seam me-2"></i>{' '}
           Mis Pedidos
         </h1>
         <Button className="btn-seguir-comprando" onClick={() => navigate('/catalogo')}>
-          <i className="bi bi-shop me-2"></i>
+          <i className="bi bi-shop me-2"></i>{' '}
           Seguir Comprando
         </Button>
       </div>
@@ -161,7 +161,7 @@ const MisPedidosPage = () => {
             <p className="text-muted">Comienza a comprar para ver tu historial de pedidos aquí</p>
             <Button className="btn-ir-catalogo" onClick={() => navigate('/catalogo')}>
               <i className="bi bi-shop me-2"></i>
-              Ir al Catálogo
+              {' '}Ir al Catálogo
             </Button>
           </Card.Body>
         </Card>
@@ -207,7 +207,7 @@ const MisPedidosPage = () => {
                         onClick={() => navigate(`/pedido-confirmado/${pedido.id}`)}
                         title="Ver detalles del pedido"
                       >
-                        <i className="bi bi-eye me-1"></i>
+                        <i className="bi bi-eye me-1"></i>{' '}
                         Ver Detalle
                       </Button>
                       {pedido.estado === 'pagado' && (
@@ -217,7 +217,7 @@ const MisPedidosPage = () => {
                           onClick={() => handleDescargarFactura(pedido.id)}
                           title="Descargar factura en PDF"
                         >
-                          <i className="bi bi-download me-1"></i>
+                          <i className="bi bi-download me-1"></i>{' '}
                           Factura
                         </Button>
                       )}

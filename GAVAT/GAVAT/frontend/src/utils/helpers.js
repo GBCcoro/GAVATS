@@ -9,8 +9,8 @@
  * Formatear precio en pesos colombianos
  */
 export const formatCurrency = (value) => {
-  const numero = parseFloat(value);
-  if (isNaN(numero)) return '$0';
+  const numero = Number.parseFloat(value);
+  if (Number.isNaN(numero)) return '$0';
   
   return new Intl.NumberFormat('es-CO', {
     style: 'currency',
@@ -56,11 +56,12 @@ export const getImageUrl = (imagePath) => {
     return imagePath;
   }
 
-  const normalizedPath = imagePath.startsWith('/uploads/')
-    ? imagePath
-    : imagePath.startsWith('uploads/')
-      ? `/${imagePath}`
-      : `/uploads/${imagePath}`;
+  let normalizedPath = `/uploads/${imagePath}`;
+  if (imagePath.startsWith('/uploads/')) {
+    normalizedPath = imagePath;
+  } else if (imagePath.startsWith('uploads/')) {
+    normalizedPath = `/${imagePath}`;
+  }
 
   const apiUrl = process.env.REACT_APP_API_URL?.replace(/\/$/, '') || '';
   const backendOrigin = apiUrl ? apiUrl.replace(/\/api$/, '') : '';
@@ -72,8 +73,19 @@ export const getImageUrl = (imagePath) => {
  * Validar email
  */
 export const isValidEmail = (email) => {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(email);
+  if (typeof email !== 'string') return false;
+
+  const emailParts = email.split('@');
+  if (emailParts.length !== 2) return false;
+
+  const [localPart, domainPart] = emailParts;
+  const domainLabels = domainPart.split('.');
+  return Boolean(
+    localPart &&
+    domainPart &&
+    domainLabels.length > 1 &&
+    domainLabels.every((label) => label.length > 0)
+  );
 };
 
 /**

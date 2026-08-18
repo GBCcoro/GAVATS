@@ -82,6 +82,11 @@ const pedidoService = {
         const response = await api.get(`/admin/pedidos/${id}`);
         return response.data.data?.pedido || response.data.pedido || response.data.data || response.data;
       } catch (adminError) {
+        const status = adminError.response?.status;
+        if (status !== 403 && status !== 404) {
+          throw adminError;
+        }
+
         const response = await api.get(`/cliente/pedidos/${id}`);
         return response.data.data?.pedido || response.data.pedido || response.data.data || response.data;
       }

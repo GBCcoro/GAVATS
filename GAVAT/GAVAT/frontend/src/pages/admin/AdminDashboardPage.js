@@ -216,7 +216,7 @@ const AdminDashboardPage = () => {
     <div className="admin-dashboard-page">
       <div className="page-header">
         <h1 className="page-title">
-          <i className="bi bi-speedometer2 page-title-icon"></i>
+          <i className="bi bi-speedometer2 page-title-icon" aria-hidden="true" />{' '}
           Panel de Administración
         </h1>
         <p className="page-subtitle text-muted">
@@ -226,21 +226,26 @@ const AdminDashboardPage = () => {
 
       <div className="dashboard-grid">
         {dashboardCards.filter(card => card.show).map((card) => (
-          <div key={card.link} className="dashboard-card" onClick={() => navigate(card.link)}>
+          <button
+            type="button"
+            key={card.link}
+            className="dashboard-card"
+            onClick={() => navigate(card.link)}
+          >
             <div className={`dashboard-card-top dashboard-card-${card.color}`}>
               <div>
                 <h6>{card.title}</h6>
                 <h2>{card.value}</h2>
               </div>
               <div className="dashboard-card-icon">
-                <i className={`${card.icon} fs-1`}></i>
+                <i className={`${card.icon} fs-1`} aria-hidden="true" />
               </div>
             </div>
             <div className="dashboard-card-footer">
               <span>Ver detalles</span>
-              <i className="bi bi-arrow-right"></i>
+              <i className="bi bi-arrow-right" aria-hidden="true" />
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -248,26 +253,26 @@ const AdminDashboardPage = () => {
         <div className="admin-panel">
           <div className="admin-panel-header admin-panel-header-dark">
             <h5>
-              <i className="bi bi-lightning-fill"></i>
+              <i className="bi bi-lightning-fill" aria-hidden="true" />{' '}
               Accesos Rápidos
             </h5>
           </div>
           <div className="admin-panel-body">
             <div className="button-grid">
               <button type="button" className="btn btn-dark btn-lg" onClick={() => navigate('/admin/productos')}>
-                <i className="bi bi-plus-circle"></i>
+                <i className="bi bi-plus-circle" aria-hidden="true" />{' '}
                 Agregar Producto
               </button>
               <button type="button" className="btn btn-dark btn-lg" onClick={() => navigate('/admin/categorias')}>
-                <i className="bi bi-plus-circle"></i>
+                <i className="bi bi-plus-circle" aria-hidden="true" />{' '}
                 Agregar Categoría
               </button>
               <button type="button" className="btn btn-dark btn-lg" onClick={() => navigate('/admin/pedidos')}>
-                <i className="bi bi-list-check"></i>
+                <i className="bi bi-list-check" aria-hidden="true" />{' '}
                 Gestionar Pedidos
               </button>
               <button type="button" className="btn btn-dark btn-lg" onClick={() => navigate('/catalogo')}>
-                <i className="bi bi-shop"></i>
+                <i className="bi bi-shop" aria-hidden="true" />{' '}
                 Visitar Tienda
               </button>
             </div>
@@ -277,26 +282,26 @@ const AdminDashboardPage = () => {
         <div className="admin-panel">
           <div className="admin-panel-header">
             <h5>
-              <i className="bi bi-info-circle"></i>
+              <i className="bi bi-info-circle" aria-hidden="true" />{' '}
               Información del Sistema
             </h5>
           </div>
           <div className="admin-panel-body">
             <ul className="info-list">
               <li>
-                <i className="bi bi-check-circle text-success"></i>
+                <i className="bi bi-check-circle text-success" aria-hidden="true" />{' '}
                 Sistema operativo correctamente
               </li>
               <li>
-                <i className="bi bi-database text-primary"></i>
+                <i className="bi bi-database text-primary" aria-hidden="true" />{' '}
                 Base de datos conectada
               </li>
               <li>
-                <i className="bi bi-shield-check text-info"></i>
+                <i className="bi bi-shield-check text-info" aria-hidden="true" />{' '}
                 Sesión de administrador activa
               </li>
               <li>
-                <i className="bi bi-clock text-secondary"></i>
+                <i className="bi bi-clock text-secondary" aria-hidden="true" />{' '}
                 Última actualización: {new Date().toLocaleDateString('es-CO')}
               </li>
             </ul>

@@ -52,7 +52,7 @@ const LoginPage = () => {
             <Card.Body className="p-5">
               <div className="text-center mb-4">
                 <h2 className="login-title">
-                  <i className="bi bi-box-arrow-in-right me-2"></i>
+                  <i className="bi bi-box-arrow-in-right me-2"></i>{' '}
                   Iniciar Sesión
                 </h2>
                 <p className="login-subtitle">Accede a tu cuenta</p>
@@ -62,7 +62,7 @@ const LoginPage = () => {
 
               {tieneCarrito && (
                 <Alert variant="success" className="login-alert-success mb-3">
-                  <i className="bi bi-cart-check me-2"></i>
+                  <i className="bi bi-cart-check me-2"></i>{' '}
                   Tu carrito se sincronizará automáticamente al iniciar sesión
                 </Alert>
               )}
@@ -70,7 +70,7 @@ const LoginPage = () => {
               <Form onSubmit={handleSubmit}>
                 <Form.Group className="mb-3">
                   <Form.Label className="login-label">
-                    <i className="bi bi-envelope me-2"></i>
+                    <i className="bi bi-envelope me-2"></i>{' '}
                     Email
                   </Form.Label>
                   <Form.Control
@@ -85,7 +85,7 @@ const LoginPage = () => {
 
                 <Form.Group className="mb-3">
                   <Form.Label className="login-label">
-                    <i className="bi bi-lock me-2"></i>
+                    <i className="bi bi-lock me-2"></i>{' '}
                     Contraseña
                   </Form.Label>
                   <Form.Control
@@ -105,12 +105,12 @@ const LoginPage = () => {
                 >
                   {loading ? (
                     <>
-                      <span className="spinner-border spinner-border-sm me-2" />
+                      <span className="spinner-border spinner-border-sm me-2" />{' '}
                       Iniciando sesión...
                     </>
                   ) : (
                     <>
-                      <i className="bi bi-box-arrow-in-right me-2"></i>
+                      <i className="bi bi-box-arrow-in-right me-2"></i>{' '}
                       Iniciar Sesión
                     </>
                   )}
@@ -122,7 +122,7 @@ const LoginPage = () => {
               <div className="text-center">
                 <p className="mb-2">¿No tienes cuenta?</p>
                 <Link to="/register" className="login-link-outline">
-                  <i className="bi bi-person-plus me-2"></i>
+                  <i className="bi bi-person-plus me-2"></i>{' '}
                   Crear cuenta nueva
                 </Link>
               </div>
@@ -130,7 +130,7 @@ const LoginPage = () => {
               <div className="mt-4">
                 <Alert variant="info" className="login-alert-info mb-0">
                   <strong>
-                    <i className="bi bi-info-circle me-2"></i>
+                    <i className="bi bi-info-circle me-2"></i>{' '}
                     Cuentas de Prueba
                   </strong>
                   <hr className="my-2" />
