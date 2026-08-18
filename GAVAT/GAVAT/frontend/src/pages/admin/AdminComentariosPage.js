@@ -1,9 +1,4 @@
-/**
- * ============================================
- * ADMIN COMENTARIOS PAGE
- * ============================================
- * Gestión y moderación de comentarios de productos
- */
+
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -54,15 +49,15 @@ const AdminComentariosPage = () => {
       if (filtros.busqueda) {
         const busqueda = filtros.busqueda.toLowerCase();
         const coincide = 
-          (comentario.usuario?.nombre && comentario.usuario.nombre.toLowerCase().includes(busqueda)) ||
-          (comentario.producto?.nombre && comentario.producto.nombre.toLowerCase().includes(busqueda)) ||
-          (comentario.comentario && comentario.comentario.toLowerCase().includes(busqueda));
+          comentario.usuario?.nombre?.toLowerCase().includes(busqueda) ||
+          comentario.producto?.nombre?.toLowerCase().includes(busqueda) ||
+          comentario.comentario?.toLowerCase().includes(busqueda);
         if (!coincide) return false;
       }
       
       // Filtro por estado
       if (filtros.estado !== 'todos') {
-        const estado = filtros.estado === 'visible' ? true : false;
+        const estado = filtros.estado === 'visible';
         if (comentario.estado !== estado) return false;
       }
       
@@ -163,7 +158,7 @@ const AdminComentariosPage = () => {
       <div className="admin-toolbar">
         <div className="admin-title">
           <h1>
-            <i className="bi bi-chat-dots"></i>
+            <i className="bi bi-chat-dots"></i>{' '}
             Moderación de Comentarios
           </h1>
           <p className="subtext">Gestiona y modera los comentarios de clientes sobre productos</p>
@@ -179,7 +174,7 @@ const AdminComentariosPage = () => {
                 exportarComentariosAPDF(comentariosFiltrados);
               }}
             >
-              <i className="bi bi-file-earmark-pdf"></i>
+              <i className="bi bi-file-earmark-pdf"></i>{' '}
               Exportar a PDF
             </button>
             <button
@@ -190,14 +185,14 @@ const AdminComentariosPage = () => {
                 await exportarComentariosAExcel(comentariosFiltrados);
               }}
             >
-              <i className="bi bi-file-earmark-excel"></i>
+              <i className="bi bi-file-earmark-excel"></i>{' '}
               Exportar a Excel
             </button>
           </div>
 
           <div className="nav-actions">
             <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-              <i className="bi bi-arrow-left"></i>
+              <i className="bi bi-arrow-left"></i>{' '}
               Volver
             </button>
           </div>
@@ -218,11 +213,12 @@ const AdminComentariosPage = () => {
         <div className="admin-card-body">
           <div className="form-grid">
             <div className="form-group">
-              <label>Buscar</label>
+              <label htmlFor="buscar-comentarios">Buscar</label>
               <div className="input-group">
                 <span className="input-icon"><i className="bi bi-search"></i></span>
                 <input
                   type="text"
+                  id="buscar-comentarios"
                   className="form-control"
                   placeholder="Buscar por usuario, producto o contenido..."
                   value={filtros.busqueda}
@@ -232,8 +228,9 @@ const AdminComentariosPage = () => {
             </div>
 
             <div className="form-group">
-              <label>Estado</label>
+              <label htmlFor="filtro-estado">Estado</label>
               <select
+                id="filtro-estado"
                 className="form-select"
                 value={filtros.estado}
                 onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
@@ -250,7 +247,7 @@ const AdminComentariosPage = () => {
                 className="btn btn-outline-secondary full-width"
                 onClick={() => setFiltros({ busqueda: '', estado: 'todos' })}
               >
-                <i className="bi bi-x-circle"></i>
+                <i className="bi bi-x-circle"></i>{' '}
                 Limpiar filtros
               </button>
             </div>
@@ -343,7 +340,7 @@ const AdminComentariosPage = () => {
           <div className="admin-pagination">
             <div>
               <small className="text-muted">
-                <i className="bi bi-chat-left"></i>
+                <i className="bi bi-chat-left"></i>{' '}
                 Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> - Mostrando <strong>{comentariosPaginados.length}</strong> de <strong>{comentariosFiltrados.length}</strong> registros
               </small>
             </div>
@@ -370,8 +367,13 @@ const AdminComentariosPage = () => {
 
       {/* MODAL DETALLE COMENTARIO */}
       {showDetalleModal && comentarioSeleccionado && (
-        <div className="modal-overlay" onClick={() => setShowDetalleModal(false)}>
-          <div className="modal-dialog" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+        <div className="modal-overlay">
+          <dialog
+            className="modal-dialog"
+            open
+            tabIndex={-1}
+            style={{ maxWidth: '600px' }}
+          >
             <div className="modal-header">
               <h2>Detalle del Comentario</h2>
               <button type="button" className="close-button" onClick={() => setShowDetalleModal(false)}>
@@ -442,7 +444,7 @@ const AdminComentariosPage = () => {
                 <i className="bi bi-trash"></i> Eliminar
               </button>
             </div>
-          </div>
+          </dialog>
         </div>
       )}
     </div>

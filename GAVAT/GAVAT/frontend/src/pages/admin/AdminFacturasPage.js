@@ -39,9 +39,9 @@ const AdminFacturasPage = () => {
       if (filtros.busqueda) {
         const busqueda = filtros.busqueda.toLowerCase();
         const coincide = 
-          (factura.numero_factura && factura.numero_factura.toLowerCase().includes(busqueda)) ||
-          (factura.cliente_nombre && factura.cliente_nombre.toLowerCase().includes(busqueda)) ||
-          (factura.cliente_email && factura.cliente_email.toLowerCase().includes(busqueda));
+          factura.numero_factura?.toLowerCase().includes(busqueda) ||
+          factura.cliente_nombre?.toLowerCase().includes(busqueda) ||
+          factura.cliente_email?.toLowerCase().includes(busqueda);
         if (!coincide) return false;
       }
       
@@ -111,7 +111,7 @@ const AdminFacturasPage = () => {
       document.body.appendChild(link);
       link.click();
       window.URL.revokeObjectURL(url);
-      document.body.removeChild(link);
+      link.remove();
       
       setMensaje({ tipo: 'success', texto: 'PDF descargado correctamente' });
     } catch (error) {

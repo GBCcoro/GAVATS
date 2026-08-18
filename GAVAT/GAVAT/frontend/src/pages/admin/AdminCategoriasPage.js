@@ -46,7 +46,7 @@ const AdminCategoriasPage = () => {
       if (filtros.busqueda) {
         const busqueda = filtros.busqueda.toLowerCase();
         const coincide = cat.nombre.toLowerCase().includes(busqueda) ||
-                        (cat.descripcion && cat.descripcion.toLowerCase().includes(busqueda));
+            cat.descripcion?.toLowerCase().includes(busqueda);
         if (!coincide) return false;
       }
       
@@ -199,7 +199,7 @@ const AdminCategoriasPage = () => {
       <div className="admin-toolbar">
         <div className="admin-title">
           <h1>
-            <i className="bi bi-folder"></i>
+            <i className="bi bi-folder"></i>{' '}
             Gestión de Categorías
           </h1>
           <p className="subtext">Administra las categorías de productos</p>
@@ -215,7 +215,7 @@ const AdminCategoriasPage = () => {
                 exportarCategoriasAPDF(categoriasFiltradas);
               }}
             >
-              <i className="bi bi-file-earmark-pdf"></i>
+              <i className="bi bi-file-earmark-pdf"></i>{' '}
               Exportar a PDF
             </button>
             <button
@@ -226,18 +226,18 @@ const AdminCategoriasPage = () => {
                 await exportarCategoriasAExcel(categoriasFiltradas);
               }}
             >
-              <i className="bi bi-file-earmark-excel"></i>
+              <i className="bi bi-file-earmark-excel"></i>{' '}
               Exportar a Excel
             </button>
           </div>
 
           <div className="nav-actions">
             <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-              <i className="bi bi-arrow-left"></i>
+              <i className="bi bi-arrow-left"></i>{' '}
               Volver
             </button>
             <button type="button" className="btn btn-primary" onClick={() => handleShowModal()}>
-              <i className="bi bi-plus-circle"></i>
+              <i className="bi bi-plus-circle"></i>{' '}
               Nueva Categoría
             </button>
           </div>
@@ -258,12 +258,13 @@ const AdminCategoriasPage = () => {
         <div className="admin-card-body">
           <div className="form-grid">
             <div className="form-group">
-              <label>Buscar</label>
+              <label htmlFor="buscar-categorias">Buscar</label>
               <div className="input-group">
                 <span className="input-icon"><i className="bi bi-search"></i></span>
                 <input
                   type="text"
                   className="form-control"
+                  id="buscar-categorias"
                   placeholder="Buscar por nombre o descripción..."
                   value={filtros.busqueda}
                   onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
@@ -272,9 +273,10 @@ const AdminCategoriasPage = () => {
             </div>
 
             <div className="form-group">
-              <label>Estado</label>
+              <label htmlFor="estado-categorias">Estado</label>
               <select
                 className="form-select"
+                id="estado-categorias"
                 value={filtros.estado}
                 onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
               >
@@ -290,7 +292,7 @@ const AdminCategoriasPage = () => {
                 className="btn btn-outline-secondary full-width"
                 onClick={() => setFiltros({ busqueda: '', estado: 'todos' })}
               >
-                <i className="bi bi-x-circle"></i>
+                <i className="bi bi-x-circle"></i>{' '}
                 Limpiar filtros
               </button>
             </div>
@@ -360,7 +362,7 @@ const AdminCategoriasPage = () => {
           <div className="admin-pagination">
             <div>
               <small className="text-muted">
-                <i className="bi bi-file-text"></i>
+                <i className="bi bi-file-text"></i>{' '}
                 Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> - Mostrando <strong>{categoriasPaginadas.length}</strong> de <strong>{categoriasFiltradas.length}</strong> registros
               </small>
             </div>
@@ -386,8 +388,8 @@ const AdminCategoriasPage = () => {
       )}
 
       {showModal && (
-        <div className="modal-overlay" onClick={handleCloseModal}>
-          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal-dialog">
             <div className="modal-header">
               <h2>{editando ? 'Editar Categoría' : 'Nueva Categoría'}</h2>
               <button type="button" className="close-button" onClick={handleCloseModal}>
@@ -397,9 +399,10 @@ const AdminCategoriasPage = () => {
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label>Nombre <span className="text-danger">*</span></label>
+                  <label htmlFor="categoria-nombre">Nombre <span className="text-danger">*</span></label>
                   <input
                     type="text"
+                    id="categoria-nombre"
                     name="nombre"
                     className="form-control"
                     value={formData.nombre}
@@ -410,10 +413,11 @@ const AdminCategoriasPage = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Descripción</label>
+                  <label htmlFor="categoria-descripcion">Descripción</label>
                   <textarea
                     className="form-control"
                     rows={3}
+                    id="categoria-descripcion"
                     name="descripcion"
                     value={formData.descripcion}
                     onChange={handleChange}
@@ -428,8 +432,8 @@ const AdminCategoriasPage = () => {
                       name="activo"
                       checked={formData.activo}
                       onChange={handleChange}
-                    />
-                    Categoría activa
+                      />{' '}
+                      Categoría activa
                   </label>
                 </div>
               </div>
