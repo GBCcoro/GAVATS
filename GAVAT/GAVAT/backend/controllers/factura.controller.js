@@ -24,7 +24,11 @@ const {
   generarFacturaPDF,
   obtenerBufferFactura,
 } = require("../services/pdfService");
-const { handleServerError } = require("./_sharedControllerHelpers");
+const {
+  handleServerError,
+  parsePaginationQuery,
+  buildPaginationMeta,
+} = require("./_sharedControllerHelpers");
 
 const obtenerDatosFactura = (factura) => ({
   id: factura.id,
@@ -258,10 +262,9 @@ exports.descargarFacturaPDF = async (req, res) => {
 exports.listarFacturasUsuario = async (req, res) => {
   try {
     const usuarioId = req.usuario.id;
-    const { page = 1, limit = 10 } = req.query;
-    const pageNumber = Number.parseInt(page, 10);
-    const limitNumber = Number.parseInt(limit, 10);
-    const offset = (pageNumber - 1) * limitNumber;
+    const { page, limit, offset } = parsePaginationQuery(req.query, {
+      defaultLimit: 10,
+    });
     const { count, rows } = await Factura.findAndCountAll({
       include: [
         {
@@ -272,17 +275,14 @@ exports.listarFacturasUsuario = async (req, res) => {
           required: true,
         },
       ],
-      limit: limitNumber,
-      offset: Number.parseInt(offset, 10),
+      limit,
+      offset,
       order: [["fechaEmision", "DESC"]],
     });
     res.status(200).json({
       success: true,
       data: {
-        total: count,
-        pagina: pageNumber,
-        limite: limitNumber,
-        totalPaginas: Math.ceil(count / limitNumber),
+        ...buildPaginationMeta(count, page, limit),
         facturas: rows.map((f) => ({
           id: f.id,
           numeroFactura: f.numeroFactura,
@@ -366,13 +366,12 @@ exports.verDetalleFactura = async (req, res) => {
 
 exports.listarFacturasAdmin = async (req, res) => {
   try {
-    const { page = 1, limit = 20, estado } = req.query;
-    const pageNumber = Number.parseInt(page, 10);
-    const limitNumber = Number.parseInt(limit, 10);
-    const offset = (pageNumber - 1) * limitNumber;
+    const { page, limit, offset } = parsePaginationQuery(req.query, {
+      defaultLimit: 20,
+    });
     const where = {};
-    if (estado) {
-      where.estado = estado;
+    if (req.query.estado) {
+      where.estado = req.query.estado;
     }
     const { count, rows } = await Factura.findAndCountAll({
       where,
@@ -386,17 +385,14 @@ exports.listarFacturasAdmin = async (req, res) => {
           ],
         },
       ],
-      limit: limitNumber,
-      offset: Number.parseInt(offset, 10),
+      limit,
+      offset,
       order: [["fechaEmision", "DESC"]],
     });
     res.status(200).json({
       success: true,
       data: {
-        total: count,
-        pagina: pageNumber,
-        limite: limitNumber,
-        totalPaginas: Math.ceil(count / limitNumber),
+        ...buildPaginationMeta(count, page, limit),
         facturas: rows.map((f) => ({
           id: f.id,
           numeroFactura: f.numeroFactura,

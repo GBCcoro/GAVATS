@@ -96,11 +96,48 @@ function buildProductListQuery(query = {}, opts = {}) {
 }
 
 function handleServerError(res, error, message = 'Error del servidor') {
-  console.error(message + ':', error);
+  console.error(`${message}:`, error);
   return res.status(500).json({ success: false, message, error: error.message });
+}
+
+function sendNotFound(res, message = 'Registro no encontrado') {
+  return res.status(404).json({ success: false, message });
+}
+
+function parsePaginationQuery(query = {}, options = {}) {
+  const {
+    pageKey = 'page',
+    limitKey = 'limit',
+    defaultPage = 1,
+    defaultLimit = 10,
+    maxLimit = Number.MAX_SAFE_INTEGER,
+  } = options;
+
+  const page = Number.parseInt(query[pageKey], 10) || defaultPage;
+  const limit = Math.min(Number.parseInt(query[limitKey], 10) || defaultLimit, maxLimit);
+  const offset = (page - 1) * limit;
+
+  return { page, limit, offset };
+}
+
+function buildPaginationMeta(total, page, limit) {
+  return {
+    total,
+    pagina: page,
+    limite: limit,
+    totalPaginas: Math.ceil(total / limit) || 0,
+  };
+}
+
+function normalizeBooleanLabel(value) {
+  return value ? 'visible' : 'no_visible';
 }
 
 module.exports = {
   buildProductListQuery,
   handleServerError,
+  sendNotFound,
+  parsePaginationQuery,
+  buildPaginationMeta,
+  normalizeBooleanLabel,
 };

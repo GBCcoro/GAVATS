@@ -13,7 +13,26 @@ const Usuario = require('../models/Usuario');
 const Producto = require('../models/Producto');
 const DetallePedido = require('../models/DetallePedido');
 const Pedido = require('../models/Pedido');
+const {
+  handleServerError,
+  sendNotFound,
+  parsePaginationQuery,
+  normalizeBooleanLabel,
+} = require('./_sharedControllerHelpers');
 const { Op } = require('sequelize');
+
+const serializarComentario = (comentario) => ({
+  id: comentario.id,
+  usuarioId: comentario.usuarioId,
+  autor: comentario.usuario?.nombre || null,
+  email: comentario.usuario?.email || null,
+  productoId: comentario.productoId,
+  producto: comentario.producto?.nombre || null,
+  comentario: comentario.comentario,
+  calificacion: comentario.calificacion,
+  estado: normalizeBooleanLabel(comentario.estado),
+  fecha: comentario.fecha,
+});
 
 /**
  * Crear comentario sobre un producto - CLIENTE
@@ -68,10 +87,7 @@ const crearComentario = async (req, res) => {
     // VALIDACIÓN 4: Producto existe
     const producto = await Producto.findByPk(productoId);
     if (!producto) {
-      return res.status(404).json({
-        success: false,
-        message: 'El producto especificado no existe'
-      });
+      return sendNotFound(res, 'El producto especificado no existe');
     }
 
     // VALIDACIÓN 5: El usuario ha comprado este producto (CRÍTICO)
@@ -118,12 +134,7 @@ const crearComentario = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error en crearComentario:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al crear el comentario',
-      error: error.message
-    });
+    return handleServerError(res, error, 'Error al crear el comentario');
   }
 };
 
@@ -153,17 +164,17 @@ const crearComentario = async (req, res) => {
 const obtenerComentariosProducto = async (req, res) => {
   try {
     const { productoId } = req.params;
-    const pagina = Number.parseInt(req.query.pagina, 10) || 1;
-    const limite = Math.min(Number.parseInt(req.query.limite, 10) || 10, 20); // Máximo 20 comentarios
-    const offset = (pagina - 1) * limite;
+    const { page, limit, offset } = parsePaginationQuery(req.query, {
+      pageKey: 'pagina',
+      limitKey: 'limite',
+      defaultLimit: 10,
+      maxLimit: 20,
+    });
 
     // VALIDACIÓN: Producto existe
     const producto = await Producto.findByPk(productoId);
     if (!producto) {
-      return res.status(404).json({
-        success: false,
-        message: 'El producto especificado no existe'
-      });
+      return sendNotFound(res, 'El producto especificado no existe');
     }
 
     // Obtiene comentarios visibles
@@ -179,13 +190,12 @@ const obtenerComentariosProducto = async (req, res) => {
           attributes: ['id', 'nombre', 'email']
         }
       ],
-      order: [['fecha', 'DESC']], // Más recientes primero
-      limit: limite,
+      order: [['fecha', 'DESC']],
+      limit,
       offset,
       distinct: true
     });
 
-    // Calcula estadísticas del producto
     const comentariosVisibles = await Comentario.findAll({
       where: {
         productoId,
@@ -198,8 +208,6 @@ const obtenerComentariosProducto = async (req, res) => {
       ? (comentariosVisibles.reduce((sum, c) => sum + c.calificacion, 0) / comentariosVisibles.length).toFixed(1)
       : 0;
 
-    const totalPaginas = Math.ceil(count / limite);
-
     res.status(200).json({
       success: true,
       data: {
@@ -209,31 +217,18 @@ const obtenerComentariosProducto = async (req, res) => {
           calificacionPromedio: Number.parseFloat(calificacionPromedio),
           totalComentarios: comentariosVisibles.length
         },
-        comentarios: comentarios.map(c => ({
-          id: c.id,
-          usuarioId: c.usuarioId,
-          autor: c.usuario.nombre,
-          comentario: c.comentario,
-          calificacion: c.calificacion,
-          estado: c.estado ? 'visible' : 'no_visible',
-          fecha: c.fecha
-        })),
+        comentarios: comentarios.map(serializarComentario),
         paginacion: {
-          paginaActual: pagina,
-          totalPaginas,
+          paginaActual: page,
+          totalPaginas: Math.ceil(count / limit),
           totalComentarios: count,
-          comentariosPorPagina: limite
+          comentariosPorPagina: limit
         }
       }
     });
 
   } catch (error) {
-    console.error('Error en obtenerComentariosProducto:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener comentarios',
-      error: error.message
-    });
+    return handleServerError(res, error, 'Error al obtener comentarios');
   }
 };
 
@@ -258,10 +253,7 @@ const eliminarComentario = async (req, res) => {
     // Busca el comentario
     const comentario = await Comentario.findByPk(comentarioId);
     if (!comentario) {
-      return res.status(404).json({
-        success: false,
-        message: 'El comentario especificado no existe'
-      });
+      return sendNotFound(res, 'El comentario especificado no existe');
     }
 
     // Obtiene datos antes de eliminar
@@ -280,12 +272,7 @@ const eliminarComentario = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error en eliminarComentario:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al eliminar el comentario',
-      error: error.message
-    });
+    return handleServerError(res, error, 'Error al eliminar el comentario');
   }
 };
 
@@ -329,29 +316,21 @@ const moderarComentario = async (req, res) => {
 
     const comentario = await Comentario.findByPk(comentarioId);
     if (!comentario) {
-      return res.status(404).json({
-        success: false,
-        message: 'Comentario no encontrado'
-      });
+      return sendNotFound(res, 'Comentario no encontrado');
     }
 
     await comentario.update({ estado: nuevoEstado });
 
     res.status(200).json({
       success: true,
-      message: `Comentario ${nuevoEstado ? 'visible' : 'no_visible'}`,
+      message: `Comentario ${normalizeBooleanLabel(nuevoEstado)}`,
       data: {
         id: comentario.id,
-        estado: nuevoEstado ? 'visible' : 'no_visible'
+        estado: normalizeBooleanLabel(nuevoEstado)
       }
     });
   } catch (error) {
-    console.error('Error en moderarComentario:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al moderar el comentario',
-      error: error.message
-    });
+    return handleServerError(res, error, 'Error al moderar el comentario');
   }
 };
 
@@ -365,10 +344,7 @@ const toggleComentario = async (req, res) => {
     const { comentarioId } = req.params;
     const comentario = await Comentario.findByPk(comentarioId);
     if (!comentario) {
-      return res.status(404).json({
-        success: false,
-        message: 'Comentario no encontrado'
-      });
+      return sendNotFound(res, 'Comentario no encontrado');
     }
 
     const nuevoEstado = !comentario.estado;
@@ -376,19 +352,14 @@ const toggleComentario = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Comentario ${nuevoEstado ? 'visible' : 'no_visible'}`,
+      message: `Comentario ${normalizeBooleanLabel(nuevoEstado)}`,
       data: {
         id: comentario.id,
-        estado: nuevoEstado ? 'visible' : 'no_visible'
+        estado: normalizeBooleanLabel(nuevoEstado)
       }
     });
   } catch (error) {
-    console.error('Error en toggleComentario:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al cambiar la visibilidad del comentario',
-      error: error.message
-    });
+    return handleServerError(res, error, 'Error al cambiar la visibilidad del comentario');
   }
 };
 
@@ -407,10 +378,7 @@ const editarComentario = async (req, res) => {
 
     const comentarioBD = await Comentario.findByPk(comentarioId);
     if (!comentarioBD) {
-      return res.status(404).json({
-        success: false,
-        message: 'Comentario no encontrado'
-      });
+      return sendNotFound(res, 'Comentario no encontrado');
     }
 
     if (comentarioBD.usuarioId !== usuarioId) {
@@ -458,16 +426,11 @@ const editarComentario = async (req, res) => {
         id: comentarioBD.id,
         comentario: comentarioBD.comentario,
         calificacion: comentarioBD.calificacion,
-        estado: comentarioBD.estado ? 'visible' : 'no_visible'
+        estado: normalizeBooleanLabel(comentarioBD.estado)
       }
     });
   } catch (error) {
-    console.error('Error en editarComentario:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al editar el comentario',
-      error: error.message
-    });
+    return handleServerError(res, error, 'Error al editar el comentario');
   }
 };
 
@@ -484,10 +447,7 @@ const eliminarComentarioPropio = async (req, res) => {
 
     const comentarioBD = await Comentario.findByPk(comentarioId);
     if (!comentarioBD) {
-      return res.status(404).json({
-        success: false,
-        message: 'Comentario no encontrado'
-      });
+      return sendNotFound(res, 'Comentario no encontrado');
     }
 
     if (comentarioBD.usuarioId !== usuarioId) {
@@ -508,12 +468,7 @@ const eliminarComentarioPropio = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error en eliminarComentarioPropio:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al eliminar el comentario',
-      error: error.message
-    });
+    return handleServerError(res, error, 'Error al eliminar el comentario');
   }
 };
 
@@ -532,10 +487,7 @@ const obtenerComentariosPorUsuario = async (req, res) => {
     });
 
     if (!usuario) {
-      return res.status(404).json({
-        success: false,
-        message: 'Usuario no encontrado'
-      });
+      return sendNotFound(res, 'Usuario no encontrado');
     }
 
     const comentarios = await Comentario.findAll({
@@ -558,24 +510,11 @@ const obtenerComentariosPorUsuario = async (req, res) => {
           nombre: usuario.nombre,
           email: usuario.email
         },
-        comentarios: comentarios.map(c => ({
-          id: c.id,
-          productoId: c.productoId,
-          producto: c.producto?.nombre || null,
-          comentario: c.comentario,
-          calificacion: c.calificacion,
-          estado: c.estado ? 'visible' : 'no_visible',
-          fecha: c.fecha
-        }))
+        comentarios: comentarios.map(serializarComentario)
       }
     });
   } catch (error) {
-    console.error('Error en obtenerComentariosPorUsuario:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener comentarios por usuario',
-      error: error.message
-    });
+    return handleServerError(res, error, 'Error al obtener comentarios por usuario');
   }
 };
 
@@ -587,9 +526,12 @@ const obtenerComentariosPorUsuario = async (req, res) => {
  */
 const obtenerTodosComentarios = async (req, res) => {
   try {
-    const pagina = Number.parseInt(req.query.pagina, 10) || 1;
-    const limite = Math.min(Number.parseInt(req.query.limite, 10) || 20, 50);
-    const offset = (pagina - 1) * limite;
+    const { page, limit, offset } = parsePaginationQuery(req.query, {
+      pageKey: 'pagina',
+      limitKey: 'limite',
+      defaultLimit: 20,
+      maxLimit: 50,
+    });
 
     const { count, rows: comentarios } = await Comentario.findAndCountAll({
       include: [
@@ -605,7 +547,7 @@ const obtenerTodosComentarios = async (req, res) => {
         }
       ],
       order: [['fecha', 'DESC']],
-      limit: limite,
+      limit,
       offset,
       distinct: true
     });
@@ -613,33 +555,17 @@ const obtenerTodosComentarios = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        comentarios: comentarios.map(c => ({
-          id: c.id,
-          usuarioId: c.usuarioId,
-          usuario: c.usuario?.nombre || null,
-          email: c.usuario?.email || null,
-          productoId: c.productoId,
-          producto: c.producto?.nombre || null,
-          comentario: c.comentario,
-          calificacion: c.calificacion,
-          estado: c.estado ? 'visible' : 'no_visible',
-          fecha: c.fecha
-        })),
+        comentarios: comentarios.map(serializarComentario),
         paginacion: {
-          paginaActual: pagina,
-          totalPaginas: Math.ceil(count / limite),
+          paginaActual: page,
+          totalPaginas: Math.ceil(count / limit),
           totalComentarios: count,
-          comentariosPorPagina: limite
+          comentariosPorPagina: limit
         }
       }
     });
   } catch (error) {
-    console.error('Error en obtenerTodosComentarios:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener todos los comentarios',
-      error: error.message
-    });
+    return handleServerError(res, error, 'Error al obtener todos los comentarios');
   }
 };
 
