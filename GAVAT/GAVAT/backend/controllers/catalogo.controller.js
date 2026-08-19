@@ -19,6 +19,7 @@ const Categoria = require("../models/Categoria");
 
 const Subcategoria = require("../models/Subcategoria");
 const { Op } = require("sequelize");
+const { buildProductListQuery, handleServerError } = require("./_sharedControllerHelpers");
 
 const contarProductosDisponibles = (campo, id) =>
   Producto.count({
@@ -46,113 +47,46 @@ const contarProductosDisponibles = (campo, id) =>
 
 const getProductos = async (req, res) => {
   try {
-    // Extrae los query params de la URL.
-    // req.query contiene los parámetros después del ? en la URL.
-    // Ejemplo: /productos?categoriaId=1&orden=precio_asc
-    // Los valores con = son valores por defecto si no se envían.
-    const {
-      categoriaId,
-      subcategoriaId,
-      buscar,
-      precioMin,
-      precioMax,
-      orden = "reciente", // Si no viene, ordena por más recientes
-      pagina = 1, // Página actual, por defecto la primera
-      limite = 12, // Productos por página, por defecto 12
-    } = req.query;
-    // Filtros base: SIEMPRE filtra productos activos con stock > 0.
-    // where es el objeto que Sequelize traduce a la cláusula WHERE de SQL.
-    const where = {
-      activo: true, // Solo productos activos
-      stock: { [Op.gt]: 0 }, // Op.gt = greater than (mayor que). Stock > 0
-    };
-    // Agrega filtros opcionales SOLO si el usuario los envió en la URL
-    if (categoriaId) where.categoriaId = categoriaId; // Filtra por categoría
-    if (subcategoriaId) where.subcategoriaId = subcategoriaId; // Filtra por subcategoría
-    // Búsqueda por texto en nombre O descripción del producto
-    if (buscar) {
-      // Op.or: busca donde se cumpla CUALQUIERA de las condiciones (OR en SQL)
-      // Op.like: equivale a LIKE en SQL. %texto% busca el texto en cualquier posición
-      where[Op.or] = [
-        { nombre: { [Op.like]: `%${buscar}%` } }, // Busca en el nombre
-        { descripcion: { [Op.like]: `%${buscar}%` } }, // O en la descripción
-      ];
-    }
-    // Filtro por rango de precios (mínimo y/o máximo)
-    if (precioMin || precioMax) {
-      where.precio = {}; // Crea el objeto para filtrar precio
-      // Op.gte = greater than or equal (>=). Precio >= precioMin
-      if (precioMin) where.precio[Op.gte] = Number.parseFloat(precioMin);
-      // Op.lte = less than or equal (<=). Precio <= precioMax
-      if (precioMax) where.precio[Op.lte] = Number.parseFloat(precioMax);
-    }
-    // Define el ordenamiento según el parámetro 'orden'
-    // order es un array de arrays: [['campo', 'dirección']]
-    let order;
-    switch (orden) {
-      case "precio_asc": // Precio de menor a mayor
-        order = [["precio", "ASC"]];
-        break;
-      case "precio_desc": // Precio de mayor a menor
-        order = [["precio", "DESC"]];
-        break;
-      case "nombre": // Nombre alfabéticamente A-Z
-        order = [["nombre", "ASC"]];
-        break;
-      case "reciente": // Más recientes primero
-      default:
-        order = [["createdAt", "DESC"]];
-        break;
-    }
-    // Calcula el offset (cuántos registros saltar) para la paginación.
-    // Ejemplo: página 3 con límite 12 -> offset = (3-1) * 12 = 24 (salta los primeros 24)
-    const offset = (Number.parseInt(pagina) - 1) * Number.parseInt(limite);
-    // Consulta productos con paginación.
-    // findAndCountAll() retorna { count: total, rows: registros }
-    // count = total de registros que coinciden (para calcular páginas)
-    // rows = solo los registros de la página actual
+    const { where, order, limit, offset } = buildProductListQuery(req.query, {
+      isPublic: true,
+      defaultLimit: 12,
+    });
+
     const { count, rows: productos } = await Producto.findAndCountAll({
-      where, // Filtros definidos arriba
+      where,
       include: [
-        // JOINs con tablas relacionadas
         {
           model: Categoria,
           as: "categoria",
           attributes: ["id", "nombre"],
-          where: { activo: true }, // Solo categorías activas
+          where: { activo: true },
         },
         {
           model: Subcategoria,
           as: "subcategoria",
           attributes: ["id", "nombre"],
-          where: { activo: true }, // Solo subcategorías activas
+          where: { activo: true },
         },
       ],
-      limit: Number.parseInt(limite), // Máximo de registros a retornar
-      offset, // Registros a saltar
-      order, // Ordenamiento
+      limit,
+      offset,
+      order,
     });
-    // Responde con los productos y la info de paginación
+
     res.json({
       success: true,
       data: {
-        productos, // Array de productos de esta página
+        productos,
         paginacion: {
-          total: count, // Total de productos que coinciden con los filtros
-          pagina: Number.parseInt(pagina),
-          limite: Number.parseInt(limite),
-          // Math.ceil redondea hacia arriba: 25/12 = 2.08 -> 3 páginas
-          totalPaginas: Math.ceil(count / Number.parseInt(limite)),
+          total: count,
+          pagina: Number.parseInt(req.query.pagina || 1),
+          limite: limit,
+          totalPaginas: Math.ceil(count / limit),
         },
       },
     });
   } catch (error) {
-    console.error("Error en getProductos:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al obtener productos",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al obtener productos");
   }
 };
 
@@ -165,51 +99,32 @@ const getProductos = async (req, res) => {
 
 const getProductoById = async (req, res) => {
   try {
-    // Obtiene el ID del producto de los parámetros de la URL
     const { id } = req.params;
-    // Busca UN producto que cumpla: tener ese ID y estar activo.
-    // findOne() retorna un solo registro o null.
     const producto = await Producto.findOne({
-      where: {
-        id, // ID del producto
-        activo: true, // Solo si está activo
-      },
+      where: { id, activo: true },
       include: [
         {
           model: Categoria,
           as: "categoria",
           attributes: ["id", "nombre"],
-          where: { activo: true }, // Categoría debe estar activa
+          where: { activo: true },
         },
         {
           model: Subcategoria,
           as: "subcategoria",
           attributes: ["id", "nombre"],
-          where: { activo: true }, // Subcategoría debe estar activa
+          where: { activo: true },
         },
       ],
     });
-    // Si no encontró el producto (no existe, está inactivo, o su categoría/subcategoría está inactiva)
+
     if (!producto) {
-      return res.status(404).json({
-        success: false,
-        message: "Producto no encontrado o no disponible",
-      });
+      return res.status(404).json({ success: false, message: "Producto no encontrado o no disponible" });
     }
-    // Responde con el producto encontrado
-    res.json({
-      success: true,
-      data: {
-        producto,
-      },
-    });
+
+    res.json({ success: true, data: { producto } });
   } catch (error) {
-    console.error("Error en getProductoById:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al obtener producto",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al obtener producto");
   }
 };
 

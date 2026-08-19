@@ -10,6 +10,7 @@
 // Importa el modelo Usuario desde models/Usuario.js → tabla 'Usuario'
 
 const Usuario = require("../models/Usuario");
+const { handleServerError } = require("./_sharedControllerHelpers");
 
 /**
  * Obtener todos los usuarios (admin)
@@ -68,12 +69,7 @@ const getUsuarios = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error en getUsuarios:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al obtener usuarios",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al obtener usuarios");
   }
 };
 
@@ -103,12 +99,7 @@ const getUsuarioById = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error en getUsuarioById:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al obtener usuario",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al obtener usuario");
   }
 };
 
@@ -167,7 +158,6 @@ const crearUsuario = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error en crearUsuario:", error);
     // Captura errores de validación del modelo Sequelize
     if (error.name === "SequelizeValidationError") {
       return res.status(400).json({
@@ -176,11 +166,7 @@ const crearUsuario = async (req, res) => {
         errors: error.errors.map((e) => e.message),
       });
     }
-    res.status(500).json({
-      success: false,
-      message: "Error al crear usuario",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al crear usuario");
   }
 };
 
@@ -228,12 +214,7 @@ const actualizarUsuario = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error en actualizarUsuario:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al actualizar usuario",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al actualizar usuario");
   }
 };
 
@@ -274,12 +255,7 @@ const toggleUsuario = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error en toggleUsuario:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al cambiar estado del usuario",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al cambiar estado del usuario");
   }
 };
 
@@ -314,12 +290,7 @@ const eliminarUsuario = async (req, res) => {
       message: "Usuario eliminado exitosamente",
     });
   } catch (error) {
-    console.error("Error en eliminarUsuario:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al eliminar usuario",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al eliminar usuario");
   }
 };
 
@@ -360,12 +331,7 @@ const getEstadisticasUsuarios = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error en getEstadisticasUsuarios:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al obtener estadísticas",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al obtener estadísticas");
   }
 };
 // Exporta todas las funciones del controlador para usarlas en las rutas de admin.

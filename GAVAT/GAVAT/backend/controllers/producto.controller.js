@@ -16,6 +16,7 @@ const Categoria = require("../models/Categoria");
 // Importa el modelo Subcategoria desde models/Subcategoria.js → tabla 'Subcategoria'
 
 const Subcategoria = require("../models/Subcategoria");
+const { buildProductListQuery, handleServerError } = require("./_sharedControllerHelpers");
 // 'path' es un módulo nativo de Node.js para manejar rutas de archivos.
 // Se usa para construir la ruta completa de las imágenes en el disco.
 
@@ -39,77 +40,38 @@ const fs = require("node:fs").promises;
 
 const getProductos = async (req, res) => {
   try {
-    // Extrae todos los filtros y datos de paginación de los query params
-    const {
-      categoriaId,
-      subcategoriaId,
-      activo,
-      conStock,
-      buscar,
-      pagina = 1, // Página actual (default: 1)
-      limite = 100, // Registros por página (default: 100)
-    } = req.query;
-    // Construye el objeto WHERE dinámicamente según los filtros recibidos
-    const where = {};
-    if (categoriaId) where.categoriaId = categoriaId; // Filtra por categoría
-    if (subcategoriaId) where.subcategoriaId = subcategoriaId; // Filtra por subcategoría
-    if (activo !== undefined) where.activo = activo === "true"; // Convierte string a boolean
-    // Op.gt = greater than (>). stock > 0
-    if (conStock === "true") where.stock = { [require("sequelize").Op.gt]: 0 };
-    // Búsqueda por texto en nombre o descripción
-    if (buscar) {
-      const { Op } = require("sequelize");
-      // Op.or: busca en nombre O descripción
-      // Op.like: equivale a LIKE en SQL
-      where[Op.or] = [
-        { nombre: { [Op.like]: `%${buscar}%` } },
-        { descripcion: { [Op.like]: `%${buscar}%` } },
-      ];
-    }
-    // Calcula el offset para paginación (cuántos registros saltar)
-    const offset = (Number.parseInt(pagina) - 1) * Number.parseInt(limite);
-    // Opciones completas de la consulta Sequelize
+    const { where, order, limit, offset } = buildProductListQuery(req.query, {
+      isPublic: false,
+      defaultLimit: 100,
+    });
+
     const opciones = {
-      where, // Filtros construidos arriba
+      where,
       include: [
-        // JOINs con tablas relacionadas
-        {
-          model: Categoria,
-          as: "categoria",
-          attributes: ["id", "nombre"], // Solo trae id y nombre de la categoría
-        },
-        {
-          model: Subcategoria,
-          as: "subcategoria",
-          attributes: ["id", "nombre"], // Solo trae id y nombre de la subcategoría
-        },
+        { model: Categoria, as: "categoria", attributes: ["id", "nombre"] },
+        { model: Subcategoria, as: "subcategoria", attributes: ["id", "nombre"] },
       ],
-      limit: Number.parseInt(limite), // Máximo de registros
-      offset, // Registros a saltar
-      order: [["nombre", "ASC"]], // Ordenar alfabéticamente A-Z
+      limit,
+      offset,
+      order,
     };
-    // findAndCountAll retorna { count: total, rows: registros de esta página }
+
     const { count, rows: productos } = await Producto.findAndCountAll(opciones);
-    // Responde con los productos y la información de paginación
+
     res.json({
       success: true,
       data: {
         productos,
         paginacion: {
-          total: count, // Total de productos que coinciden
-          pagina: Number.parseInt(pagina),
-          limite: Number.parseInt(limite),
-          totalPaginas: Math.ceil(count / Number.parseInt(limite)), // Redondea hacia arriba
+          total: count,
+          pagina: Number.parseInt(req.query.pagina || 1),
+          limite: limit,
+          totalPaginas: Math.ceil(count / limit),
         },
       },
     });
   } catch (error) {
-    console.error("Error en getProductos:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al obtener productos",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al obtener productos");
   }
 };
 
@@ -122,44 +84,21 @@ const getProductos = async (req, res) => {
 
 const getProductoById = async (req, res) => {
   try {
-    const { id } = req.params; // ID del producto desde la URL
-    // findByPk busca por Primary Key (clave primaria = id)
-    // include hace JOINs con Categoria y Subcategoria
+    const { id } = req.params;
     const producto = await Producto.findByPk(id, {
       include: [
-        {
-          model: Categoria,
-          as: "categoria",
-          attributes: ["id", "nombre", "activo"], // Incluye si está activa
-        },
-        {
-          model: Subcategoria,
-          as: "subcategoria",
-          attributes: ["id", "nombre", "activo"],
-        },
+        { model: Categoria, as: "categoria", attributes: ["id", "nombre", "activo"] },
+        { model: Subcategoria, as: "subcategoria", attributes: ["id", "nombre", "activo"] },
       ],
     });
-    // Si no existe el producto
+
     if (!producto) {
-      return res.status(404).json({
-        success: false,
-        message: "Producto no encontrado",
-      });
+      return res.status(404).json({ success: false, message: "Producto no encontrado" });
     }
-    // Responde con el producto encontrado
-    res.json({
-      success: true,
-      data: {
-        producto,
-      },
-    });
+
+    res.json({ success: true, data: { producto } });
   } catch (error) {
-    console.error("Error en getProductoById:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al obtener producto",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al obtener producto");
   }
 };
 

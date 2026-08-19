@@ -24,6 +24,7 @@ const {
   generarFacturaPDF,
   obtenerBufferFactura,
 } = require("../services/pdfService");
+const { handleServerError } = require("./_sharedControllerHelpers");
 
 const obtenerDatosFactura = (factura) => ({
   id: factura.id,
@@ -154,12 +155,7 @@ exports.crearFactura = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Error creando factura:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al crear la factura",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al crear la factura");
   }
 };
 
@@ -209,12 +205,7 @@ exports.obtenerFacturaPedido = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error obteniendo factura:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al obtener la factura",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al obtener la factura");
   }
 };
 
@@ -252,18 +243,10 @@ exports.descargarFacturaPDF = async (req, res) => {
     }
     await enviarFacturaPDF(factura, numeroFactura, res, true);
   } catch (error) {
-    console.error("Error descargando factura:", error);
     if (error.code === "ENOENT") {
-      return res.status(404).json({
-        success: false,
-        message: "Archivo de factura no encontrado",
-      });
+      return res.status(404).json({ success: false, message: "Archivo de factura no encontrado" });
     }
-    res.status(500).json({
-      success: false,
-      message: "Error al descargar la factura",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al descargar la factura");
   }
 };
 
@@ -312,12 +295,7 @@ exports.listarFacturasUsuario = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error listando facturas:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al listar las facturas",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al listar las facturas");
   }
 };
 
@@ -377,12 +355,7 @@ exports.verDetalleFactura = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error obteniendo detalle de factura:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al obtener la factura",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al obtener la factura");
   }
 };
 
@@ -442,12 +415,7 @@ exports.listarFacturasAdmin = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error listando facturas (admin):", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al listar las facturas",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al listar las facturas");
   }
 };
 
@@ -488,12 +456,7 @@ exports.anularFactura = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error anulando factura:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al anular la factura",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al anular la factura");
   }
 };
 
@@ -523,18 +486,10 @@ exports.descargarFacturaPDFAdmin = async (req, res) => {
     }
     await enviarFacturaPDF(factura, numeroFactura, res, false);
   } catch (error) {
-    console.error("Error descargando factura (admin):", error);
     if (error.code === "ENOENT") {
-      return res.status(404).json({
-        success: false,
-        message: "Archivo de factura no encontrado",
-      });
+      return res.status(404).json({ success: false, message: "Archivo de factura no encontrado" });
     }
-    res.status(500).json({
-      success: false,
-      message: "Error al descargar la factura",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al descargar la factura");
   }
 };
 

@@ -14,6 +14,7 @@ const Usuario = require("../models/Usuario");
 // Se usa para crear un token JWT después de un registro o login exitoso.
 
 const { generateToken } = require("../config/jwt");
+const { handleServerError } = require("./_sharedControllerHelpers");
 
 /**
  * Registrar nuevo usuario
@@ -93,15 +94,7 @@ const register = async (req, res) => {
       },
     });
   } catch (error) {
-    // Si ocurre cualquier error inesperado, lo captura aquí
-    // Registra el error completo en consola del servidor (para debugging)
-    console.error("Error en register:", error);
-    // Responde con status 500 (Internal Server Error = error del servidor)
-    res.status(500).json({
-      success: false,
-      message: "Error al registrar usuario",
-      error: error.message, // Solo envía el mensaje, no el stack completo
-    });
+    return handleServerError(res, error, "Error al registrar usuario");
   }
 };
 
@@ -182,12 +175,7 @@ const login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error en login:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al iniciar sesión",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al iniciar sesión");
   }
 };
 
@@ -227,12 +215,7 @@ const getMe = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error en getMe:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al obtener perfil",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al obtener perfil");
   }
 };
 
@@ -281,12 +264,7 @@ const updateMe = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error en updateMe:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al actualizar perfil",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al actualizar perfil");
   }
 };
 
@@ -350,12 +328,7 @@ const changePassword = async (req, res) => {
       message: "Contraseña actualizada exitosamente",
     });
   } catch (error) {
-    console.error("Error en changePassword:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al cambiar contraseña",
-      error: error.message,
-    });
+    return handleServerError(res, error, "Error al cambiar contraseña");
   }
 };
 // Exporta todas las funciones del controlador como un objeto.
