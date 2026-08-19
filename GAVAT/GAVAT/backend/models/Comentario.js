@@ -10,43 +10,38 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
+const crearClaveForanea = (modelo, mensaje) => ({
+  type: DataTypes.INTEGER,
+  allowNull: false,
+  references: {
+    model: modelo,
+    key: 'id'
+  },
+  onUpdate: 'CASCADE',
+  onDelete: 'CASCADE',
+  validate: {
+    notNull: {
+      msg: mensaje
+    }
+  }
+});
+
 const Comentario = sequelize.define('Comentario', {
+
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
     allowNull: false
   },
+
   usuarioId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'usuarios',
-      key: 'id'
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'CASCADE',
-    validate: {
-      notNull: {
-        msg: 'Debe especificar un usuario'
-      }
-    }
+    ...crearClaveForanea('usuarios', 'Debe especificar un usuario')
   },
   productoId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'productos',
-      key: 'id'
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'CASCADE',
-    validate: {
-      notNull: {
-        msg: 'Debe especificar un producto'
-      }
-    }
+    ...crearClaveForanea('productos', 'Debe especificar un producto')
   },
+
   comentario: {
     type: DataTypes.TEXT,
     allowNull: false,
@@ -60,6 +55,7 @@ const Comentario = sequelize.define('Comentario', {
       }
     }
   },
+
   calificacion: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -72,11 +68,13 @@ const Comentario = sequelize.define('Comentario', {
       }
     }
   },
+
   fecha: {
     type: DataTypes.DATE,
     allowNull: false,
     defaultValue: DataTypes.NOW
   },
+
   estado: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
