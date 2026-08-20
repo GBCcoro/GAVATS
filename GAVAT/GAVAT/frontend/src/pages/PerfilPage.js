@@ -208,7 +208,6 @@ const PerfilPage = () => {
                         </div>
                       </div>
                     )}
-                )}
 
                 {/* Sección Rol */}
                 <div className="perfil-item">
