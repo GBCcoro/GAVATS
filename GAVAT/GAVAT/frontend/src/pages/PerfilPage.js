@@ -177,40 +177,37 @@ const PerfilPage = () => {
                 )}
 
                 {/* Sección Dirección - Solo para Clientes */}
-                {/* Sección Dirección - Solo para Clientes */}
-                {isCliente && (
-                  !isEditing ? (
-                    <div className="perfil-item">
-                      <div className="perfil-item-icon">
-                        <i className="bi bi-geo-alt" aria-hidden="true" />
+                {isCliente && (!isEditing ? (
+                      <div className="perfil-item">
+                        <div className="perfil-item-icon">
+                          <i className="bi bi-geo-alt" aria-hidden="true" />
+                        </div>
+                        <div className="perfil-item-content">
+                            <span className="perfil-item-label">Dirección de Envío</span>
+                          <p className="perfil-item-value">{user?.direccion || 'No especificada'}</p>
+                        </div>
                       </div>
-                      <div className="perfil-item-content">
-                        <span className="perfil-item-label">Dirección de Envío</span>
-                        <p className="perfil-item-value">{user?.direccion || 'No especificada'}</p>
+                    ) : (
+                      <div className="perfil-item">
+                        <div className="perfil-item-icon">
+                          <i className="bi bi-geo-alt" aria-hidden="true" />
+                        </div>
+                        <div className="perfil-item-content w-100">
+                            <Form.Label className="perfil-item-label" htmlFor="perfil-direccion">
+                              Dirección de Envío
+                            </Form.Label>
+                          <Form.Control
+                              id="perfil-direccion"
+                            as="textarea"
+                            rows={2}
+                            name="direccion"
+                            value={formData.direccion}
+                            onChange={handleInputChange}
+                            placeholder="Ingresa tu dirección"
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="perfil-item">
-                      <div className="perfil-item-icon">
-                        <i className="bi bi-geo-alt" aria-hidden="true" />
-                      </div>
-                      <div className="perfil-item-content w-100">
-                        <Form.Label className="perfil-item-label" htmlFor="perfil-direccion">
-                          Dirección de Envío
-                        </Form.Label>
-                        <Form.Control
-                          id="perfil-direccion"
-                          as="textarea"
-                          rows={2}
-                          name="direccion"
-                          value={formData.direccion}
-                          onChange={handleInputChange}
-                          placeholder="Ingresa tu dirección"
-                        />
-                      </div>
-                    </div>
-                  )
-                )}
+                    )}
 
                 {/* Sección Rol */}
                 <div className="perfil-item">
