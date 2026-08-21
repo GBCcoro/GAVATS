@@ -398,9 +398,227 @@ const actualizarProducto = async (req, res) => {
   }
 };
 
+/**
+ * Activar/Desactivar producto (toggle) (admin)
+ * 
+ * Ruta: PATCH /api/admin/productos/:id/toggle
+ * Invierte el estado activo del producto.
+ */
+const toggleProducto = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Busca el producto por ID
+    const producto = await Producto.findByPk(id);
+    
+    if (!producto) {
+      return res.status(404).json({
+        success: false,
+        message: 'Producto no encontrado'
+      });
+    }
+    
+    // Si se va a activar, verificar que la categoría y subcategoría estén activas
+    if (!producto.activo) {
+      const categoria = await Categoria.findByPk(producto.categoriaId);
+      if (!categoria || !categoria.activo) {
+        return res.status(400).json({
+          success: false,
+          message: `No se puede activar el producto porque la categoría "${categoria ? categoria.nombre : producto.categoriaId}" está inactiva`
+        });
+      }
+      const subcategoria = await Subcategoria.findByPk(producto.subcategoriaId);
+      if (!subcategoria || !subcategoria.activo) {
+        return res.status(400).json({
+          success: false,
+          message: `No se puede activar el producto porque la subcategoría "${subcategoria ? subcategoria.nombre : producto.subcategoriaId}" está inactiva`
+        });
+      }
+    }
+
+    // Invierte el estado: true → false, false → true
+    producto.activo = !producto.activo;
+    await producto.save();
+    
+    // Responde indicando el nuevo estado
+    res.json({
+      success: true,
+      message: `Producto ${producto.activo ? 'activado' : 'desactivado'} exitosamente`,
+      data: {
+        producto
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error en toggleProducto:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al cambiar estado del producto',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Eliminar producto (admin)
+ * 
+ * Ruta: DELETE /api/admin/productos/:id
+ * Elimina el producto de la BD.
+ */
+const eliminarProducto = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const producto = await Producto.findByPk(id);
+    
+    if (!producto) {
+      return res.status(404).json({
+        success: false,
+        message: 'Producto no encontrado'
+      });
+    }
+    
+    // Si tiene imagen almacenada en disco, eliminarla
+    if (producto.imagen && typeof producto.imagen === 'string' && !producto.imagen.startsWith('data:')) {
+      const rutaImagen = path.join(__dirname, '../uploads', producto.imagen);
+      try {
+        await fs.promises.unlink(rutaImagen);
+      } catch (err) {
+        // Ignorar si el archivo no existe
+      }
+    }
+
+    await producto.destroy();
+    
+    res.json({
+      success: true,
+      message: 'Producto eliminado exitosamente'
+    });
+    
+  } catch (error) {
+    console.error('Error en eliminarProducto:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al eliminar producto',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Actualizar stock de un producto (admin)
+ * 
+ * Ruta: PATCH /api/admin/productos/:id/stock
+ * Body JSON: { cantidad, operacion: 'aumentar' | 'reducir' | 'establecer' }
+ * 
+ * - aumentar: suma la cantidad al stock actual
+ * - reducir: resta la cantidad del stock actual
+ * - establecer: reemplaza el stock con la cantidad dada
+ */
+const actualizarStock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { cantidad, operacion } = req.body;   // Datos del body JSON
+    
+    // Valida que se enviaron ambos campos
+    if (cantidad === undefined || cantidad === null || !operacion) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requiere cantidad y operación'
+      });
+    }
+    
+    // Convierte la cantidad a número entero
+    const cantidadNum = Number.parseInt(cantidad);
+    if (Number.isNaN(cantidadNum) || cantidadNum < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'La cantidad debe ser un número entero mayor o igual a 0'
+      });
+    }
+    
+    // Busca el producto por ID
+    const producto = await Producto.findByPk(id);
+    
+    if (!producto) {
+      return res.status(404).json({
+        success: false,
+        message: 'Producto no encontrado'
+      });
+    }
+    
+    let nuevoStock;   // Variable para almacenar el stock resultante
+    
+    // Según la operación, calcula el nuevo stock
+    switch (operacion) {
+      case 'aumentar':
+        nuevoStock = producto.stock + cantidadNum;
+        break;
+      case 'reducir':
+        // Verifica que haya suficiente stock antes de reducir
+        if (cantidadNum > producto.stock) {
+          return res.status(400).json({
+            success: false,
+            message: `No hay suficiente stock. Stock actual: ${producto.stock}`
+          });
+        }
+        nuevoStock = producto.stock - cantidadNum;
+        break;
+      case 'establecer':
+        // Simplemente establece el valor directamente
+        nuevoStock = cantidadNum;
+        break;
+      default:
+        // Si la operación no es válida
+        return res.status(400).json({
+          success: false,
+          message: 'Operación inválida. Usa: aumentar, reducir o establecer'
+        });
+    }
+    
+    const stockAnterior = producto.stock;
+
+    // Asigna el nuevo stock y guarda en la BD
+    producto.stock = nuevoStock;
+    await producto.save();
+    
+    // Responde con el resultado de la operación
+    let mensajeOperacion;
+    if (operacion === 'aumentar') {
+      mensajeOperacion = 'aumentado';
+    } else if (operacion === 'reducir') {
+      mensajeOperacion = 'reducido';
+    } else {
+      mensajeOperacion = 'establecido';
+    }
+
+    res.json({
+      success: true,
+      message: `Stock ${mensajeOperacion} exitosamente`,
+      data: {
+        productoId: producto.id,
+        nombre: producto.nombre,
+        stockAnterior: operacion === 'establecer' ? null : stockAnterior,
+        stockNuevo: producto.stock
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error en actualizarStock:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al actualizar stock',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getProductos,
   getProductoById,
   crearProducto,
   actualizarProducto,
+  toggleProducto,
+  eliminarProducto,
+  actualizarStock
 };

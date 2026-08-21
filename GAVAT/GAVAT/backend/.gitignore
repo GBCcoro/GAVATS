@@ -22,3 +22,12 @@ Thumbs.db
 # Ignorar archivos temporales
 *.tmp
 *.temp
+# Pruebas y cobertura de código (Test results & coverage)
+coverage/
+.nyc_output/
+test-results/
+test-report.html
+test-report.xml
+junit.xml
+*.lcov
+.jest/

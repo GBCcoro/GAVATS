@@ -6,7 +6,16 @@
 .pnp.js
 
 # testing
+# testing
 /coverage
+coverage/
+.nyc_output/
+test-results/
+test-report.html
+test-report.xml
+junit.xml
+*.lcov
+.jest/
 
 # production
 /build

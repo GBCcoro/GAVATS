@@ -23,19 +23,12 @@ require('dotenv').config();
  * Esta instancia se reutiliza en toda la aplicación para interactuar con la BD.
  */
 const sequelize = new Sequelize(
-  // Primer parámetro: nombre de la base de datos, leído de .env (variable DB_NAME)
-  process.env.DB_NAME,
-  // Segundo parámetro: usuario de MySQL, leído de .env (variable DB_USER)
-  process.env.DB_USER,
-  // Tercer parámetro: contraseña de MySQL, leído de .env (variable DB_PASSWORD)
-  process.env.DB_PASSWORD,
+  process.env.DB_NAME || 'gavat',
+  process.env.DB_USER || 'root',
+  process.env.DB_PASSWORD || '',
   {
-    // host: dirección del servidor MySQL, leído de .env (variable DB_HOST)
-    // Normalmente es 'localhost' en desarrollo con XAMPP
-    host: process.env.DB_HOST,
-    // port: puerto de MySQL, leído de .env (variable DB_PORT)
-    // El puerto estándar de MySQL es 3306
-    port: process.env.DB_PORT,
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306,
     // dialect: indica a Sequelize qué tipo de base de datos usamos
     // Opciones posibles: 'mysql', 'postgres', 'sqlite', 'mariadb', 'mssql'
     dialect: 'mysql',

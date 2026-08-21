@@ -72,7 +72,10 @@ export const AuthProvider = ({ children }) => {
   // Actualizar perfil
   const updateProfile = useCallback(async (userData) => {
     const response = await authService.updateProfile(userData);
-    setUser(response.data.usuario);
+    const usuario = response?.data?.usuario || response?.usuario || response?.data;
+    if (usuario) {
+      setUser(usuario);
+    }
     return response;
   }, []);
 

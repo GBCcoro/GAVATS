@@ -32,11 +32,14 @@ const LoginPage = () => {
 
     try {
       const response = await login(email, password);
+      const usuario = response?.usuario || response?.data?.usuario || response;
 
-      if (response.data.usuario.rol === 'cliente') {
+      if (usuario?.rol === 'cliente') {
         navigate('/catalogo');
-      } else if (response.data.usuario.rol === 'administrador' || response.data.usuario.rol === 'auxiliar') {
+      } else if (usuario?.rol === 'administrador' || usuario?.rol === 'auxiliar') {
         navigate('/admin/dashboard');
+      } else {
+        navigate('/');
       }
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión');

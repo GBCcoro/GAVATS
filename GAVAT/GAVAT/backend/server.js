@@ -35,6 +35,7 @@ const cors = require('cors');
 // path proporciona utilidades para trabajar con rutas de archivos del sistema operativo
 // Se usa aquí para construir la ruta absoluta de la carpeta 'uploads/'
 const path = require('node:path');
+const fs = require('fs');
 
 // Ejecuta dotenv.config() para cargar las variables del archivo .env
 // Lee el archivo .env en la raíz del backend y las pone en process.env
@@ -95,22 +96,28 @@ const sanitizeForLog = (value) => {
 // porque el backend está en un puerto diferente (localhost:5000)
 const allowedOrigins = new Set([
   ...(process.env.FRONTEND_URL || 'http://localhost:3000').split(',').map(url => url.trim()).filter(Boolean),
+  'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost:3002'
 ]);
 
-const isLocalhostOrigin = (origin) => {
+const isLocalOrNetworkOrigin = (origin) => {
   if (!origin) return false;
-  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+  // Permite localhost, 127.0.0.1 e IPs de red privada (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+  return /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/.test(origin);
 };
 
 app.use(cors({
   origin: function (origin, callback) {
-    // allow non-browser tools like Postman or server-side requests
+    // Permite peticiones sin origin (herramientas como Postman, scripts del servidor, etc.)
     if (!origin) {
       return callback(null, true);
     }
-    if (allowedOrigins.has(origin) || (process.env.NODE_ENV === 'development' && isLocalhostOrigin(origin))) {
+    if (
+      allowedOrigins.has(origin) ||
+      isLocalOrNetworkOrigin(origin) ||
+      process.env.NODE_ENV === 'development'
+    ) {
       return callback(null, true);
     }
     return callback(new Error(`Origin ${origin} no autorizado por CORS`));
@@ -149,6 +156,12 @@ app.use(express.urlencoded({ extended: true }));
 // Ejemplo: Un archivo en uploads/producto-123.jpg es accesible en http://localhost:5000/uploads/producto-123.jpg
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Servir archivos estáticos del frontend React (compilado en build/)
+const frontendBuildPath = path.join(__dirname, '../frontend/build');
+if (fs.existsSync(frontendBuildPath)) {
+  app.use(express.static(frontendBuildPath));
+}
+
 // Middleware de logging → Muestra en consola cada petición HTTP que llega al servidor
 // Solo se activa en modo desarrollo (NODE_ENV=development en .env)
 // Útil para depuración: ver qué rutas se están llamando y con qué método
@@ -173,12 +186,14 @@ if (process.env.NODE_ENV === 'development') {
 // Al visitar http://localhost:5000/ en el navegador, muestra esta respuesta
 // Es útil para verificar rápidamente que el servidor arrancó correctamente
 app.get('/', (req, res) => {
-  // res.json() envía una respuesta en formato JSON al cliente
+  if (fs.existsSync(frontendBuildPath)) {
+    return res.sendFile(path.join(frontendBuildPath, 'index.html'));
+  }
   res.json({
-    success: true,                                // Indica que la petición fue exitosa
+    success: true,
     message: '✅ Servidor E-commerce Backend corriendo correctamente',
-    version: '1.0.0',                             // Versión del backend
-    timestamp: new Date().toISOString()            // Fecha/hora actual en formato ISO 8601
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
   });
 });
 
