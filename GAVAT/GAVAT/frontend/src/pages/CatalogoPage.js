@@ -180,7 +180,7 @@ const CatalogoPage = () => {
                 disabled={paginacion.pagina === 1}
                 onClick={() => handlePageChange(paginacion.pagina - 1)}
               >
-                <i className="bi bi-chevron-left"></i>{' '}Anterior
+                <img src="/assests/icons/arrow_left.svg" alt="Anterior" width="16" height="16" className="me-1 pagination-icon-svg" />{' '}Anterior
               </Button>
 
               <div className="d-flex align-items-center mx-3">
@@ -213,7 +213,7 @@ const CatalogoPage = () => {
                 disabled={paginacion.pagina === paginacion.totalPaginas}
                 onClick={() => handlePageChange(paginacion.pagina + 1)}
               >
-                Siguiente{' '}<i className="bi bi-chevron-right"></i>
+                Siguiente{' '}<img src="/assests/icons/arrow_right.svg" alt="Siguiente" width="16" height="16" className="ms-1 pagination-icon-svg" />
               </Button>
             </div>
           )}

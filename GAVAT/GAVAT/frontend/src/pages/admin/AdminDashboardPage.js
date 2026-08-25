@@ -117,7 +117,7 @@ const AdminDashboardPage = () => {
       title: 'Productos',
       subtitle: 'Catálogo disponible',
       value: stats.productos,
-      icon: 'bi-box-seam',
+      icon: 'product.svg',
       colorClass: 'card-stat-gold',
       iconBg: 'rgba(245, 194, 113, 0.2)',
       iconColor: '#f5c271',
@@ -128,7 +128,7 @@ const AdminDashboardPage = () => {
       title: 'Categorías',
       subtitle: 'Familias de producto',
       value: stats.categorias,
-      icon: 'bi-tags',
+      icon: 'category.svg',
       colorClass: 'card-stat-navy',
       iconBg: 'rgba(56, 189, 248, 0.15)',
       iconColor: '#38bdf8',
@@ -139,7 +139,7 @@ const AdminDashboardPage = () => {
       title: 'Subcategorías',
       subtitle: 'Líneas y divisiones',
       value: stats.subcategorias,
-      icon: 'bi-diagram-3',
+      icon: 'subcategory.svg',
       colorClass: 'card-stat-teal',
       iconBg: 'rgba(45, 212, 191, 0.15)',
       iconColor: '#2dd4bf',
@@ -150,7 +150,7 @@ const AdminDashboardPage = () => {
       title: 'Usuarios',
       subtitle: 'Clientes y personal',
       value: stats.usuarios,
-      icon: 'bi-people',
+      icon: 'account_black.svg',
       colorClass: 'card-stat-purple',
       iconBg: 'rgba(168, 85, 247, 0.15)',
       iconColor: '#a855f7',
@@ -161,7 +161,7 @@ const AdminDashboardPage = () => {
       title: 'Pedidos Totales',
       subtitle: 'Órdenes procesadas',
       value: stats.pedidos,
-      icon: 'bi-cart-check',
+      icon: 'orders.svg',
       colorClass: 'card-stat-blue',
       iconBg: 'rgba(99, 102, 241, 0.15)',
       iconColor: '#6366f1',
@@ -172,7 +172,7 @@ const AdminDashboardPage = () => {
       title: 'Por Atender',
       subtitle: 'Pedidos pendientes',
       value: stats.pedidosPendientes,
-      icon: 'bi-clock-history',
+      icon: 'orders.svg',
       colorClass: 'card-stat-red',
       iconBg: 'rgba(244, 63, 94, 0.15)',
       iconColor: '#f43f5e',
@@ -183,7 +183,7 @@ const AdminDashboardPage = () => {
       title: 'Facturas',
       subtitle: 'Documentos generados',
       value: stats.facturas,
-      icon: 'bi-file-earmark-text',
+      icon: 'bill.svg',
       colorClass: 'card-stat-amber',
       iconBg: 'rgba(251, 191, 36, 0.15)',
       iconColor: '#fbbf24',
@@ -194,7 +194,7 @@ const AdminDashboardPage = () => {
       title: 'Comentarios',
       subtitle: 'Opiniones y reseñas',
       value: stats.comentarios,
-      icon: 'bi-chat-dots',
+      icon: 'comment.svg',
       colorClass: 'card-stat-emerald',
       iconBg: 'rgba(16, 185, 129, 0.15)',
       iconColor: '#10b981',
@@ -207,28 +207,28 @@ const AdminDashboardPage = () => {
     {
       title: 'Agregar Producto',
       description: 'Crear nuevo artículo con foto, precio y stock',
-      icon: 'bi-plus-circle',
+      icon: 'product.svg',
       link: '/admin/productos',
       btnClass: 'btn-action-gold'
     },
     {
       title: 'Nueva Categoría',
       description: 'Organizar secciones y catálogos de venta',
-      icon: 'bi-folder-plus',
+      icon: 'category.svg',
       link: '/admin/categorias',
       btnClass: 'btn-action-navy'
     },
     {
       title: 'Gestionar Pedidos',
       description: 'Consultar estados, pagos y despachos',
-      icon: 'bi-truck',
+      icon: 'orders.svg',
       link: '/admin/pedidos',
       btnClass: 'btn-action-emerald'
     },
     {
       title: 'Ver Tienda Online',
       description: 'Navegar por el catálogo como cliente',
-      icon: 'bi-shop',
+      icon: 'shop.svg',
       link: '/catalogo',
       btnClass: 'btn-action-outline'
     }
@@ -317,7 +317,17 @@ const AdminDashboardPage = () => {
                       className="stat-icon-wrap"
                       style={{ backgroundColor: card.iconBg, color: card.iconColor }}
                     >
-                      <i className={`bi ${card.icon}`} />
+                      {card.icon.endsWith('.svg') ? (
+                        <img 
+                          src={`/assests/icons/${card.icon}`} 
+                          alt={card.title} 
+                          width="24" 
+                          height="24" 
+                          style={{ filter: card.iconColor === '#f5c271' ? 'none' : 'invert(29%) sepia(35%) saturate(885%) hue-rotate(180deg) brightness(91%) contrast(92%)' }} 
+                        />
+                      ) : (
+                        <i className={`bi ${card.icon}`} />
+                      )}
                     </div>
                   </div>
                   <div className="d-flex align-items-baseline justify-content-between mt-auto">
@@ -340,8 +350,8 @@ const AdminDashboardPage = () => {
           <Card className="panel-card shadow-sm h-100">
             <Card.Header className="panel-card-header d-flex align-items-center justify-content-between">
               <div className="d-flex align-items-center gap-2">
-                <div className="panel-header-icon bg-gold-subtle text-gold">
-                  <i className="bi bi-lightning-charge-fill" />
+                <div className="panel-header-icon bg-gold-subtle text-gold d-flex align-items-center justify-content-center">
+                  <img src="/assests/icons/access_flash.svg" alt="Accesos" width="20" height="20" />
                 </div>
                 <div>
                   <h6 className="mb-0 fw-bold panel-header-title">Accesos Rápidos</h6>
@@ -359,8 +369,12 @@ const AdminDashboardPage = () => {
                       onClick={() => navigate(action.link)}
                     >
                       <div className="d-flex align-items-center gap-3">
-                        <div className="action-tile-icon">
-                          <i className={`bi ${action.icon}`} />
+                        <div className="action-tile-icon d-flex align-items-center justify-content-center">
+                          {action.icon.endsWith('.svg') ? (
+                            <img src={`/assests/icons/${action.icon}`} alt={action.title} width="20" height="20" />
+                          ) : (
+                            <i className={`bi ${action.icon}`} />
+                          )}
                         </div>
                         <div className="flex-grow-1 overflow-hidden">
                           <div className="action-tile-title">{action.title}</div>
@@ -380,8 +394,8 @@ const AdminDashboardPage = () => {
           <Card className="panel-card shadow-sm h-100">
             <Card.Header className="panel-card-header d-flex align-items-center justify-content-between">
               <div className="d-flex align-items-center gap-2">
-                <div className="panel-header-icon bg-info-subtle text-info">
-                  <i className="bi bi-info-circle-fill" />
+                <div className="panel-header-icon bg-info-subtle text-info d-flex align-items-center justify-content-center">
+                  <img src="/assests/icons/state.svg" alt="Estado" width="20" height="20" />
                 </div>
                 <div>
                   <h6 className="mb-0 fw-bold panel-header-title">Estado del Sistema</h6>

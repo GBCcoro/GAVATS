@@ -81,7 +81,7 @@ const NavigationBar = memo(() => {
             className={`nav-link-custom-mobile me-2 ${isActive('/carrito') ? 'active' : ''}`} 
             aria-label="Carrito de compras"
           >
-            <i className="bi bi-cart3 fs-4" />
+            <img src="/assests/icons/shopping.svg" alt="Carrito" width="22" height="22" className="navbar-icon-svg" />
           </Link>
 
           {/* Menú Usuario en Móvil */}
@@ -110,17 +110,17 @@ const NavigationBar = memo(() => {
                   </span>
                 </div>
                 <NavDropdown.Item as={Link} to="/perfil" onClick={handleLinkClick}>
-                  <i className="bi bi-person me-2" /> Mi Perfil
+                  <img src="/assests/icons/account_white.svg" alt="Perfil" width="16" height="16" className="me-2 navbar-icon-svg" /> Mi Perfil
                 </NavDropdown.Item>
                 {isCliente && (
                   <NavDropdown.Item as={Link} to="/mis-pedidos" onClick={handleLinkClick}>
-                    <i className="bi bi-box-seam me-2" /> Mis Pedidos
+                    <img src="/assests/icons/orders.svg" alt="Pedidos" width="16" height="16" className="me-2 navbar-icon-svg" /> Mis Pedidos
                   </NavDropdown.Item>
                 )}
                 {(isAdmin || isAuxiliar) && (
                   <>
                     <NavDropdown.Item as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick}>
-                      <i className="bi bi-box-seam me-2" /> Mis Pedidos (Admin)
+                      <img src="/assests/icons/orders.svg" alt="Pedidos" width="16" height="16" className="me-2 navbar-icon-svg" /> Mis Pedidos (Admin)
                     </NavDropdown.Item>
                   </>
                 )}
@@ -153,7 +153,7 @@ const NavigationBar = memo(() => {
               <i className="bi bi-house-door me-2 d-lg-none" />Inicio
             </Nav.Link>
             <Nav.Link as={Link} to="/catalogo" onClick={handleLinkClick} className={`nav-link-custom ${isActive('/catalogo') ? 'active' : ''}`}>
-              <i className="bi bi-grid me-2 d-lg-none" />Catálogo
+              <img src="/assests/icons/shop.svg" alt="Catálogo" width="16" height="16" className="me-2 d-lg-none navbar-icon-svg" />Catálogo
             </Nav.Link>
             <Nav.Link 
               as={Link} 
@@ -161,7 +161,7 @@ const NavigationBar = memo(() => {
               onClick={handleLinkClick}
               className={`nav-link-custom d-none d-lg-flex align-items-center ${isActive('/carrito') ? 'active' : ''}`}
             >
-              <i className="bi bi-cart3 me-2" />Carrito
+              <img src="/assests/icons/shopping.svg" alt="Carrito" width="16" height="16" className="me-2 navbar-icon-svg" />Carrito
             </Nav.Link>
           </Nav>
 
@@ -172,7 +172,7 @@ const NavigationBar = memo(() => {
               <NavDropdown
                 title={
                   <>
-                    <i className="bi bi-shield-lock-fill text-gold me-1" />
+                    <img src="/assests/icons/access_flash.svg" alt="Administración" width="16" height="16" className="me-1 navbar-icon-svg" />
                     <span className="text-gold">Administración</span>
                   </>
                 }
@@ -181,38 +181,38 @@ const NavigationBar = memo(() => {
                 align="end"
               >
                 <div className="dropdown-header-custom px-3 py-2 border-bottom mb-2 text-gold small fw-bold d-flex align-items-center">
-                  <i className="bi bi-shield-shaded me-2" /> Panel Administrativo
+                  <img src="/assests/icons/access_flash.svg" alt="Panel" width="16" height="16" className="me-2 navbar-icon-svg" /> Panel Administrativo
                 </div>
                 <NavDropdown.Item as={Link} to="/admin/dashboard" onClick={handleLinkClick}>
-                  <i className="bi bi-speedometer2 me-2 text-gold" /> Dashboard
+                  <img src="/assests/icons/access_flash.svg" alt="Dashboard" width="16" height="16" className="me-2 navbar-icon-svg" /> Dashboard
                 </NavDropdown.Item>
                 <NavDropdown.Divider />
                 <NavDropdown.Item as={Link} to="/admin/categorias" onClick={handleLinkClick}>
-                  <i className="bi bi-tags me-2" /> Categorías
+                  <img src="/assests/icons/category.svg" alt="Categorías" width="16" height="16" className="me-2 navbar-icon-svg" /> Categorías
                 </NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/admin/subcategorias" onClick={handleLinkClick}>
-                  <i className="bi bi-diagram-3 me-2" /> Subcategorías
+                  <img src="/assests/icons/subcategory.svg" alt="Subcategorías" width="16" height="16" className="me-2 navbar-icon-svg" /> Subcategorías
                 </NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/admin/productos" onClick={handleLinkClick}>
-                  <i className="bi bi-box-seam me-2" /> Productos
+                  <img src="/assests/icons/product.svg" alt="Productos" width="16" height="16" className="me-2 navbar-icon-svg" /> Productos
                 </NavDropdown.Item>
                 {isAdmin && (
                   <NavDropdown.Item as={Link} to="/admin/usuarios" onClick={handleLinkClick}>
-                    <i className="bi bi-people me-2" /> Usuarios
+                    <img src="/assests/icons/account_white.svg" alt="Usuarios" width="16" height="16" className="me-2 navbar-icon-svg" /> Usuarios
                   </NavDropdown.Item>
                 )}
                 <NavDropdown.Item as={Link} to="/admin/facturas" onClick={handleLinkClick}>
-                  <i className="bi bi-file-earmark-text me-2" /> Facturas
+                  <img src="/assests/icons/bill.svg" alt="Facturas" width="16" height="16" className="me-2 navbar-icon-svg" /> Facturas
                 </NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/admin/pedidos" onClick={handleLinkClick}>
-                  <i className="bi bi-cart-check me-2" /> Pedidos
+                  <img src="/assests/icons/orders.svg" alt="Pedidos" width="16" height="16" className="me-2 navbar-icon-svg" /> Pedidos
                 </NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/admin/comentarios" onClick={handleLinkClick}>
-                  <i className="bi bi-chat-dots me-2" /> Comentarios
+                  <img src="/assests/icons/comment.svg" alt="Comentarios" width="16" height="16" className="me-2 navbar-icon-svg" /> Comentarios
                 </NavDropdown.Item>
                 <NavDropdown.Divider />
                 <NavDropdown.Item as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick}>
-                  <i className="bi bi-bag-check me-2" /> Mis Pedidos (Admin)
+                  <img src="/assests/icons/orders.svg" alt="Pedidos" width="16" height="16" className="me-2 navbar-icon-svg" /> Mis Pedidos (Admin)
                 </NavDropdown.Item>
               </NavDropdown>
             )}
@@ -243,17 +243,17 @@ const NavigationBar = memo(() => {
                     </span>
                   </div>
                   <NavDropdown.Item as={Link} to="/perfil" onClick={handleLinkClick}>
-                    <i className="bi bi-person me-2" /> Mi Perfil
+                    <img src="/assests/icons/account_white.svg" alt="Perfil" width="16" height="16" className="me-2 navbar-icon-svg" /> Mi Perfil
                   </NavDropdown.Item>
                   {isCliente && (
                     <NavDropdown.Item as={Link} to="/mis-pedidos" onClick={handleLinkClick}>
-                      <i className="bi bi-box-seam me-2" /> Mis Pedidos
+                      <img src="/assests/icons/orders.svg" alt="Pedidos" width="16" height="16" className="me-2 navbar-icon-svg" /> Mis Pedidos
                     </NavDropdown.Item>
                   )}
                   {(isAdmin || isAuxiliar) && (
                     <>
                       <NavDropdown.Item as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick}>
-                        <i className="bi bi-box-seam me-2" /> Mis Pedidos (Admin)
+                        <img src="/assests/icons/orders.svg" alt="Pedidos" width="16" height="16" className="me-2 navbar-icon-svg" /> Mis Pedidos (Admin)
                       </NavDropdown.Item>
                     </>
                   )}
@@ -279,36 +279,36 @@ const NavigationBar = memo(() => {
           {(isAdmin || isAuxiliar) && (
             <div className="d-lg-none border-top mt-3 pt-2 admin-mobile-menu">
               <div className="px-3 py-2 text-gold fw-bold small d-flex align-items-center">
-                <i className="bi bi-shield-lock-fill me-2" /> ADMINISTRACIÓN
+                <img src="/assests/icons/access_flash.svg" alt="Administración" width="16" height="16" className="me-2 navbar-icon-svg" /> ADMINISTRACIÓN
               </div>
               <Nav.Link as={Link} to="/admin/dashboard" onClick={handleLinkClick} className="nav-link-custom ps-4">
-                <i className="bi bi-speedometer2 me-2 text-gold" /> Dashboard
+                <img src="/assests/icons/access_flash.svg" alt="Dashboard" width="16" height="16" className="me-2 navbar-icon-svg" /> Dashboard
               </Nav.Link>
               <Nav.Link as={Link} to="/admin/categorias" onClick={handleLinkClick} className="nav-link-custom ps-4">
-                <i className="bi bi-tags me-2" /> Categorías
+                <img src="/assests/icons/category.svg" alt="Categorías" width="16" height="16" className="me-2 navbar-icon-svg" /> Categorías
               </Nav.Link>
               <Nav.Link as={Link} to="/admin/subcategorias" onClick={handleLinkClick} className="nav-link-custom ps-4">
-                <i className="bi bi-diagram-3 me-2" /> Subcategorías
+                <img src="/assests/icons/subcategory.svg" alt="Subcategorías" width="16" height="16" className="me-2 navbar-icon-svg" /> Subcategorías
               </Nav.Link>
               <Nav.Link as={Link} to="/admin/productos" onClick={handleLinkClick} className="nav-link-custom ps-4">
-                <i className="bi bi-box-seam me-2" /> Productos
+                <img src="/assests/icons/product.svg" alt="Productos" width="16" height="16" className="me-2 navbar-icon-svg" /> Productos
               </Nav.Link>
               {isAdmin && (
                 <Nav.Link as={Link} to="/admin/usuarios" onClick={handleLinkClick} className="nav-link-custom ps-4">
-                  <i className="bi bi-people me-2" /> Usuarios
+                  <img src="/assests/icons/account_white.svg" alt="Usuarios" width="16" height="16" className="me-2 navbar-icon-svg" /> Usuarios
                 </Nav.Link>
               )}
               <Nav.Link as={Link} to="/admin/facturas" onClick={handleLinkClick} className="nav-link-custom ps-4">
-                <i className="bi bi-file-earmark-text me-2" /> Facturas
+                <img src="/assests/icons/bill.svg" alt="Facturas" width="16" height="16" className="me-2 navbar-icon-svg" /> Facturas
               </Nav.Link>
               <Nav.Link as={Link} to="/admin/pedidos" onClick={handleLinkClick} className="nav-link-custom ps-4">
-                <i className="bi bi-cart-check me-2" /> Pedidos
+                <img src="/assests/icons/orders.svg" alt="Pedidos" width="16" height="16" className="me-2 navbar-icon-svg" /> Pedidos
               </Nav.Link>
               <Nav.Link as={Link} to="/admin/comentarios" onClick={handleLinkClick} className="nav-link-custom ps-4">
-                <i className="bi bi-chat-dots me-2" /> Comentarios
+                <img src="/assests/icons/comment.svg" alt="Comentarios" width="16" height="16" className="me-2 navbar-icon-svg" /> Comentarios
               </Nav.Link>
               <Nav.Link as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick} className="nav-link-custom ps-4">
-                <i className="bi bi-bag-check me-2" /> Mis Pedidos (Admin)
+                <img src="/assests/icons/orders.svg" alt="Pedidos" width="16" height="16" className="me-2 navbar-icon-svg" /> Mis Pedidos (Admin)
               </Nav.Link>
             </div>
           )}
@@ -324,6 +324,10 @@ const NavigationBar = memo(() => {
           border-bottom: 1px solid rgba(255, 255, 255, 0.12);
           padding: 0.6rem 0;
           transition: all 0.3s ease;
+        }
+        .navbar-icon-svg {
+          vertical-align: middle;
+          margin-bottom: 2px;
         }
         .navbar-brand-img {
           height: 38px;
