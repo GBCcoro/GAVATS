@@ -81,7 +81,7 @@ const HomePage = () => {
             <Col lg={6} className="text-center hero-logo-col">
               <div className="hero-logo-wrap">
                 <img 
-                  src="/gavat.png"
+                  src="/assests/icons/logo-gavat-fondo-blanco.png"
                   alt="Logo GAVAT"
                   className="hero-logo-img"
                 />
