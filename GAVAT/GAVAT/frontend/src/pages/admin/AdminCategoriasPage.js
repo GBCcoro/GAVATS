@@ -242,10 +242,10 @@ const AdminCategoriasPage = () => {
             </Dropdown.Menu>
           </Dropdown>
           <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-            <i className="bi bi-arrow-left me-1" /> Volver
+            <img src="/assests/icons/arrow_left.svg" alt="Volver" width="16" height="16" className="me-1 pagination-icon-svg" /> Volver
           </Button>
           <Button variant="primary" onClick={() => handleShowModal()}>
-            <i className="bi bi-plus-circle me-1" /> Nueva Categoría
+            <img src="/assests/icons/plus-circle.svg" alt="Nueva" width="16" height="16" className="me-1 pagination-icon-svg" /> Nueva Categoría
           </Button>
         </div>
       </div>

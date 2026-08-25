@@ -390,11 +390,11 @@ const AdminProductosPage = () => {
             </Dropdown.Menu>
           </Dropdown>
           <button type="button" className="btn btn-dark me-2" onClick={() => navigate('/admin/dashboard')}>
-            <i className="bi bi-arrow-left me-1"></i>{' '}
+            <img src="/assests/icons/arrow_left.svg" alt="Volver" width="16" height="16" className="me-1 pagination-icon-svg" />{' '}
             Volver
           </button>
           <button type="button" className="btn btn-dark" onClick={() => handleShowModal()}>
-            <i className="bi bi-plus-circle me-1"></i>{' '}
+            <img src="/assests/icons/plus-circle.svg" alt="Nuevo" width="16" height="16" className="me-1 pagination-icon-svg" />{' '}
             Nuevo Producto
           </button>
         </div>
@@ -626,7 +626,7 @@ const AdminProductosPage = () => {
                 disabled={paginaActual === 1}
                 onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
               >
-                <i className="bi bi-chevron-left"></i>
+                <img src="/assests/icons/arrow_left.svg" alt="Anterior" width="16" height="16" className="pagination-icon-svg" />
               </Button>
               
               <span className="text-nowrap">
@@ -639,7 +639,7 @@ const AdminProductosPage = () => {
                 disabled={paginaActual >= totalPaginas}
                 onClick={() => setPaginaActual(prev => prev + 1)}
               >
-                <i className="bi bi-chevron-right"></i>
+                <img src="/assests/icons/arrow_right.svg" alt="Siguiente" width="16" height="16" className="pagination-icon-svg" />
               </Button>
             </div>
           </div>
