@@ -20,17 +20,17 @@
   --bg-aviso: #F7B517;
   --fnt-light: #ffffff;
   --fnt-black: #000000;
-  --bs-oldGold-bg: rgb(145, 105, 52);
-  --bs-gold-dark: #c7984e;
-  --bs-gold: #f5c271;
-  --bs-gold-light: #f0db7f;
+  --bs-oldGold-bg: #8F6A34;
+  --bs-gold-dark: #8F6A34;
+  --bs-gold: #C5974A;
+  --bs-gold-light: #ECC880;
   --font-roboto: "Roboto Condensed", system-ui, -apple-system, sans-serif;
   --font-baskerville: "Libre Baskerville", Georgia, serif;
   --bs-body-font-family: var(--font-roboto);
   --space-sm: 0.5rem;
   --space-md: 1rem;
   --space-lg: 2rem;
-  --gradient-gold: linear-gradient(135deg, var(--bs-gold), var(--bs-gold-dark));
+  --gradient-gold: linear-gradient(135deg, var(--bs-gold-light) 0%, var(--bs-gold) 50%, var(--bs-gold-dark) 100%);
   --gradient-positive-negative: linear-gradient(135deg, var(--bg-positiva), var(--bg-negativo));
 }
 
