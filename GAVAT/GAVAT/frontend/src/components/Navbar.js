@@ -81,7 +81,7 @@ const NavigationBar = memo(() => {
             className={`nav-link-custom-mobile me-2 ${isActive('/carrito') ? 'active' : ''}`} 
             aria-label="Carrito de compras"
           >
-            <img src="/assests/icons/shopping.svg" alt="Carrito" width="22" height="22" className="navbar-icon-svg" />
+            <i className="bi bi-cart3 fs-4" />
           </Link>
 
           {/* Menú Usuario en Móvil */}
@@ -110,17 +110,17 @@ const NavigationBar = memo(() => {
                   </span>
                 </div>
                 <NavDropdown.Item as={Link} to="/perfil" onClick={handleLinkClick}>
-                  <img src="/assests/icons/account_white.svg" alt="Perfil" width="16" height="16" className="me-2 navbar-icon-svg" /> Mi Perfil
+                  <i className="bi bi-person me-2" /> Mi Perfil
                 </NavDropdown.Item>
                 {isCliente && (
                   <NavDropdown.Item as={Link} to="/mis-pedidos" onClick={handleLinkClick}>
-                    <img src="/assests/icons/orders.svg" alt="Pedidos" width="16" height="16" className="me-2 navbar-icon-svg" /> Mis Pedidos
+                    <i className="bi bi-box-seam me-2" /> Mis Pedidos
                   </NavDropdown.Item>
                 )}
                 {(isAdmin || isAuxiliar) && (
                   <>
                     <NavDropdown.Item as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick}>
-                      <img src="/assests/icons/orders.svg" alt="Pedidos" width="16" height="16" className="me-2 navbar-icon-svg" /> Mis Pedidos (Admin)
+                      <i className="bi bi-box-seam me-2" /> Mis Pedidos (Admin)
                     </NavDropdown.Item>
                   </>
                 )}
@@ -153,7 +153,7 @@ const NavigationBar = memo(() => {
               <i className="bi bi-house-door me-2 d-lg-none" />Inicio
             </Nav.Link>
             <Nav.Link as={Link} to="/catalogo" onClick={handleLinkClick} className={`nav-link-custom ${isActive('/catalogo') ? 'active' : ''}`}>
-              <img src="/assests/icons/shop.svg" alt="Catálogo" width="16" height="16" className="me-2 d-lg-none navbar-icon-svg" />Catálogo
+              <i className="bi bi-grid me-2 d-lg-none" />Catálogo
             </Nav.Link>
             <Nav.Link 
               as={Link} 
@@ -161,7 +161,7 @@ const NavigationBar = memo(() => {
               onClick={handleLinkClick}
               className={`nav-link-custom d-none d-lg-flex align-items-center ${isActive('/carrito') ? 'active' : ''}`}
             >
-              <img src="/assests/icons/shopping.svg" alt="Carrito" width="16" height="16" className="me-2 navbar-icon-svg" />Carrito
+              <i className="bi bi-cart3 me-2" />Carrito
             </Nav.Link>
           </Nav>
 
@@ -243,17 +243,17 @@ const NavigationBar = memo(() => {
                     </span>
                   </div>
                   <NavDropdown.Item as={Link} to="/perfil" onClick={handleLinkClick}>
-                    <img src="/assests/icons/account_white.svg" alt="Perfil" width="16" height="16" className="me-2 navbar-icon-svg" /> Mi Perfil
+                    <i className="bi bi-person me-2" /> Mi Perfil
                   </NavDropdown.Item>
                   {isCliente && (
                     <NavDropdown.Item as={Link} to="/mis-pedidos" onClick={handleLinkClick}>
-                      <img src="/assests/icons/orders.svg" alt="Pedidos" width="16" height="16" className="me-2 navbar-icon-svg" /> Mis Pedidos
+                      <i className="bi bi-box-seam me-2" /> Mis Pedidos
                     </NavDropdown.Item>
                   )}
                   {(isAdmin || isAuxiliar) && (
                     <>
                       <NavDropdown.Item as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick}>
-                        <img src="/assests/icons/orders.svg" alt="Pedidos" width="16" height="16" className="me-2 navbar-icon-svg" /> Mis Pedidos (Admin)
+                        <i className="bi bi-box-seam me-2" /> Mis Pedidos (Admin)
                       </NavDropdown.Item>
                     </>
                   )}
