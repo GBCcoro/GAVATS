@@ -6,11 +6,13 @@
  */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import adminService from '../../services/adminService';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { exportarFacturasAPDF, exportarFacturasAExcel } from '../../utils/exportUtils';
+import SvgIcon from '../../components/SvgIcon';
 
 const AdminFacturasPage = () => {
   useAuth();
@@ -35,17 +37,18 @@ const AdminFacturasPage = () => {
   // Facturas filtradas y paginadas
   const facturasFiltradas = useMemo(() => {
     return facturas.filter(factura => {
-      // Filtro por búsqueda (número de factura, nombre cliente, email)
       if (filtros.busqueda) {
         const busqueda = filtros.busqueda.toLowerCase();
         const coincide = 
           factura.numero_factura?.toLowerCase().includes(busqueda) ||
+          factura.numeroFactura?.toLowerCase().includes(busqueda) ||
           factura.cliente_nombre?.toLowerCase().includes(busqueda) ||
-          factura.cliente_email?.toLowerCase().includes(busqueda);
+          factura.clienteNombre?.toLowerCase().includes(busqueda) ||
+          factura.cliente_email?.toLowerCase().includes(busqueda) ||
+          factura.clienteEmail?.toLowerCase().includes(busqueda);
         if (!coincide) return false;
       }
       
-      // Filtro por estado
       if (filtros.estado !== 'todos') {
         if (filtros.estado !== factura.estado) return false;
       }
@@ -54,15 +57,12 @@ const AdminFacturasPage = () => {
     });
   }, [facturas, filtros.busqueda, filtros.estado]);
   
-  // Aplicar paginación
   const totalPaginas = Math.ceil(facturasFiltradas.length / registrosPorPagina);
   const facturasPaginadas = useMemo(() => {
     const inicio = (paginaActual - 1) * registrosPorPagina;
-    const fin = inicio + registrosPorPagina;
-    return facturasFiltradas.slice(inicio, fin);
+    return facturasFiltradas.slice(inicio, inicio + registrosPorPagina);
   }, [facturasFiltradas, paginaActual, registrosPorPagina]);
   
-  // Resetear página cuando cambian los filtros
   useEffect(() => {
     setPaginaActual(1);
   }, [filtros.busqueda, filtros.estado]);
@@ -71,8 +71,8 @@ const AdminFacturasPage = () => {
     setLoading(true);
     try {
       const response = await adminService.getFacturas({ limite: 1000 });
-      const facturas = response.data?.facturas || response.data || [];
-      setFacturas(Array.isArray(facturas) ? facturas : []);
+      const facturasData = response.data?.facturas || response.data || [];
+      setFacturas(Array.isArray(facturasData) ? facturasData : []);
     } catch (error) {
       console.error('Error al cargar facturas:', error);
       setMensaje({ tipo: 'danger', texto: 'Error al cargar las facturas' });
@@ -82,7 +82,6 @@ const AdminFacturasPage = () => {
     }
   }, []);
 
-  // Cargar facturas al montar el componente
   useEffect(() => {
     loadFacturas();
   }, [loadFacturas]);
@@ -101,8 +100,6 @@ const AdminFacturasPage = () => {
   const handleDescargarPDF = async (numeroFactura) => {
     try {
       const response = await adminService.descargarFacturaPDF(numeroFactura);
-      
-      // Crear un blob y descargar
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -112,7 +109,6 @@ const AdminFacturasPage = () => {
       link.click();
       window.URL.revokeObjectURL(url);
       link.remove();
-      
       setMensaje({ tipo: 'success', texto: 'PDF descargado correctamente' });
     } catch (error) {
       console.error('Error al descargar PDF:', error);
@@ -122,7 +118,6 @@ const AdminFacturasPage = () => {
 
   const handleAnularFactura = async (id) => {
     if (!window.confirm('¿Estás seguro de que deseas anular esta factura?')) return;
-    
     try {
       await adminService.anularFactura(id);
       setMensaje({ tipo: 'success', texto: 'Factura anulada exitosamente' });
@@ -139,7 +134,7 @@ const AdminFacturasPage = () => {
       style: 'currency', 
       currency: 'COP', 
       minimumFractionDigits: 0 
-    }).format(precio);
+    }).format(precio || 0);
   };
 
   const formatearFecha = (fecha) => {
@@ -158,369 +153,340 @@ const AdminFacturasPage = () => {
       'emitida': 'warning',
       'enviada': 'info',
       'vista': 'warning',
-      'anulada': 'danger'
+      'anulada': 'danger',
+      'pagada': 'success'
     };
     return estados[estado] || 'secondary';
   };
-
-  const handleCloseDetalleModal = () => setShowDetalleModal(false);
-
-  useEffect(() => {
-    if (!showDetalleModal) return;
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        handleCloseDetalleModal();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showDetalleModal]);
 
   if (loading) {
     return <LoadingSpinner message="Cargando facturas..." />;
   }
 
   return (
-    <div className="admin-facturas-page">
-      <div className="admin-toolbar">
-        <div className="admin-title">
-          <h1>
-            <i className="bi bi-file-earmark-pdf"></i>{' '}
+    <Container className="py-4">
+      {/* Header Toolbar */}
+      <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+          <h1 className="h2 mb-1 fw-bold text-navy">
+            <i className="bi bi-file-earmark-pdf me-2 text-gold" />
             Gestión de Facturas
           </h1>
-          <p className="subtext">Consulta, descarga y gestiona facturas</p>
+          <p className="text-muted mb-0">
+            Total: {facturasFiltradas.length} de {facturas.length} factura{facturas.length !== 1 ? 's' : ''}
+          </p>
         </div>
-
-        <div className="action-groups">
-          <div className="export-actions">
-            <button
-              type="button"
-              className={`btn ${tipoExportacion === 'pdf' ? 'btn-primary' : 'btn-outline-primary'}`}
+        <div className="d-flex flex-wrap gap-2">
+          <Dropdown as={ButtonGroup}>
+            <Button
+              variant="primary"
               onClick={() => {
                 setTipoExportacion('pdf');
                 exportarFacturasAPDF(facturasFiltradas);
               }}
             >
-              <i className="bi bi-file-earmark-pdf"></i>{' '}
-              Exportar a PDF
-            </button>
-            <button
-              type="button"
-              className={`btn ${tipoExportacion === 'excel' ? 'btn-primary' : 'btn-outline-primary'}`}
-              onClick={async () => {
+              <i className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} />
+              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+            </Button>
+            <Dropdown.Toggle split variant="primary" />
+            <Dropdown.Menu>
+              <Dropdown.Item onClick={() => {
+                setTipoExportacion('pdf');
+                exportarFacturasAPDF(facturasFiltradas);
+              }}>
+                <i className="bi bi-file-earmark-pdf me-2" /> Exportar a PDF
+              </Dropdown.Item>
+              <Dropdown.Item onClick={async () => {
                 setTipoExportacion('excel');
                 await exportarFacturasAExcel(facturasFiltradas);
-              }}
-            >
-              <i className="bi bi-file-earmark-excel"></i>{' '}
-              Exportar a Excel
-            </button>
-          </div>
-
-          <div className="nav-actions">
-            <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-              <i className="bi bi-arrow-left"></i>{' '}
-              Volver
-            </button>
-          </div>
+              }}>
+                <i className="bi bi-file-earmark-excel me-2" /> Exportar a Excel
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
+          <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
+            <i className="bi bi-arrow-left me-1" /> Volver
+          </Button>
         </div>
       </div>
 
       {mensaje.texto && (
-        <div className={`alert alert-${mensaje.tipo}`}>
+        <Alert variant={mensaje.tipo} dismissible onClose={() => setMensaje({ tipo: '', texto: '' })}>
           {mensaje.texto}
-        </div>
+        </Alert>
       )}
 
-      <section className="admin-card">
-        <div className="admin-card-header">
-          <i className="bi bi-funnel"></i>{' '}
-          <strong>Filtros</strong>
-        </div>
-        <div className="admin-card-body">
-          <div className="form-grid">
-            <div className="form-group">
-              <label htmlFor="busqueda">Buscar</label>
-              <div className="input-group">
-                <span className="input-icon"><i className="bi bi-search"></i></span>
-                <input
-                  id="busqueda"
-                  type="text"
-                  className="form-control"
-                  placeholder="Buscar por número, cliente o email..."
-                  value={filtros.busqueda}
-                  onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="estado">Estado</label>
-              <select
-                id="estado"
-                className="form-select"
-                value={filtros.estado}
-                onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
-              >
-                <option value="todos">Todos</option>
-                <option value="emitida">Emitida</option>
-                <option value="enviada">Enviada</option>
-                <option value="vista">Vista</option>
-                <option value="anulada">Anulada</option>
-              </select>
-            </div>
-
-            <div className="form-group form-align-end">
-              <button
-                type="button"
-                className="btn btn-outline-secondary full-width"
+      {/* Filtros */}
+      <Card className="shadow-sm border-0 mb-4 admin-card-table">
+        <Card.Body className="p-3 p-md-4">
+          <h6 className="fw-bold mb-3 d-flex align-items-center gap-2 text-navy">
+            <i className="bi bi-funnel text-gold" /> Filtros de Búsqueda
+          </h6>
+          <Row className="g-3 align-items-end">
+            <Col md={6}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold mb-1">Buscar Factura</Form.Label>
+                <InputGroup>
+                  <InputGroup.Text className="bg-light">
+                    <i className="bi bi-search" />
+                  </InputGroup.Text>
+                  <Form.Control
+                    placeholder="Buscar por número, cliente o email..."
+                    value={filtros.busqueda}
+                    onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
+                  />
+                </InputGroup>
+              </Form.Group>
+            </Col>
+            <Col md={3}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
+                <Form.Select
+                  value={filtros.estado}
+                  onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
+                >
+                  <option value="todos">Todos</option>
+                  <option value="emitida">Emitida</option>
+                  <option value="enviada">Enviada</option>
+                  <option value="vista">Vista</option>
+                  <option value="pagada">Pagada</option>
+                  <option value="anulada">Anulada</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={3}>
+              <Button
+                variant="outline-secondary"
+                className="w-100"
                 onClick={() => setFiltros({ busqueda: '', estado: 'todos' })}
               >
-                <i className="bi bi-x-circle"></i>{' '}
-                Limpiar filtros
-              </button>
-            </div>
-          </div>
+                <i className="bi bi-arrow-clockwise me-1" /> Limpiar filtros
+              </Button>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
 
-          <div className="text-muted small">
-            Mostrando {facturasFiltradas.length} de {facturas.length} facturas
-          </div>
-        </div>
-      </section>
-
-      <section className="admin-card">
-        <div className="table-responsive">
-          <table className="admin-table">
+      {/* Tabla de Facturas */}
+      <Card className="shadow-sm border-0 admin-card-table">
+        <Card.Body className="p-0">
+          <Table responsive hover className="admin-table align-middle mb-0">
             <thead>
               <tr>
-                <th>Número Factura</th>
+                <th style={{ width: '150px' }}>Número Factura</th>
                 <th>Cliente</th>
-                <th>Monto</th>
-                <th>Estado</th>
-                <th>Fecha</th>
-                <th className="text-center">Acciones</th>
+                <th style={{ width: '120px' }}>Monto</th>
+                <th className="d-none d-sm-table-cell" style={{ width: '100px' }}>Estado</th>
+                <th className="d-none d-md-table-cell" style={{ width: '130px' }}>Fecha</th>
+                <th className="text-center" style={{ minWidth: '110px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {facturasPaginadas.length === 0 ? (
+              {facturasFiltradas.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="text-center py-4 text-muted">
-                    {facturas.length === 0 ? 'No hay facturas registradas' : 'No se encontraron facturas con los filtros aplicados'}
+                    No hay facturas registradas
                   </td>
                 </tr>
               ) : (
                 facturasPaginadas.map((factura) => (
                   <tr key={factura.id}>
-                    <td className="font-bold">{factura.numeroFactura}</td>
-                    <td>
-                      <div>
-                        <div className="font-bold">{factura.clienteNombre}</div>
-                        <small className="text-muted">{factura.clienteEmail}</small>
-                      </div>
+                    <td className="align-middle fw-bold">{factura.numeroFactura || factura.numero_factura}</td>
+                    <td className="align-middle">
+                      <div className="fw-bold">{factura.clienteNombre || factura.cliente_nombre || '-'}</div>
+                      <small className="text-muted">{factura.clienteEmail || factura.cliente_email || ''}</small>
                     </td>
-                    <td className="font-bold">{formatearPrecio(factura.total)}</td>
-                    <td>
-                      <span 
-                        className={`badge badge-${getBadgeEstado(factura.estado)}`}
-                      >
+                    <td className="align-middle fw-bold">{formatearPrecio(factura.total)}</td>
+                    <td className="align-middle d-none d-sm-table-cell">
+                      <Badge bg={getBadgeEstado(factura.estado)}>
                         {factura.estado}
-                      </span>
+                      </Badge>
                     </td>
-                    <td>{formatearFecha(factura.fechaEmision)}</td>
-                    <td className="text-center">
-                      <button 
-                        type="button" 
-                        className="btn btn-outline-primary btn-sm" 
-                        onClick={() => handleVerDetalle(factura)}
-                        title="Ver detalle"
-                      >
-                        <i className="bi bi-eye"></i>
-                      </button>
-                      <button 
-                        type="button" 
-                        className="btn btn-outline-success btn-sm" 
-                        onClick={() => handleDescargarPDF(factura.numeroFactura)}
-                        title="Descargar PDF"
-                      >
-                        <i className="bi bi-download"></i>
-                      </button>
-                      {factura.estado !== 'anulada' && (
-                        <button 
-                          type="button" 
-                          className="btn btn-outline-danger btn-sm" 
-                          onClick={() => handleAnularFactura(factura.id)}
-                          title="Anular factura"
+                    <td className="align-middle d-none d-md-table-cell">{formatearFecha(factura.fechaEmision || factura.created_at)}</td>
+                    <td className="align-middle text-center">
+                      <div className="action-btn-group">
+                        <Button 
+                          variant="outline-primary" 
+                          size="sm" 
+                          className="btn-action-table" 
+                          onClick={() => handleVerDetalle(factura)}
+                          title="Ver detalle de factura"
                         >
-                          <i className="bi bi-x-circle"></i>
-                        </button>
-                      )}
+                          <SvgIcon name="eye" />
+                          <span className="btn-text">Detalle</span>
+                        </Button>
+                        <Button 
+                          variant="outline-success" 
+                          size="sm" 
+                          className="btn-action-table" 
+                          onClick={() => handleDescargarPDF(factura.numeroFactura || factura.numero_factura)}
+                          title="Descargar PDF"
+                        >
+                          <SvgIcon name="download" />
+                          <span className="btn-text">PDF</span>
+                        </Button>
+                        {factura.estado !== 'anulada' && (
+                          <Button 
+                            variant="outline-danger" 
+                            size="sm" 
+                            className="btn-action-table" 
+                            onClick={() => handleAnularFactura(factura.id)}
+                            title="Anular factura"
+                          >
+                            <SvgIcon name="x-circle" />
+                            <span className="btn-text">Anular</span>
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
-          </table>
-        </div>
-      </section>
+          </Table>
+        </Card.Body>
+      </Card>
 
+      {/* Paginación */}
       {totalPaginas > 1 && (
-        <section className="admin-card pagination-card">
-          <div className="admin-pagination">
-            <div>
-              <small className="text-muted">
-                <i className="bi bi-file-text"></i>{' '}
-                Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> - Mostrando <strong>{facturasPaginadas.length}</strong> de <strong>{facturasFiltradas.length}</strong> registros
-              </small>
-            </div>
-            <div className="pagination-buttons">
-              <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1} title="Primera página">
-                <i className="bi bi-chevron-bar-left"></i>
-              </button>
-              <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setPaginaActual(prev => prev - 1)} disabled={paginaActual === 1} title="Página anterior">
-                <i className="bi bi-chevron-left"></i> Anterior
-              </button>
-              <button type="button" className="btn btn-primary btn-sm" disabled>
-                {paginaActual} / {totalPaginas}
-              </button>
-              <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setPaginaActual(prev => prev + 1)} disabled={paginaActual === totalPaginas} title="Página siguiente">
-                Siguiente <i className="bi bi-chevron-right"></i>
-              </button>
-              <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas} title="Última página">
-                <i className="bi bi-chevron-bar-right"></i>
-              </button>
-            </div>
-          </div>
-        </section>
+        <div className="d-flex justify-content-between align-items-center mt-3">
+          <small className="text-muted">
+            Página {paginaActual} de {totalPaginas} - Mostrando {facturasPaginadas.length} de {facturasFiltradas.length} registros
+          </small>
+          <ButtonGroup size="sm">
+            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
+              ««
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1}>
+              Anterior
+            </Button>
+            <Button variant="primary" disabled>
+              {paginaActual} / {totalPaginas}
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas}>
+              Siguiente
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
+              »»
+            </Button>
+          </ButtonGroup>
+        </div>
       )}
 
-      {/* MODAL DETALLE FACTURA */}
-      {showDetalleModal && facturaSeleccionada && (
-        <dialog
-          className="modal-overlay"
-          onCancel={handleCloseDetalleModal}
-          aria-label="Cerrar modal"
-          open
-        >
-          <div
-            className="modal-dialog"
-            style={{ maxWidth: '700px' }}
-            aria-labelledby="detalle-factura-title"
-          >
-            <div className="modal-header">
-              <h2 id="detalle-factura-title">Detalle de Factura</h2>
-              <button type="button" className="close-button" onClick={handleCloseDetalleModal}>
-                &times;
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="row mb-3">
-                <div className="col-md-6">
-                  <strong>Número Factura:</strong> {facturaSeleccionada.numeroFactura}
-                </div>
-                <div className="col-md-6">
-                  <strong>Estado:</strong> 
-                  <span 
-                    className={`badge badge-${getBadgeEstado(facturaSeleccionada.estado)}`}
-                  >
-                    {facturaSeleccionada.estado}
-                  </span>
-                </div>
-              </div>
+      {/* Modal Detalle Factura */}
+      <Modal show={showDetalleModal} onHide={() => setShowDetalleModal(false)} size="lg" centered>
+        <Modal.Header closeButton>
+          <Modal.Title className="h5 fw-bold text-navy">
+            Detalle de Factura
+          </Modal.Title>
+        </Modal.Header>
+        {facturaSeleccionada && (
+          <Modal.Body>
+            <Row className="mb-3">
+              <Col md={6}>
+                <strong>Número Factura:</strong> {facturaSeleccionada.numeroFactura || facturaSeleccionada.numero_factura}
+              </Col>
+              <Col md={6}>
+                <strong>Estado:</strong>{' '}
+                <Badge bg={getBadgeEstado(facturaSeleccionada.estado)}>
+                  {facturaSeleccionada.estado}
+                </Badge>
+              </Col>
+            </Row>
 
-              <div className="row mb-3">
-                <div className="col-md-6">
-                  <strong>Fecha Emisión:</strong> {formatearFecha(facturaSeleccionada.fechaEmision)}
-                </div>
-                <div className="col-md-6">
-                  <strong>Cliente:</strong> {facturaSeleccionada.clienteNombre || '-'}
-                </div>
-              </div>
+            <Row className="mb-3">
+              <Col md={6}>
+                <strong>Fecha Emisión:</strong> {formatearFecha(facturaSeleccionada.fechaEmision || facturaSeleccionada.created_at)}
+              </Col>
+              <Col md={6}>
+                <strong>Cliente:</strong> {facturaSeleccionada.clienteNombre || facturaSeleccionada.cliente_nombre || '-'}
+              </Col>
+            </Row>
 
-              <div className="row mb-3">
-                <div className="col-md-6">
-                  <strong>Email:</strong> {facturaSeleccionada.clienteEmail || '-'}
-                </div>
-                <div className="col-md-6">
-                  <strong>Documento:</strong> {facturaSeleccionada.clienteDocumento || 'N/A'}
-                </div>
-              </div>
+            <Row className="mb-3">
+              <Col md={6}>
+                <strong>Email:</strong> {facturaSeleccionada.clienteEmail || facturaSeleccionada.cliente_email || '-'}
+              </Col>
+              <Col md={6}>
+                <strong>Documento:</strong> {facturaSeleccionada.clienteDocumento || facturaSeleccionada.cliente_documento || 'N/A'}
+              </Col>
+            </Row>
 
-              <div className="row mb-3">
-                <div className="col-md-6">
-                  <strong>Teléfono:</strong> {facturaSeleccionada.telefonoEnvio || '-'}
-                </div>
-                <div className="col-md-6">
-                  <strong>Método Pago:</strong> {facturaSeleccionada.metodoPago || '-'}
-                </div>
-              </div>
+            <Row className="mb-3">
+              <Col md={6}>
+                <strong>Teléfono:</strong> {facturaSeleccionada.telefonoEnvio || facturaSeleccionada.telefono || '-'}
+              </Col>
+              <Col md={6}>
+                <strong>Método Pago:</strong> {facturaSeleccionada.metodoPago || facturaSeleccionada.metodo_pago || '-'}
+              </Col>
+            </Row>
 
-              <div className="row mb-3">
-                <div className="col-md-12">
-                  <strong>Dirección Envío:</strong> 
-                  <div className="alert alert-light mt-2 mb-0">
-                    {facturaSeleccionada.direccionEnvio || 'No especificada'}
+            <Row className="mb-3">
+              <Col md={12}>
+                <strong>Dirección Envío:</strong> 
+                <div className="alert alert-light mt-2 mb-0">
+                  {facturaSeleccionada.direccionEnvio || facturaSeleccionada.direccion || 'No especificada'}
+                </div>
+              </Col>
+            </Row>
+
+            <hr />
+
+            <Row className="mb-3">
+              <Col md={6}>
+                <strong>Subtotal:</strong> {formatearPrecio(facturaSeleccionada.subtotal)}
+              </Col>
+              <Col md={6}>
+                <strong>Impuesto (IVA):</strong> {formatearPrecio(facturaSeleccionada.impuesto)}
+              </Col>
+            </Row>
+
+            <Row className="mb-3">
+              <Col md={12}>
+                <strong style={{ fontSize: '1.1rem' }}>Total a Pagar:</strong> 
+                <div style={{ fontSize: '1.3rem', color: 'var(--bs-gold-dark, #c7984e)', fontWeight: 'bold' }}>
+                  {formatearPrecio(facturaSeleccionada.total)}
+                </div>
+              </Col>
+            </Row>
+
+            {facturaSeleccionada.notas && (
+              <Row className="mb-3">
+                <Col md={12}>
+                  <strong>Notas:</strong>
+                  <div className="alert alert-info mt-2 mb-0">
+                    {facturaSeleccionada.notas}
                   </div>
-                </div>
-              </div>
-
-              <hr />
-
-              <div className="row mb-3">
-                <div className="col-md-6">
-                  <strong>Subtotal:</strong> {formatearPrecio(facturaSeleccionada.subtotal)}
-                </div>
-                <div className="col-md-6">
-                  <strong>Impuesto (IVA):</strong> {formatearPrecio(facturaSeleccionada.impuesto)}
-                </div>
-              </div>
-
-              <div className="row mb-3">
-                <div className="col-md-12">
-                  <strong style={{ fontSize: '1.1rem' }}>Total a Pagar:</strong> 
-                  <div style={{ fontSize: '1.3rem', color: 'var(--bs-gold-dark, #c7984e)', fontWeight: 'bold' }}>
-                    {formatearPrecio(facturaSeleccionada.total)}
-                  </div>
-                </div>
-              </div>
-
-              {facturaSeleccionada.notas && (
-                <div className="row mb-3">
-                  <div className="col-md-12">
-                    <strong>Notas:</strong>
-                    <div className="alert alert-info mt-2 mb-0">
-                      {facturaSeleccionada.notas}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="btn btn-outline-secondary" onClick={handleCloseDetalleModal}>
-                Cerrar
-              </button>
-              <button 
-                type="button" 
-                className="btn btn-success" 
-                onClick={() => handleDescargarPDF(facturaSeleccionada.numeroFactura)}
+                </Col>
+              </Row>
+            )}
+          </Modal.Body>
+        )}
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={() => setShowDetalleModal(false)}>
+            Cerrar
+          </Button>
+          {facturaSeleccionada && (
+            <>
+              <Button 
+                variant="success" 
+                onClick={() => handleDescargarPDF(facturaSeleccionada.numeroFactura || facturaSeleccionada.numero_factura)}
               >
-                <i className="bi bi-download"></i> Descargar PDF
-              </button>
+                <i className="bi bi-download me-1" /> Descargar PDF
+              </Button>
               {facturaSeleccionada.estado !== 'anulada' && (
-                <button 
-                  type="button" 
-                  className="btn btn-danger" 
+                <Button 
+                  variant="danger" 
                   onClick={() => handleAnularFactura(facturaSeleccionada.id)}
                 >
-                  <i className="bi bi-x-circle"></i> Anular
-                </button>
+                  <i className="bi bi-x-circle me-1" /> Anular
+                </Button>
               )}
-            </div>
-          </div>
-        </dialog>
-      )}
-    </div>
+            </>
+          )}
+        </Modal.Footer>
+      </Modal>
+    </Container>
   );
 };
 

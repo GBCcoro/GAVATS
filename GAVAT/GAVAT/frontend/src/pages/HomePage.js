@@ -184,8 +184,19 @@ const HomePage = () => {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        .hero-section {
+          position: relative;
+          z-index: 1;
+        }
         .fade-in {
           animation: fadeIn 0.6s ease-out;
+          position: relative;
+          z-index: 5;
+        }
+        .hero-actions {
+          position: relative;
+          z-index: 10;
+          pointer-events: auto;
         }
         .hero-actions .btn {
           display: inline-flex;
@@ -195,39 +206,49 @@ const HomePage = () => {
           border-radius: 0.85rem;
           font-weight: 700;
           transition: all 0.3s ease;
+          position: relative !important;
+          z-index: 10 !important;
+          cursor: pointer !important;
+          pointer-events: auto !important;
+          text-decoration: none !important;
         }
         .btn-hero-primary {
           background: white;
-          color: var(--bg-negativo, #192847);
+          color: var(--bg-negativo, #192847) !important;
           border: none;
           box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
         }
         .btn-hero-primary:hover {
           transform: translateY(-2px);
           box-shadow: 0 16px 35px rgba(0, 0, 0, 0.2);
+          color: var(--bg-negativo, #192847) !important;
         }
         .btn-hero-outline {
           background: transparent;
           border: 1.5px solid rgba(255,255,255,0.9);
-          color: white;
+          color: white !important;
         }
         .btn-hero-outline:hover {
           background: rgba(255,255,255,0.1);
-          color: white;
+          color: white !important;
         }
         .hero-logo-col {
           position: relative;
+          z-index: 2;
         }
         .hero-logo-wrap {
           display: inline-flex;
           align-items: center;
           justify-content: center;
           width: 100%;
+          pointer-events: none;
         }
         .hero-logo-img {
           width: min(420px, 100%);
           animation: float 4s ease-in-out infinite;
           max-width: 420px;
+          pointer-events: none;
+          user-select: none;
         }
         .hero-hero-cards {
           display: grid;

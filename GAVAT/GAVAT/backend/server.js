@@ -158,9 +158,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Servir archivos estáticos del frontend React (compilado en build/)
 const frontendBuildPath = path.join(__dirname, '../frontend/build');
-if (fs.existsSync(frontendBuildPath)) {
-  app.use(express.static(frontendBuildPath));
-}
+const frontendIndexPath = path.join(frontendBuildPath, 'index.html');
+app.use(express.static(frontendBuildPath));
 
 // Middleware de logging → Muestra en consola cada petición HTTP que llega al servidor
 // Solo se activa en modo desarrollo (NODE_ENV=development en .env)
@@ -186,8 +185,8 @@ if (process.env.NODE_ENV === 'development') {
 // Al visitar http://localhost:5000/ en el navegador, muestra esta respuesta
 // Es útil para verificar rápidamente que el servidor arrancó correctamente
 app.get('/', (req, res) => {
-  if (fs.existsSync(frontendBuildPath)) {
-    return res.sendFile(path.join(frontendBuildPath, 'index.html'));
+  if (fs.existsSync(frontendIndexPath)) {
+    return res.sendFile(frontendIndexPath);
   }
   res.json({
     success: true,
@@ -256,6 +255,9 @@ app.use('/api', facturasRoutes);
 // Debe ir DESPUÉS de todas las rutas definidas
 // app.use() sin ruta específica captura TODAS las peticiones no manejadas
 app.use((req, res) => {
+  if (req.method === 'GET' && fs.existsSync(frontendIndexPath) && !req.path.startsWith('/api') && !req.path.startsWith('/uploads') && (req.accepts('html') || !path.extname(req.path))) {
+    return res.sendFile(frontendIndexPath);
+  }
   // Retorna error 404 (Not Found) con un mensaje descriptivo
   res.status(404).json({
     success: false,

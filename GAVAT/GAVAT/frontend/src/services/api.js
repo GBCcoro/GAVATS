@@ -71,14 +71,15 @@ apiClient.interceptors.response.use(
       
       // Token expirado o inválido (401 Unauthorized)
       if (status === 401) {
-        console.error('⚠️ Sesión expirada. Redirigiendo al login...');
-        
-        // Eliminar token del localStorage
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        
-        // Redirigir al login (se puede mejorar con React Router)
-        window.location.href = '/login';
+        const isAuthRoute = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register');
+        if (!isAuthRoute && window.location.pathname !== '/login') {
+          console.error('⚠️ Sesión expirada. Redirigiendo al login...');
+          // Eliminar token del localStorage
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          // Redirigir al login
+          window.location.href = '/login';
+        }
       }
       
       // Acceso denegado (403 Forbidden)

@@ -11,6 +11,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import carritoService from '../services/carritoService';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
+import SvgIcon from '../components/SvgIcon';
 
 const CarritoPage = () => {
   const [carrito, setCarrito] = useState(null);
@@ -147,12 +148,13 @@ const CarritoPage = () => {
                     <Badge className="carrito-badge ms-2">{items.length}</Badge>
                   </h5>
                   <Button 
-                    className="btn-vaciar-carrito" 
+                    variant="outline-danger" 
+                    className="btn-vaciar-carrito d-inline-flex align-items-center gap-1" 
                     size="sm"
                     onClick={handleVaciarCarrito}
                   >
-                    <i className="bi bi-trash me-1"></i>{' '}
-                    Vaciar carrito
+                    <SvgIcon name="trash" />
+                    <span>Vaciar carrito</span>
                   </Button>
                 </div>
               </Card.Header>
@@ -205,7 +207,7 @@ const CarritoPage = () => {
                             >
                               <i className="bi bi-dash"></i>
                             </Button>
-                            <span className="mx-3">{item.cantidad}</span>
+                            <span className="mx-3 fw-bold">{item.cantidad}</span>
                             <Button
                               className="btn-cantidad"
                               size="sm"
@@ -220,11 +222,12 @@ const CarritoPage = () => {
                         </td>
                         <td className="text-center align-middle">
                           <Button
-                            className="btn-eliminar"
+                            className="btn-eliminar d-inline-flex align-items-center justify-content-center"
                             size="sm"
                             onClick={() => handleEliminar(item.id)}
+                            title="Eliminar producto"
                           >
-                            <i className="bi bi-trash"></i>
+                            <SvgIcon name="trash" />
                           </Button>
                         </td>
                       </tr>
@@ -236,7 +239,7 @@ const CarritoPage = () => {
           </Col>
 
           <Col lg={4}>
-            <Card className="resumen-card sticky-top" style={{ top: '20px' }}>
+            <Card className="resumen-card">
               <Card.Header className="resumen-card-header">
                 <h5 className="mb-0">Resumen del Pedido</h5>
               </Card.Header>
@@ -256,17 +259,17 @@ const CarritoPage = () => {
                 </div>
 
                 <Button
-                  className="btn-proceder-pago w-100 mb-2"
+                  className="btn-proceder-pago w-100 mb-2 d-inline-flex align-items-center justify-content-center gap-2"
                   size="lg"
                   onClick={handleProcederPago}
                 >
-                  <i className="bi bi-credit-card me-2"></i>{' '}
-                  {isAuthenticated ? 'Proceder al Pago' : 'Iniciar Sesión para Pagar'}
+                  <SvgIcon name="cash" />
+                  <span>{isAuthenticated ? 'Proceder al Pago' : 'Iniciar Sesión para Pagar'}</span>
                 </Button>
 
-                <Button as={Link} to="/catalogo" className="btn-seguir-comprando w-100">
-                  <i className="bi bi-arrow-left me-2"></i>{' '}
-                  Seguir Comprando
+                <Button as={Link} to="/catalogo" className="btn-seguir-comprando w-100 d-inline-flex align-items-center justify-content-center gap-2">
+                  <i className="bi bi-arrow-left"></i>
+                  <span>Seguir Comprando</span>
                 </Button>
               </Card.Body>
             </Card>

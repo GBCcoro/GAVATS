@@ -2,18 +2,20 @@
  * ============================================
  * PRODUCTO DETALLE PAGE
  * ============================================
- * Página de detalle completo de un producto con comentarios
+ * Página de detalle de producto con presentación atractiva,
+ * imagen adaptativa transparente y comentarios de clientes.
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Container, Row, Col, Button, Badge, Alert, Breadcrumb } from 'react-bootstrap';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Container, Row, Col, Button, Badge, Alert, Breadcrumb, Card } from 'react-bootstrap';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import catalogoService from '../services/catalogoService';
 import carritoService from '../services/carritoService';
 import ProductoComentarios from '../components/ProductoComentarios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { formatCurrency, getImageUrl } from '../utils/helpers';
 import { useAuth } from '../context/AuthContext';
+import SvgIcon from '../components/SvgIcon';
 
 const ProductoDetallePage = () => {
   const { id } = useParams();
@@ -21,8 +23,9 @@ const ProductoDetallePage = () => {
   const [producto, setProducto] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
-  const [cantidad, setCantidad] = useState('');
-  const { isAuthenticated, isCliente } = useAuth();
+  const [cantidad, setCantidad] = useState(1);
+  const [agregando, setAgregando] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const cargarProducto = async () => {
@@ -43,14 +46,17 @@ const ProductoDetallePage = () => {
   }, [id, navigate]);
 
   const handleAddToCart = useCallback(async () => {
+    if (!producto) return;
+    setAgregando(true);
     try {
-      const cantidadFinal = cantidad === '' ? 1 : cantidad;
+      const cantidadFinal = Number.parseInt(cantidad, 10) || 1;
       await carritoService.agregarAlCarrito(producto.id, cantidadFinal, producto);
-      setMensaje({ tipo: 'success', texto: `${producto.nombre} agregado al carrito` });
-      setCantidad('');
-      setTimeout(() => setMensaje({ tipo: '', texto: '' }), 3000);
+      setMensaje({ tipo: 'success', texto: `¡"${producto.nombre}" (${cantidadFinal} ud.) agregado al carrito!` });
+      setTimeout(() => setMensaje({ tipo: '', texto: '' }), 4000);
     } catch (error) {
       setMensaje({ tipo: 'danger', texto: error.message || 'Error al agregar al carrito' });
+    } finally {
+      setAgregando(false);
     }
   }, [producto, cantidad]);
 
@@ -64,7 +70,7 @@ const ProductoDetallePage = () => {
       const num = Number.parseInt(valor, 10);
       if (!Number.isNaN(num)) {
         if (num < 1) {
-          setCantidad('');
+          setCantidad(1);
         } else if (num > maxStock) {
           setCantidad(maxStock);
         } else {
@@ -76,237 +82,504 @@ const ProductoDetallePage = () => {
 
   const handleIncreaseQuantity = useCallback(() => {
     const maxStock = producto?.stock || 1;
-    const currentValue = cantidad === '' ? 0 : cantidad;
-    
-    if (currentValue < maxStock) {
-      setCantidad(currentValue + 1);
+    const current = Number.parseInt(cantidad, 10) || 0;
+    if (current < maxStock) {
+      setCantidad(current + 1);
     }
   }, [cantidad, producto?.stock]);
 
   const handleDecreaseQuantity = useCallback(() => {
-    const currentValue = cantidad === '' ? 0 : cantidad;
-    
-    if (currentValue > 1) {
-      setCantidad(currentValue - 1);
-    } else if (currentValue === 1) {
-      setCantidad('');
+    const current = Number.parseInt(cantidad, 10) || 1;
+    if (current > 1) {
+      setCantidad(current - 1);
     }
   }, [cantidad]);
 
   const handleComentarioCreado = useCallback(() => {
-    setMensaje({ tipo: 'success', texto: 'Comentario creado exitosamente' });
+    setMensaje({ tipo: 'success', texto: 'Comentario publicado exitosamente' });
     setTimeout(() => setMensaje({ tipo: '', texto: '' }), 3000);
   }, []);
 
   if (loading) {
-    return <LoadingSpinner message="Cargando producto..." />;
+    return <LoadingSpinner message="Cargando detalles del producto..." />;
   }
 
   if (!producto) {
     return (
-      <Container className="py-4 text-center">
-        <h2>Producto no encontrado</h2>
-        <Button onClick={() => navigate('/catalogo')} className="mt-3">
-          <i className="bi bi-arrow-left me-2"></i>{' '}
-          Volver al catálogo
-        </Button>
+      <Container className="py-5 text-center">
+        <Card className="p-5 shadow-sm border-0 rounded-4 mx-auto" style={{ maxWidth: '500px' }}>
+          <i className="bi bi-exclamation-circle text-warning fs-1 mb-3" />
+          <h3 className="fw-bold text-navy">Producto no encontrado</h3>
+          <p className="text-muted">El producto que estás buscando no existe o ya no está disponible.</p>
+          <Button as={Link} to="/catalogo" variant="primary" className="mt-3">
+            <i className="bi bi-arrow-left me-2" /> Volver al catálogo
+          </Button>
+        </Card>
       </Container>
     );
   }
 
+  const stockDisponible = producto.stock || 0;
+
   return (
-    <Container className="py-4">
-      {/* Breadcrumb */}
-      <Breadcrumb className="mb-4">
-        <Breadcrumb.Item onClick={() => navigate('/')} style={{ cursor: 'pointer' }} className="text-decoration-none">
-          <i className="bi bi-house me-2"></i>Inicio
+    <Container className="py-4 py-lg-5">
+      {/* Breadcrumb de navegación */}
+      <Breadcrumb className="mb-4 product-breadcrumb">
+        <Breadcrumb.Item linkAs={Link} linkProps={{ to: '/' }}>
+          <i className="bi bi-house-door me-1" /> Inicio
         </Breadcrumb.Item>
-        <Breadcrumb.Item onClick={() => navigate('/catalogo')} style={{ cursor: 'pointer' }} className="text-decoration-none">
+        <Breadcrumb.Item linkAs={Link} linkProps={{ to: '/catalogo' }}>
           Catálogo
         </Breadcrumb.Item>
+        {producto.categoria && (
+          <Breadcrumb.Item linkAs={Link} linkProps={{ to: `/catalogo?categoria=${producto.categoria.id || ''}` }}>
+            {producto.categoria.nombre}
+          </Breadcrumb.Item>
+        )}
         <Breadcrumb.Item active>{producto.nombre}</Breadcrumb.Item>
       </Breadcrumb>
 
-      {/* Mensaje */}
+      {/* Alerta de notificación */}
       {mensaje.texto && (
-        <Alert variant={mensaje.tipo} dismissible onClose={() => setMensaje({ tipo: '', texto: '' })}>
-          {mensaje.texto}
+        <Alert 
+          variant={mensaje.tipo} 
+          dismissible 
+          onClose={() => setMensaje({ tipo: '', texto: '' })}
+          className="shadow-sm rounded-3 mb-4 d-flex justify-content-between align-items-center"
+        >
+          <div>
+            <i className={`bi bi-${mensaje.tipo === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill'} me-2`} />
+            {mensaje.texto}
+          </div>
+          {mensaje.tipo === 'success' && (
+            <Button as={Link} to="/carrito" variant="outline-success" size="sm" className="ms-3 fw-bold">
+              Ver Carrito <i className="bi bi-arrow-right ms-1" />
+            </Button>
+          )}
         </Alert>
       )}
 
-      {/* Detalle del producto */}
-      <Row className="mb-5">
-        <Col md={6} className="mb-4">
-          <div style={{
-            overflow: 'hidden',
-            borderRadius: '1rem',
-            backgroundColor: '#f8f9fa',
-            height: '400px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <img
-              src={getImageUrl(producto.imagen)}
-              alt={producto.nombre}
-              style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
-                objectFit: 'contain'
-              }}
-            />
-          </div>
-        </Col>
-
-        <Col md={6}>
-          <h1 className="mb-3">{producto.nombre}</h1>
-
-          <div className="mb-3">
-            <p className="text-muted">{producto.descripcion}</p>
-          </div>
-
-          {/* Stock Badge */}
-          <div className="mb-3">
-            {producto.stock > 0 ? (
-              <Badge className="badge-stock-success" style={{ fontSize: '0.95rem', padding: '0.5rem 1rem' }}>
-                <i className="bi bi-check-circle me-1"></i>
-                En stock: {producto.stock} unidades
-              </Badge>
-            ) : (
-              <Badge className="badge-stock-danger" style={{ fontSize: '0.95rem', padding: '0.5rem 1rem' }}>
-                <i className="bi bi-x-circle me-1"></i>{' '}
-                Sin stock
-              </Badge>
-            )}
-          </div>
-
-          {/* Precio */}
-          <h2 className="mb-4" style={{ color: 'var(--bs-oldGold-bg)', fontWeight: '700' }}>
-            {formatCurrency(producto.precio)}
-          </h2>
-
-          {/* Cantidad */}
-          {producto.stock > 0 && (
-            <div className="mb-4">
-              <label className="form-label">Cantidad (máximo {producto.stock}):</label>
-              <div className="d-flex align-items-center gap-2">
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  onClick={handleDecreaseQuantity}
-                >
-                  <i className="bi bi-dash"></i>
-                </Button>
-                <input
-                  type="number"
-                  className="form-control cantidad-input text-center"
-                  placeholder="0"
-                  value={cantidad}
-                  onChange={handleCantidadChange}
-                  min="1"
-                  max={producto.stock}
-                  style={{ width: '80px' }}
-                />
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  onClick={handleIncreaseQuantity}
-                >
-                  <i className="bi bi-plus"></i>
-                </Button>
+      {/* Tarjeta principal del producto */}
+      <Card className="shadow-sm border-0 rounded-4 overflow-hidden mb-5 product-detail-card">
+        <Card.Body className="p-4 p-lg-5">
+          <Row className="g-4 g-lg-5 align-items-center">
+            {/* Columna de Imagen: Contenedor transparente y adaptativo */}
+            <Col lg={6}>
+              <div className="product-image-stage">
+                <div className="product-image-backdrop">
+                  <img
+                    src={getImageUrl(producto.imagen)}
+                    alt={producto.nombre}
+                    className="product-hero-image"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/producto-default.jpg';
+                    }}
+                  />
+                </div>
+                {/* Badges superpuestos */}
+                <div className="product-badges-overlay">
+                  {producto.categoria && (
+                    <Badge className="badge-category-tag">
+                      {producto.categoria.nombre}
+                    </Badge>
+                  )}
+                  {stockDisponible <= 5 && stockDisponible > 0 && (
+                    <Badge bg="warning" className="text-dark fw-bold shadow-sm">
+                      <i className="bi bi-lightning-fill me-1" /> ¡Últimas unidades!
+                    </Badge>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            </Col>
 
-          {/* Botón Agregar al carrito */}
-          {isAuthenticated && isCliente && producto.stock > 0 && (
-            <Button
-              className="w-100 btn-add-to-cart mb-3"
-              size="lg"
-              onClick={handleAddToCart}
-            >
-              <i className="bi bi-cart-plus me-2"></i>
-              Agregar {cantidad} al carrito
-            </Button>
-          )}
+            {/* Columna de Información */}
+            <Col lg={6}>
+              <div className="product-info-wrapper">
+                {/* Categoría y Subcategoría */}
+                <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+                  {producto.categoria && (
+                    <span className="product-meta-pill">
+                      <i className="bi bi-tag me-1 text-gold" />
+                      {producto.categoria.nombre}
+                    </span>
+                  )}
+                  {producto.subcategoria && (
+                    <span className="product-meta-pill">
+                      <i className="bi bi-bookmark me-1 text-gold" />
+                      {producto.subcategoria.nombre}
+                    </span>
+                  )}
+                  <span className="product-meta-sku ms-auto text-muted small">
+                    SKU: #{producto.id}
+                  </span>
+                </div>
 
-          {!isAuthenticated && (
-            <Button
-              className="w-100 mb-3"
-              size="lg"
-              onClick={() => navigate('/login')}
-              variant="info"
-            >
-              <i className="bi bi-box-arrow-right me-2"></i>{' '}
-              Inicia sesión para comprar
-            </Button>
-          )}
+                {/* Título del producto */}
+                <h1 className="product-title fw-bold text-navy mb-3">
+                  {producto.nombre}
+                </h1>
 
-          {producto.stock === 0 && (
-            <Button className="w-100" size="lg" disabled variant="secondary">
-              <i className="bi bi-ban me-2"></i>{' '}
-              Producto no disponible
-            </Button>
-          )}
+                {/* Precio */}
+                <div className="product-price-box mb-4">
+                  <div className="d-flex align-items-baseline gap-2">
+                    <span className="product-price-amount">
+                      {formatCurrency(producto.precio)}
+                    </span>
+                    <span className="product-price-vat text-muted small">
+                      (IVA incluido)
+                    </span>
+                  </div>
+                </div>
 
-          {/* Información adicional */}
-          <div className="mt-4 p-3" style={{ backgroundColor: '#f8f9fa', borderRadius: '0.75rem' }}>
-            <div className="mb-2">
-              <strong>SKU:</strong> {producto.id}
-            </div>
-            {producto.categoria && (
-              <div className="mb-2">
-                <strong>Categoría:</strong> {producto.categoria?.nombre || 'N/A'}
+                {/* Estado del stock */}
+                <div className="mb-4">
+                  {stockDisponible > 10 ? (
+                    <div className="d-inline-flex align-items-center text-success fw-semibold stock-status-pill in-stock">
+                      <i className="bi bi-check-circle-fill me-2" />
+                      En stock ({stockDisponible} disponibles)
+                    </div>
+                  ) : stockDisponible > 0 ? (
+                    <div className="d-inline-flex align-items-center text-warning-dark fw-semibold stock-status-pill low-stock">
+                      <i className="bi bi-exclamation-circle-fill me-2" />
+                      ¡Pocas unidades disponibles! ({stockDisponible} disponibles)
+                    </div>
+                  ) : (
+                    <div className="d-inline-flex align-items-center text-danger fw-semibold stock-status-pill out-of-stock">
+                      <i className="bi bi-x-circle-fill me-2" />
+                      Agotado temporalmente
+                    </div>
+                  )}
+                </div>
+
+                {/* Descripción */}
+                <div className="product-description-box mb-4">
+                  <h6 className="fw-bold text-navy mb-2">Descripción</h6>
+                  <p className="text-secondary mb-0 leading-relaxed">
+                    {producto.descripcion || 'Producto de alta calidad garantizada, elaborado con los más finos acabados.'}
+                  </p>
+                </div>
+
+                {/* Selector de cantidad y Botón de compra */}
+                {stockDisponible > 0 ? (
+                  <div className="purchase-controls-box mb-4">
+                    <div className="d-flex flex-wrap align-items-center gap-3">
+                      <div className="quantity-selector-card">
+                        <Button
+                          variant="link"
+                          className="quantity-btn"
+                          onClick={handleDecreaseQuantity}
+                          disabled={cantidad <= 1}
+                          title="Disminuir"
+                        >
+                          <i className="bi bi-dash" />
+                        </Button>
+                        <input
+                          type="number"
+                          className="quantity-input-field"
+                          value={cantidad}
+                          onChange={handleCantidadChange}
+                          min="1"
+                          max={stockDisponible}
+                        />
+                        <Button
+                          variant="link"
+                          className="quantity-btn"
+                          onClick={handleIncreaseQuantity}
+                          disabled={cantidad >= stockDisponible}
+                          title="Aumentar"
+                        >
+                          <i className="bi bi-plus" />
+                        </Button>
+                      </div>
+
+                      {isAuthenticated ? (
+                        <Button
+                          className="btn-add-cart-luxury flex-grow-1"
+                          size="lg"
+                          onClick={handleAddToCart}
+                          disabled={agregando}
+                        >
+                          <SvgIcon name="cash" className="me-2" />
+                          <span>{agregando ? 'Agregando...' : `Agregar ${cantidad} al Carrito`}</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          as={Link}
+                          to="/login"
+                          className="btn-add-cart-luxury flex-grow-1"
+                          size="lg"
+                        >
+                          <i className="bi bi-box-arrow-in-right me-2" />
+                          Inicia Sesión para Comprar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-4">
+                    <Button variant="secondary" size="lg" disabled className="w-100 py-3 rounded-3">
+                      <i className="bi bi-slash-circle me-2" />
+                      Producto Agotado
+                    </Button>
+                  </div>
+                )}
+
+                {/* Beneficios de confianza */}
+                <div className="trust-badges-grid pt-3 border-top">
+                  <div className="trust-badge-item">
+                    <i className="bi bi-shield-check text-gold fs-4" />
+                    <div>
+                      <span className="fw-bold d-block text-navy small">Autenticidad</span>
+                      <span className="text-muted extra-small">100% garantizada</span>
+                    </div>
+                  </div>
+                  <div className="trust-badge-item">
+                    <i className="bi bi-truck text-gold fs-4" />
+                    <div>
+                      <span className="fw-bold d-block text-navy small">Envío Seguro</span>
+                      <span className="text-muted extra-small">A todo el país</span>
+                    </div>
+                  </div>
+                  <div className="trust-badge-item">
+                    <i className="bi bi-gem text-gold fs-4" />
+                    <div>
+                      <span className="fw-bold d-block text-navy small">Calidad Premium</span>
+                      <span className="text-muted extra-small">Máxima distinción</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-            {producto.subcategoria && (
-              <div>
-                <strong>Subcategoría:</strong> {producto.subcategoria?.nombre || 'N/A'}
-              </div>
-            )}
-          </div>
-        </Col>
-      </Row>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
 
-      {/* Comentarios */}
-      <Row className="mb-5">
-        <Col>
+      {/* Sección de Comentarios y Reseñas */}
+      <Card className="shadow-sm border-0 rounded-4 overflow-hidden mb-5">
+        <Card.Body className="p-4 p-lg-5">
+          <h4 className="fw-bold text-navy mb-4 d-flex align-items-center gap-2">
+            <i className="bi bi-chat-quote-fill text-gold" />
+            Opiniones y Reseñas del Producto
+          </h4>
           <ProductoComentarios 
             productoId={producto.id}
             onComentarioCreado={handleComentarioCreado}
           />
-        </Col>
-      </Row>
+        </Card.Body>
+      </Card>
 
-      {/* Botón volver */}
-      <Row>
-        <Col className="text-center">
-          <Button
-            variant="outline-secondary"
-            onClick={() => navigate('/catalogo')}
-          >
-            <i className="bi bi-arrow-left me-2"></i>{' '}
-            Volver al catálogo
-          </Button>
-        </Col>
-      </Row>
+      {/* Botón Volver */}
+      <div className="text-center">
+        <Button
+          as={Link}
+          to="/catalogo"
+          variant="outline-secondary"
+          className="px-4 py-2 rounded-pill"
+        >
+          <i className="bi bi-arrow-left me-2" /> Volver al catálogo
+        </Button>
+      </div>
 
+      {/* Estilos dedicados para la vista de producto */}
       <style>{`
-        .badge-stock-success {
-          background-color: #198754;
-          color: white;
+        .product-breadcrumb .breadcrumb-item a {
+          color: var(--bs-gold-dark, #c7984e);
+          text-decoration: none;
+          font-weight: 500;
         }
-        .badge-stock-danger {
-          background-color: #dc3545;
-          color: white;
+        .product-breadcrumb .breadcrumb-item.active {
+          color: #192847;
+          font-weight: 600;
         }
-        .cantidad-input::-webkit-outer-spin-button,
-        .cantidad-input::-webkit-inner-spin-button {
+
+        .product-detail-card {
+          background: #ffffff;
+          box-shadow: 0 8px 30px rgba(25, 40, 71, 0.06) !important;
+        }
+
+        /* Escenario de Imagen transparente y adaptativo */
+        .product-image-stage {
+          position: relative;
+          width: 100%;
+          min-height: 380px;
+          height: 100%;
+          max-height: 480px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 1.5rem;
+          background: radial-gradient(circle at center, rgba(245, 194, 113, 0.12) 0%, rgba(219, 225, 237, 0.18) 60%, rgba(255, 255, 255, 0) 100%);
+          padding: 2rem;
+          border: 1px solid rgba(245, 194, 113, 0.2);
+          overflow: hidden;
+          transition: all 0.3s ease;
+        }
+
+        .product-image-stage:hover {
+          border-color: rgba(245, 194, 113, 0.4);
+          box-shadow: 0 12px 36px rgba(245, 194, 113, 0.15);
+        }
+
+        .product-image-backdrop {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .product-hero-image {
+          max-width: 90%;
+          max-height: 380px;
+          object-fit: contain;
+          filter: drop-shadow(0 15px 25px rgba(25, 40, 71, 0.12));
+          transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .product-image-stage:hover .product-hero-image {
+          transform: scale(1.06) translateY(-4px);
+        }
+
+        .product-badges-overlay {
+          position: absolute;
+          top: 1rem;
+          left: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          z-index: 2;
+        }
+
+        .badge-category-tag {
+          background: rgba(25, 40, 71, 0.85);
+          backdrop-filter: blur(8px);
+          color: #f5c271;
+          font-weight: 600;
+          font-size: 0.8rem;
+          padding: 0.45rem 0.85rem;
+          border-radius: 0.75rem;
+          border: 1px solid rgba(245, 194, 113, 0.3);
+        }
+
+        .product-meta-pill {
+          background: rgba(219, 225, 237, 0.45);
+          color: #192847;
+          font-size: 0.82rem;
+          font-weight: 600;
+          padding: 0.35rem 0.75rem;
+          border-radius: 2rem;
+        }
+
+        .product-title {
+          font-size: clamp(1.6rem, 2.5vw, 2.2rem);
+          line-height: 1.25;
+          letter-spacing: -0.02em;
+        }
+
+        .product-price-amount {
+          font-size: 2.2rem;
+          font-weight: 800;
+          color: #b8832a;
+          letter-spacing: -0.01em;
+        }
+
+        .stock-status-pill {
+          padding: 0.45rem 0.95rem;
+          border-radius: 2rem;
+          font-size: 0.9rem;
+        }
+
+        .stock-status-pill.in-stock {
+          background: rgba(16, 185, 129, 0.1);
+        }
+
+        .stock-status-pill.low-stock {
+          background: rgba(245, 158, 11, 0.12);
+          color: #b45309 !important;
+        }
+
+        .stock-status-pill.out-of-stock {
+          background: rgba(239, 68, 68, 0.1);
+        }
+
+        .quantity-selector-card {
+          display: inline-flex;
+          align-items: center;
+          background: #f8fafc;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 0.85rem;
+          padding: 0.25rem 0.4rem;
+        }
+
+        .quantity-btn {
+          color: #192847 !important;
+          font-size: 1.2rem;
+          padding: 0.3rem 0.7rem;
+          text-decoration: none !important;
+          line-height: 1;
+        }
+
+        .quantity-btn:hover:not(:disabled) {
+          color: #c7984e !important;
+        }
+
+        .quantity-input-field {
+          width: 50px;
+          border: none;
+          background: transparent;
+          text-align: center;
+          font-weight: 700;
+          font-size: 1.1rem;
+          color: #192847;
+          outline: none;
+        }
+
+        .quantity-input-field::-webkit-outer-spin-button,
+        .quantity-input-field::-webkit-inner-spin-button {
           -webkit-appearance: none;
           margin: 0;
         }
-        .cantidad-input[type=number] {
+        .quantity-input-field[type=number] {
           -moz-appearance: textfield;
+        }
+
+        .btn-add-cart-luxury {
+          background: linear-gradient(135deg, #192847 0%, #0f1a30 100%) !important;
+          border: 1px solid #f5c271 !important;
+          color: #f5c271 !important;
+          font-weight: 700 !important;
+          border-radius: 0.85rem !important;
+          padding: 0.75rem 1.5rem !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          box-shadow: 0 4px 15px rgba(25, 40, 71, 0.2) !important;
+        }
+
+        .btn-add-cart-luxury:hover:not(:disabled) {
+          background: linear-gradient(135deg, #f5c271 0%, #c7984e 100%) !important;
+          color: #000000 !important;
+          border-color: #c7984e !important;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(199, 152, 78, 0.35) !important;
+        }
+
+        .trust-badges-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+          gap: 1rem;
+        }
+
+        .trust-badge-item {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .extra-small {
+          font-size: 0.75rem;
         }
       `}</style>
     </Container>

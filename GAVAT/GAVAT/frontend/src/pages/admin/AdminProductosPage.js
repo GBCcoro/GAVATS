@@ -13,6 +13,7 @@ import api from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { getImageUrl } from '../../utils/helpers';
 import { exportarProductosAPDF, exportarProductosAExcel } from '../../utils/exportUtils';
+import SvgIcon from '../../components/SvgIcon';
 
 // Componente memoizado para imágenes de productos
 const ProductImage = memo(({ imagen, nombre }) => {
@@ -509,19 +510,19 @@ const AdminProductosPage = () => {
         </Card.Body>
       </Card>
 
-      <Card>
+      <Card className="shadow-sm border-0 admin-card-table">
         <Card.Body className="p-0">
-          <Table responsive className="mb-0" style={{ tableLayout: 'fixed' }}>
-            <thead className="bg-light" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+          <Table responsive hover className="admin-table align-middle mb-0">
+            <thead>
               <tr>
-                <th>ID</th>
-                <th>Imagen</th>
+                <th className="d-none d-md-table-cell" style={{ width: '50px' }}>ID</th>
+                <th style={{ width: '65px' }}>Imagen</th>
                 <th>Nombre</th>
-                <th>Categoría</th>
-                <th>Precio</th>
-                <th>Stock</th>
-                <th>Estado</th>
-                <th className="text-center">Acciones</th>
+                <th className="d-none d-lg-table-cell" style={{ width: '160px' }}>Categoría</th>
+                <th style={{ width: '115px' }}>Precio</th>
+                <th style={{ width: '80px' }}>Stock</th>
+                <th className="d-none d-sm-table-cell" style={{ width: '95px' }}>Estado</th>
+                <th className="text-center" style={{ minWidth: '110px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -542,12 +543,17 @@ const AdminProductosPage = () => {
 
                   return (
                     <tr key={prod.id}>
-                    <td className="align-middle">{prod.id}</td>
+                    <td className="align-middle d-none d-md-table-cell">{prod.id}</td>
                     <td className="align-middle">
                       <ProductImage imagen={prod.imagen} nombre={prod.nombre} />
                     </td>
-                    <td className="align-middle fw-bold">{prod.nombre}</td>
-                    <td className="align-middle">
+                    <td className="align-middle fw-bold">
+                      <div>{prod.nombre}</div>
+                      <small className="d-lg-none text-muted">
+                        {prod.categoria?.nombre || 'Sin categoría'}
+                      </small>
+                    </td>
+                    <td className="align-middle d-none d-lg-table-cell">
                       <Badge bg="info">{prod.categoria?.nombre || 'N/A'}</Badge>
                       {prod.subcategoria && (
                         <><br /><small className="text-muted">{prod.subcategoria.nombre}</small></>
@@ -559,35 +565,44 @@ const AdminProductosPage = () => {
                         {prod.stock}
                       </Badge>
                     </td>
-                    <td className="align-middle">
+                    <td className="align-middle d-none d-sm-table-cell">
                       <Badge bg={prod.activo ? 'success' : 'secondary'}>
                         {prod.activo ? 'Activo' : 'Inactivo'}
                       </Badge>
                     </td>
                     <td className="align-middle text-center">
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        className="me-1"
-                        onClick={() => handleShowModal(prod)}
-                      >
-                        <i className="bi bi-pencil"></i>
-                      </Button>
-                      <Button
-                        variant={prod.activo ? 'outline-warning' : 'outline-success'}
-                        size="sm"
-                        className="me-1"
-                        onClick={() => handleToggleActivo(prod)}
-                      >
-                        <i className={`bi bi-${prod.activo ? 'x-circle' : 'check-circle'}`}></i>
-                      </Button>
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        onClick={() => handleDelete(prod.id)}
-                      >
-                        <i className="bi bi-trash"></i>
-                      </Button>
+                      <div className="action-btn-group">
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          className="btn-action-table"
+                          onClick={() => handleShowModal(prod)}
+                          title="Editar producto"
+                        >
+                          <SvgIcon name="pencil" />
+                          <span className="btn-text">Editar</span>
+                        </Button>
+                        <Button
+                          variant={prod.activo ? 'outline-warning' : 'outline-success'}
+                          size="sm"
+                          className="btn-action-table"
+                          onClick={() => handleToggleActivo(prod)}
+                          title={prod.activo ? 'Desactivar producto' : 'Activar producto'}
+                        >
+                          <SvgIcon name={prod.activo ? 'x-circle' : 'check-circle'} />
+                          <span className="btn-text">{prod.activo ? 'Pausar' : 'Activar'}</span>
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          className="btn-action-table"
+                          onClick={() => handleDelete(prod.id)}
+                          title="Eliminar producto"
+                        >
+                          <SvgIcon name="trash" />
+                          <span className="btn-text">Eliminar</span>
+                        </Button>
+                      </div>
                     </td>
                     </tr>
                   );

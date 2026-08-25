@@ -662,33 +662,122 @@ img {
 
 .table-responsive {
   overflow-x: auto;
+  border-radius: 0.75rem;
 }
 
 .admin-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   min-width: 620px;
 }
 
-.admin-table th,
-.admin-table td {
-  text-align: left;
-  padding: 1rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+.admin-table th {
+  background: #f8fafc;
+  color: #192847;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.8rem 0.95rem;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
 }
 
-.admin-table thead {
-  background: var(--bg-positiva);
-  color: var(--dark-color);
+.admin-table td {
+  text-align: left;
+  padding: 0.75rem 0.95rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.admin-table tbody tr {
+  transition: background-color 0.15s ease;
 }
 
 .admin-table tbody tr:hover {
-  background: var(--bg-positiva);
+  background-color: rgba(245, 194, 113, 0.06);
+}
+
+.admin-card-table {
+  border-radius: 1rem !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 20px rgba(25, 40, 71, 0.05) !important;
 }
 
 .admin-table th.text-center,
 .admin-table td.text-center {
   text-align: center;
+}
+
+/* Grupo de botones de acción en tabla */
+.action-btn-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+/* Botones de acción responsivos */
+.btn-action-table,
+.btn-action {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  padding: 0.38rem 0.65rem !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.btn-action-table i,
+.btn-action i {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+/* Ícono SVG vectorial basado en archivos locales */
+.btn-icon-svg {
+  display: inline-block;
+  vertical-align: middle;
+  background-color: currentColor;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.btn-action-table .btn-text,
+.btn-action .btn-text {
+  display: inline;
+  margin-left: 0.35rem;
+}
+
+/* En pantallas reducidas, ocultar el texto y mostrar solo el icono */
+@media (max-width: 1200px) {
+  .btn-action-table .btn-text,
+  .btn-action .btn-text {
+    display: none !important;
+  }
+  .btn-action-table,
+  .btn-action {
+    padding: 0.4rem 0.55rem !important;
+    min-width: 32px;
+  }
 }
 
 .font-bold {

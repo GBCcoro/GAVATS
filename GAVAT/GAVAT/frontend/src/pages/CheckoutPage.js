@@ -14,7 +14,7 @@ import pedidoService from '../services/pedidoService';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const OrderSummary = ({ items, total, formatearPrecio }) => (
-  <Card className="resumen-card sticky-top resumen-card-sticky">
+  <Card className="resumen-card">
     <Card.Header className="resumen-card-header">
       <h5 className="mb-0">Resumen del Pedido</h5>
     </Card.Header>
@@ -333,9 +333,6 @@ const CheckoutPage = () => {
           overflow: hidden;
           background: var(--bg, #ffffff);
           box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
-        }
-        .resumen-card-sticky {
-          top: 20px;
         }
         .checkout-card-header, .resumen-card-header {
           background: var(--bg-positiva, #DBE1ED);

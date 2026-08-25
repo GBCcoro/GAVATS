@@ -2,10 +2,11 @@
  * ============================================
  * NAVBAR COMPONENT - Adaptado a la paleta del proyecto
  * ============================================
- * Barra de navegación principal con menú responsive y colores personalizados
+ * Barra de navegación principal con menú responsive, colores personalizados
+ * y cierre automático al hacer clic fuera del menú o navegar.
  */
 
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
@@ -14,19 +15,55 @@ const NavigationBar = memo(() => {
   const { user, isAuthenticated, isAdmin, isAuxiliar, isCliente, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [expanded, setExpanded] = useState(false);
+  const navbarRef = useRef(null);
+
+  // Cerrar menú al cambiar de ruta
+  useEffect(() => {
+    setExpanded(false);
+  }, [location.pathname]);
+
+  // Cerrar menú al hacer clic fuera del navbar
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (navbarRef.current && !navbarRef.current.contains(event.target)) {
+        setExpanded(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = useCallback(() => {
+    setExpanded(false);
     logout();
     navigate('/login');
   }, [logout, navigate]);
 
+  const handleLinkClick = useCallback(() => {
+    setExpanded(false);
+  }, []);
+
   const isActive = useCallback((path) => location.pathname === path, [location]);
 
   return (
-    <Navbar expand="lg" sticky="top" className="custom-navbar shadow-sm">
+    <Navbar 
+      ref={navbarRef}
+      expand="lg" 
+      sticky="top" 
+      expanded={expanded}
+      onToggle={setExpanded}
+      className="custom-navbar shadow-sm"
+    >
       <Container>
         {/* LOGO (Siempre a la izquierda) */}
-        <Navbar.Brand as={Link} to="/" className="brand-logo d-flex align-items-center">
+        <Navbar.Brand as={Link} to="/" onClick={handleLinkClick} className="brand-logo d-flex align-items-center">
           <img 
             src="/gavat.png" 
             alt="GAVAT" 
@@ -40,18 +77,25 @@ const NavigationBar = memo(() => {
           {/* Carrito en Móvil */}
           <Link 
             to="/carrito" 
+            onClick={handleLinkClick}
             className={`nav-link-custom-mobile me-2 ${isActive('/carrito') ? 'active' : ''}`} 
             aria-label="Carrito de compras"
           >
             <i className="bi bi-cart3 fs-4" />
           </Link>
 
-          {/* Menú Usuario en Móvil (Solo Icono) */}
+          {/* Menú Usuario en Móvil */}
           <NavDropdown
             title={
-              <div className="user-icon-btn d-flex align-items-center justify-content-center">
-                <img src="/assests/icons/account_white.svg" alt="Usuario" className="user-icon-img" />
-              </div>
+              isAuthenticated ? (
+                <span className="user-name-text text-gold small fw-bold">
+                  {user?.rol === 'administrador' ? 'Admin' : user?.rol === 'auxiliar' ? 'Auxiliar' : 'Cliente'}
+                </span>
+              ) : (
+                <div className="user-icon-btn d-flex align-items-center justify-content-center">
+                  <img src="/assests/icons/account_white.svg" alt="Usuario" className="user-icon-img" />
+                </div>
+              )
             }
             id="user-dropdown-mobile"
             align="end"
@@ -65,17 +109,17 @@ const NavigationBar = memo(() => {
                     {user?.email}
                   </span>
                 </div>
-                <NavDropdown.Item as={Link} to="/perfil">
+                <NavDropdown.Item as={Link} to="/perfil" onClick={handleLinkClick}>
                   <i className="bi bi-person me-2" /> Mi Perfil
                 </NavDropdown.Item>
                 {isCliente && (
-                  <NavDropdown.Item as={Link} to="/mis-pedidos">
+                  <NavDropdown.Item as={Link} to="/mis-pedidos" onClick={handleLinkClick}>
                     <i className="bi bi-box-seam me-2" /> Mis Pedidos
                   </NavDropdown.Item>
                 )}
                 {(isAdmin || isAuxiliar) && (
                   <>
-                    <NavDropdown.Item as={Link} to="/admin/mis-pedidos">
+                    <NavDropdown.Item as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick}>
                       <i className="bi bi-box-seam me-2" /> Mis Pedidos (Admin)
                     </NavDropdown.Item>
                   </>
@@ -87,10 +131,10 @@ const NavigationBar = memo(() => {
               </>
             ) : (
               <>
-                <NavDropdown.Item as={Link} to="/login">
+                <NavDropdown.Item as={Link} to="/login" onClick={handleLinkClick}>
                   <i className="bi bi-box-arrow-in-right me-2" /> Iniciar Sesión
                 </NavDropdown.Item>
-                <NavDropdown.Item as={Link} to="/register">
+                <NavDropdown.Item as={Link} to="/register" onClick={handleLinkClick}>
                   <i className="bi bi-person-plus me-2" /> Registrarse
                 </NavDropdown.Item>
               </>
@@ -105,15 +149,16 @@ const NavigationBar = memo(() => {
         <Navbar.Collapse id="basic-navbar-nav" className="order-3 order-lg-2">
           {/* Enlaces de la Izquierda */}
           <Nav className="me-auto align-items-lg-center navbar-left-group">
-            <Nav.Link as={Link} to="/" className={`nav-link-custom ${isActive('/') ? 'active' : ''}`}>
+            <Nav.Link as={Link} to="/" onClick={handleLinkClick} className={`nav-link-custom ${isActive('/') ? 'active' : ''}`}>
               <i className="bi bi-house-door me-2 d-lg-none" />Inicio
             </Nav.Link>
-            <Nav.Link as={Link} to="/catalogo" className={`nav-link-custom ${isActive('/catalogo') ? 'active' : ''}`}>
+            <Nav.Link as={Link} to="/catalogo" onClick={handleLinkClick} className={`nav-link-custom ${isActive('/catalogo') ? 'active' : ''}`}>
               <i className="bi bi-grid me-2 d-lg-none" />Catálogo
             </Nav.Link>
             <Nav.Link 
               as={Link} 
               to="/carrito" 
+              onClick={handleLinkClick}
               className={`nav-link-custom d-none d-lg-flex align-items-center ${isActive('/carrito') ? 'active' : ''}`}
             >
               <i className="bi bi-cart3 me-2" />Carrito
@@ -126,43 +171,64 @@ const NavigationBar = memo(() => {
             {(isAdmin || isAuxiliar) && (
               <NavDropdown
                 title={
-                  <span className="d-flex align-items-center text-gold">
-                    <i className="bi bi-shield-lock me-1" /> Administración
-                  </span>
+                  <>
+                    <i className="bi bi-shield-lock-fill text-gold me-1" />
+                    <span className="text-gold">Administración</span>
+                  </>
                 }
                 id="admin-dropdown-desktop"
-                className="nav-dropdown-custom me-3"
+                className="nav-dropdown-custom admin-dropdown-pill me-3"
                 align="end"
               >
-                <NavDropdown.Item as={Link} to="/admin/dashboard">
-                  <i className="bi bi-speedometer2 me-2" /> Dashboard
+                <div className="dropdown-header-custom px-3 py-2 border-bottom mb-2 text-gold small fw-bold d-flex align-items-center">
+                  <i className="bi bi-shield-shaded me-2" /> Panel Administrativo
+                </div>
+                <NavDropdown.Item as={Link} to="/admin/dashboard" onClick={handleLinkClick}>
+                  <i className="bi bi-speedometer2 me-2 text-gold" /> Dashboard
                 </NavDropdown.Item>
                 <NavDropdown.Divider />
-                <NavDropdown.Item as={Link} to="/admin/categorias">Categorías</NavDropdown.Item>
-                <NavDropdown.Item as={Link} to="/admin/subcategorias">Subcategorías</NavDropdown.Item>
-                <NavDropdown.Item as={Link} to="/admin/productos">Productos</NavDropdown.Item>
+                <NavDropdown.Item as={Link} to="/admin/categorias" onClick={handleLinkClick}>
+                  <i className="bi bi-tags me-2" /> Categorías
+                </NavDropdown.Item>
+                <NavDropdown.Item as={Link} to="/admin/subcategorias" onClick={handleLinkClick}>
+                  <i className="bi bi-diagram-3 me-2" /> Subcategorías
+                </NavDropdown.Item>
+                <NavDropdown.Item as={Link} to="/admin/productos" onClick={handleLinkClick}>
+                  <i className="bi bi-box-seam me-2" /> Productos
+                </NavDropdown.Item>
                 {isAdmin && (
-                  <NavDropdown.Item as={Link} to="/admin/usuarios">Usuarios</NavDropdown.Item>
+                  <NavDropdown.Item as={Link} to="/admin/usuarios" onClick={handleLinkClick}>
+                    <i className="bi bi-people me-2" /> Usuarios
+                  </NavDropdown.Item>
                 )}
-                <NavDropdown.Item as={Link} to="/admin/facturas">Facturas</NavDropdown.Item>
-                <NavDropdown.Item as={Link} to="/admin/pedidos">Pedidos</NavDropdown.Item>
-                <NavDropdown.Item as={Link} to="/admin/comentarios">Comentarios</NavDropdown.Item>
+                <NavDropdown.Item as={Link} to="/admin/facturas" onClick={handleLinkClick}>
+                  <i className="bi bi-file-earmark-text me-2" /> Facturas
+                </NavDropdown.Item>
+                <NavDropdown.Item as={Link} to="/admin/pedidos" onClick={handleLinkClick}>
+                  <i className="bi bi-cart-check me-2" /> Pedidos
+                </NavDropdown.Item>
+                <NavDropdown.Item as={Link} to="/admin/comentarios" onClick={handleLinkClick}>
+                  <i className="bi bi-chat-dots me-2" /> Comentarios
+                </NavDropdown.Item>
                 <NavDropdown.Divider />
-                <NavDropdown.Item as={Link} to="/admin/mis-pedidos">Mis Pedidos (Admin)</NavDropdown.Item>
+                <NavDropdown.Item as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick}>
+                  <i className="bi bi-bag-check me-2" /> Mis Pedidos (Admin)
+                </NavDropdown.Item>
               </NavDropdown>
             )}
 
-            {/* Dropdown de Usuario (Desktop) */}
+            {/* Menú Usuario Desktop */}
             <NavDropdown
               title={
-                <div className="user-icon-btn d-flex align-items-center justify-content-center">
-                  <img src="/assests/icons/account_white.svg" alt="Usuario" className="user-icon-img" />
-                  {isAuthenticated && (
-                    <span className="ms-2 user-name-text d-none d-xl-inline">
-                      {user?.nombre?.split(' ')[0]}
-                    </span>
-                  )}
-                </div>
+                isAuthenticated ? (
+                  <span className="user-name-text text-gold small fw-bold">
+                    {user?.nombre}
+                  </span>
+                ) : (
+                  <div className="user-icon-btn d-flex align-items-center justify-content-center">
+                    <img src="/assests/icons/account_white.svg" alt="Usuario" className="user-icon-img" />
+                  </div>
+                )
               }
               id="user-dropdown-desktop"
               align="end"
@@ -176,17 +242,17 @@ const NavigationBar = memo(() => {
                       {user?.email}
                     </span>
                   </div>
-                  <NavDropdown.Item as={Link} to="/perfil">
+                  <NavDropdown.Item as={Link} to="/perfil" onClick={handleLinkClick}>
                     <i className="bi bi-person me-2" /> Mi Perfil
                   </NavDropdown.Item>
                   {isCliente && (
-                    <NavDropdown.Item as={Link} to="/mis-pedidos">
+                    <NavDropdown.Item as={Link} to="/mis-pedidos" onClick={handleLinkClick}>
                       <i className="bi bi-box-seam me-2" /> Mis Pedidos
                     </NavDropdown.Item>
                   )}
                   {(isAdmin || isAuxiliar) && (
                     <>
-                      <NavDropdown.Item as={Link} to="/admin/mis-pedidos">
+                      <NavDropdown.Item as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick}>
                         <i className="bi bi-box-seam me-2" /> Mis Pedidos (Admin)
                       </NavDropdown.Item>
                     </>
@@ -198,10 +264,10 @@ const NavigationBar = memo(() => {
                 </>
               ) : (
                 <>
-                  <NavDropdown.Item as={Link} to="/login">
+                  <NavDropdown.Item as={Link} to="/login" onClick={handleLinkClick}>
                     <i className="bi bi-box-arrow-in-right me-2" /> Iniciar Sesión
                   </NavDropdown.Item>
-                  <NavDropdown.Item as={Link} to="/register">
+                  <NavDropdown.Item as={Link} to="/register" onClick={handleLinkClick}>
                     <i className="bi bi-person-plus me-2" /> Registrarse
                   </NavDropdown.Item>
                 </>
@@ -212,22 +278,38 @@ const NavigationBar = memo(() => {
           {/* Menú Administración para Móviles (Visible solo en pantallas pequeñas adentro del collapse) */}
           {(isAdmin || isAuxiliar) && (
             <div className="d-lg-none border-top mt-3 pt-2 admin-mobile-menu">
-              <div className="px-3 py-2 text-gold fw-bold small">
-                <i className="bi bi-shield-lock me-1" /> ADMINISTRACIÓN
+              <div className="px-3 py-2 text-gold fw-bold small d-flex align-items-center">
+                <i className="bi bi-shield-lock-fill me-2" /> ADMINISTRACIÓN
               </div>
-              <Nav.Link as={Link} to="/admin/dashboard" className="nav-link-custom ps-4">
-                <i className="bi bi-speedometer2 me-2" /> Dashboard
+              <Nav.Link as={Link} to="/admin/dashboard" onClick={handleLinkClick} className="nav-link-custom ps-4">
+                <i className="bi bi-speedometer2 me-2 text-gold" /> Dashboard
               </Nav.Link>
-              <Nav.Link as={Link} to="/admin/categorias" className="nav-link-custom ps-4">Categorías</Nav.Link>
-              <Nav.Link as={Link} to="/admin/subcategorias" className="nav-link-custom ps-4">Subcategorías</Nav.Link>
-              <Nav.Link as={Link} to="/admin/productos" className="nav-link-custom ps-4">Productos</Nav.Link>
+              <Nav.Link as={Link} to="/admin/categorias" onClick={handleLinkClick} className="nav-link-custom ps-4">
+                <i className="bi bi-tags me-2" /> Categorías
+              </Nav.Link>
+              <Nav.Link as={Link} to="/admin/subcategorias" onClick={handleLinkClick} className="nav-link-custom ps-4">
+                <i className="bi bi-diagram-3 me-2" /> Subcategorías
+              </Nav.Link>
+              <Nav.Link as={Link} to="/admin/productos" onClick={handleLinkClick} className="nav-link-custom ps-4">
+                <i className="bi bi-box-seam me-2" /> Productos
+              </Nav.Link>
               {isAdmin && (
-                <Nav.Link as={Link} to="/admin/usuarios" className="nav-link-custom ps-4">Usuarios</Nav.Link>
+                <Nav.Link as={Link} to="/admin/usuarios" onClick={handleLinkClick} className="nav-link-custom ps-4">
+                  <i className="bi bi-people me-2" /> Usuarios
+                </Nav.Link>
               )}
-              <Nav.Link as={Link} to="/admin/facturas" className="nav-link-custom ps-4">Facturas</Nav.Link>
-              <Nav.Link as={Link} to="/admin/pedidos" className="nav-link-custom ps-4">Pedidos</Nav.Link>
-              <Nav.Link as={Link} to="/admin/comentarios" className="nav-link-custom ps-4">Comentarios</Nav.Link>
-              <Nav.Link as={Link} to="/admin/mis-pedidos" className="nav-link-custom ps-4">Mis Pedidos (Admin)</Nav.Link>
+              <Nav.Link as={Link} to="/admin/facturas" onClick={handleLinkClick} className="nav-link-custom ps-4">
+                <i className="bi bi-file-earmark-text me-2" /> Facturas
+              </Nav.Link>
+              <Nav.Link as={Link} to="/admin/pedidos" onClick={handleLinkClick} className="nav-link-custom ps-4">
+                <i className="bi bi-cart-check me-2" /> Pedidos
+              </Nav.Link>
+              <Nav.Link as={Link} to="/admin/comentarios" onClick={handleLinkClick} className="nav-link-custom ps-4">
+                <i className="bi bi-chat-dots me-2" /> Comentarios
+              </Nav.Link>
+              <Nav.Link as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick} className="nav-link-custom ps-4">
+                <i className="bi bi-bag-check me-2" /> Mis Pedidos (Admin)
+              </Nav.Link>
             </div>
           )}
         </Navbar.Collapse>
@@ -257,20 +339,18 @@ const NavigationBar = memo(() => {
           text-decoration: none;
         }
         .brand-name {
-          background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-light, #f0db7f));
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-          letter-spacing: 0.5px;
+          color: var(--bs-gold, #f5c271);
+          letter-spacing: 0.05em;
         }
+
+        /* Nav links default styling */
         .nav-link-custom {
           color: rgba(255, 255, 255, 0.85) !important;
           font-weight: 500;
           font-size: 0.95rem;
-          padding: 0.5rem 1rem !important;
+          padding: 0.5rem 0.9rem !important;
           border-radius: 0.5rem;
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-          margin: 0 0.15rem;
+          transition: all 0.2s ease;
         }
         .nav-link-custom:hover {
           color: var(--bs-gold, #f5c271) !important;
@@ -351,9 +431,38 @@ const NavigationBar = memo(() => {
           transform: rotate(180deg);
         }
         
-        /* Hide caret arrow for user menu dropdowns */
-        .user-dropdown-desktop-container .dropdown-toggle::after,
-        .user-dropdown-mobile-container .dropdown-toggle::after {
+        /* Admin Pill Button Styling */
+        .admin-dropdown-pill .dropdown-toggle {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          background: rgba(245, 194, 113, 0.12) !important;
+          border: 1.5px solid rgba(245, 194, 113, 0.38) !important;
+          border-radius: 2rem !important;
+          padding: 0.45rem 1.15rem !important;
+          color: var(--bs-gold, #f5c271) !important;
+          font-size: 0.92rem;
+          font-weight: 600;
+          line-height: 1.2;
+          white-space: nowrap;
+          transition: all 0.25s ease;
+        }
+        .admin-dropdown-pill .dropdown-toggle::after {
+          margin-left: 0.45rem !important;
+          vertical-align: middle !important;
+          align-self: center !important;
+        }
+        .admin-dropdown-pill .dropdown-toggle:hover,
+        .admin-dropdown-pill.show .dropdown-toggle {
+          background: rgba(245, 194, 113, 0.22) !important;
+          border-color: var(--bs-gold, #f5c271) !important;
+          box-shadow: 0 0 14px rgba(245, 194, 113, 0.3);
+          transform: translateY(-1px);
+        }
+
+        /* Hide caret arrow for icon-only button */
+        .user-dropdown-desktop-container:has(.user-icon-btn) .dropdown-toggle::after,
+        .user-dropdown-mobile-container:has(.user-icon-btn) .dropdown-toggle::after {
           display: none !important;
         }
 
@@ -364,6 +473,7 @@ const NavigationBar = memo(() => {
           border-radius: 0.75rem;
           padding: 0.5rem;
           margin-top: 0.6rem;
+          min-width: 220px;
         }
         .nav-dropdown-custom .dropdown-item {
           color: rgba(255, 255, 255, 0.85) !important;
@@ -375,51 +485,35 @@ const NavigationBar = memo(() => {
         .nav-dropdown-custom .dropdown-item i {
           opacity: 0.8;
         }
-        .nav-dropdown-custom .dropdown-item:hover {
-          background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e));
-          color: var(--fnt-black, #000000) !important;
-          transform: translateX(3px);
+        .nav-dropdown-custom .dropdown-item:hover,
+        .nav-dropdown-custom .dropdown-item:focus {
+          color: #000000 !important;
+          background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e)) !important;
+          font-weight: 600;
         }
-        .nav-dropdown-custom .dropdown-item:hover i {
+        .nav-dropdown-custom .dropdown-item:hover i,
+        .nav-dropdown-custom .dropdown-item:focus i {
           opacity: 1;
+          color: #000000 !important;
         }
-        .nav-dropdown-custom .dropdown-divider {
-          border-color: rgba(255, 255, 255, 0.1);
+        .nav-dropdown-custom .dropdown-item.text-danger:hover {
+          background: #dc3545 !important;
+          color: #ffffff !important;
+        }
+        .nav-dropdown-custom .dropdown-item.text-danger:hover i {
+          color: #ffffff !important;
         }
         .dropdown-header-custom {
-          background-color: rgba(255, 255, 255, 0.03);
-          border-radius: 0.5rem;
+          color: var(--bs-gold, #f5c271);
+          border-color: rgba(255, 255, 255, 0.1) !important;
         }
-
-        /* Mobile specific collapse styling */
-        @media (max-width: 991.98px) {
-          .navbar-collapse {
-            background-color: #192847;
-            border-radius: 0.75rem;
-            margin-top: 0.75rem;
-            padding: 1rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-          }
-          .nav-link-custom {
-            margin: 0.25rem 0;
-            padding: 0.6rem 1rem !important;
-          }
-          .nav-link-custom.active {
-            border-bottom: none;
-            border-left: 3px solid var(--bs-gold, #f5c271);
-            border-radius: 0.5rem;
-            background-color: rgba(255, 255, 255, 0.04);
-          }
-          .admin-mobile-menu {
-            border-color: rgba(255, 255, 255, 0.1) !important;
-          }
+        .dropdown-divider {
+          border-color: rgba(255, 255, 255, 0.1);
+          margin: 0.4rem 0;
         }
       `}</style>
     </Navbar>
   );
 });
-
-NavigationBar.displayName = 'NavigationBar';
 
 export default NavigationBar;

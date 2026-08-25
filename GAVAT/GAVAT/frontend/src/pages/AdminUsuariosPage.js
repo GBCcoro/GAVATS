@@ -1,7 +1,17 @@
+/**
+ * ============================================
+ * ADMIN USUARIOS PAGE
+ * ============================================
+ * Gestión CRUD de usuarios y roles
+ */
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import usuarioService from '../services/usuarioService';
 import { exportarUsuariosAPDF, exportarUsuariosAExcel } from '../utils/exportUtils';
+import LoadingSpinner from '../components/LoadingSpinner';
+import SvgIcon from '../components/SvgIcon';
 
 function AdminUsuariosPage() {
   const navigate = useNavigate();
@@ -10,6 +20,8 @@ function AdminUsuariosPage() {
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando] = useState(false);
   const [tipoExportacion, setTipoExportacion] = useState('pdf');
+  const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
+  
   const [usuarioActual, setUsuarioActual] = useState({
     id: null,
     nombre: '',
@@ -21,6 +33,7 @@ function AdminUsuariosPage() {
     rol: 'cliente',
     activo: true
   });
+  
   const [filtros, setFiltros] = useState({
     busqueda: '',
     rol: 'todos',
@@ -31,12 +44,13 @@ function AdminUsuariosPage() {
   const registrosPorPagina = 25;
 
   const cargarUsuarios = useCallback(async () => {
+    setLoading(true);
     try {
       const data = await usuarioService.obtenerUsuarios('?limite=1000');
       setUsuarios(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error al cargar usuarios:', error);
-      alert('Error al cargar usuarios');
+      setMensaje({ tipo: 'danger', texto: 'Error al cargar los usuarios' });
       setUsuarios([]);
     } finally {
       setLoading(false);
@@ -46,58 +60,6 @@ function AdminUsuariosPage() {
   useEffect(() => {
     cargarUsuarios();
   }, [cargarUsuarios]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (editando) {
-        const dataActualizar = { ...usuarioActual };
-        if (!dataActualizar.password) delete dataActualizar.password;
-        await usuarioService.actualizarUsuario(usuarioActual.id, dataActualizar);
-        alert('Usuario actualizado exitosamente');
-      } else {
-        if (!usuarioActual.password) {
-          alert('La contraseña es requerida para nuevos usuarios');
-          return;
-        }
-        await usuarioService.crearUsuario(usuarioActual);
-        alert('Usuario creado exitosamente');
-      }
-      setShowModal(false);
-      limpiarFormulario();
-      cargarUsuarios();
-    } catch (error) {
-      alert(error.response?.data?.message || 'Error al guardar usuario');
-    }
-  };
-
-  const handleEditar = (usuario) => {
-    setUsuarioActual({ ...usuario, password: '' });
-    setEditando(true);
-    setShowModal(true);
-  };
-
-  const handleEliminar = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar este usuario?')) return;
-    try {
-      await usuarioService.eliminarUsuario(id);
-      alert('Usuario eliminado exitosamente');
-      cargarUsuarios();
-    } catch (error) {
-      console.error('Error al eliminar usuario:', error);
-      alert('Error al eliminar usuario');
-    }
-  };
-
-  const handleToggleActivo = async (usuario) => {
-    try {
-      await usuarioService.cambiarEstado(usuario.id);
-      cargarUsuarios();
-    } catch (error) {
-      console.error('Error al cambiar estado del usuario:', error);
-      alert('Error al cambiar estado del usuario');
-    }
-  };
 
   const limpiarFormulario = () => {
     setUsuarioActual({
@@ -114,8 +76,69 @@ function AdminUsuariosPage() {
     setEditando(false);
   };
 
-  const limpiarFiltros = () => {
-    setFiltros({ busqueda: '', rol: 'todos', estado: 'todos' });
+  const handleShowModal = (usuario = null) => {
+    if (usuario) {
+      setUsuarioActual({ ...usuario, password: '' });
+      setEditando(true);
+    } else {
+      limpiarFormulario();
+    }
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    limpiarFormulario();
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editando) {
+        const dataActualizar = { ...usuarioActual };
+        if (!dataActualizar.password) delete dataActualizar.password;
+        await usuarioService.actualizarUsuario(usuarioActual.id, dataActualizar);
+        setMensaje({ tipo: 'success', texto: 'Usuario actualizado exitosamente' });
+      } else {
+        if (!usuarioActual.password) {
+          setMensaje({ tipo: 'danger', texto: 'La contraseña es requerida para nuevos usuarios' });
+          return;
+        }
+        await usuarioService.crearUsuario(usuarioActual);
+        setMensaje({ tipo: 'success', texto: 'Usuario creado exitosamente' });
+      }
+      handleCloseModal();
+      await cargarUsuarios();
+    } catch (error) {
+      console.error('Error al guardar usuario:', error);
+      setMensaje({ tipo: 'danger', texto: error.response?.data?.message || 'Error al guardar usuario' });
+    }
+  };
+
+  const handleEliminar = async (id) => {
+    if (!window.confirm('¿Estás seguro de eliminar este usuario?')) return;
+    try {
+      await usuarioService.eliminarUsuario(id);
+      setMensaje({ tipo: 'success', texto: 'Usuario eliminado exitosamente' });
+      await cargarUsuarios();
+    } catch (error) {
+      console.error('Error al eliminar usuario:', error);
+      setMensaje({ tipo: 'danger', texto: 'Error al eliminar usuario' });
+    }
+  };
+
+  const handleToggleActivo = async (usuario) => {
+    try {
+      await usuarioService.cambiarEstado(usuario.id);
+      setMensaje({ 
+        tipo: 'success', 
+        texto: `Usuario ${usuario.activo ? 'desactivado' : 'activado'} exitosamente` 
+      });
+      await cargarUsuarios();
+    } catch (error) {
+      console.error('Error al cambiar estado del usuario:', error);
+      setMensaje({ tipo: 'danger', texto: 'Error al cambiar estado del usuario' });
+    }
   };
 
   const usuariosFiltrados = useMemo(() => {
@@ -143,494 +166,348 @@ function AdminUsuariosPage() {
   }, [filtros.busqueda, filtros.rol, filtros.estado]);
 
   if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '50vh' }}>
-        <output>
-          <div className="spinner-border" style={{ color: 'var(--bs-gold, #f5c271)' }}>
-            <span className="visually-hidden">Cargando...</span>
-          </div>
-        </output>
-      </div>
-    );
+    return <LoadingSpinner message="Cargando usuarios..." />;
   }
 
   return (
-    <div className="admin-container mt-4">
-      <div className="admin-toolbar">
-        <div className="admin-title">
-          <h1>
-            <i className="bi bi-people-fill" aria-hidden="true"></i>{' '}
+    <Container className="py-4">
+      {/* Header Toolbar */}
+      <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+          <h1 className="h2 mb-1 fw-bold text-navy">
+            <i className="bi bi-people-fill me-2 text-gold" />
             Gestión de Usuarios
           </h1>
-          <p className="subtext">Administra los usuarios y roles del sistema</p>
+          <p className="text-muted mb-0">
+            Total: {usuariosFiltrados.length} de {usuarios.length} usuario{usuarios.length !== 1 ? 's' : ''}
+          </p>
         </div>
-
-        <div className="action-groups">
-          <div className="export-actions">
-            <button
-              type="button"
-              className={`btn ${tipoExportacion === 'pdf' ? 'btn-primary' : 'btn-outline-primary'}`}
+        <div className="d-flex flex-wrap gap-2">
+          <Dropdown as={ButtonGroup}>
+            <Button
+              variant="primary"
               onClick={() => {
                 setTipoExportacion('pdf');
                 exportarUsuariosAPDF(usuariosFiltrados);
               }}
             >
-              <i className="bi bi-file-earmark-pdf" aria-hidden="true"></i>{' '}
-              Exportar a PDF
-            </button>
-            <button
-              type="button"
-              className={`btn ${tipoExportacion === 'excel' ? 'btn-primary' : 'btn-outline-primary'}`}
-              onClick={async () => {
+              <i className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} />
+              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+            </Button>
+            <Dropdown.Toggle split variant="primary" />
+            <Dropdown.Menu>
+              <Dropdown.Item onClick={() => {
+                setTipoExportacion('pdf');
+                exportarUsuariosAPDF(usuariosFiltrados);
+              }}>
+                <i className="bi bi-file-earmark-pdf me-2" /> Exportar a PDF
+              </Dropdown.Item>
+              <Dropdown.Item onClick={async () => {
                 setTipoExportacion('excel');
                 await exportarUsuariosAExcel(usuariosFiltrados);
-              }}
-            >
-              <i className="bi bi-file-earmark-excel" aria-hidden="true"></i>{' '}
-              Exportar a Excel
-            </button>
-          </div>
-          <div className="nav-actions">
-            <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-              <i className="bi bi-arrow-left" aria-hidden="true"></i>{' '}
-              Volver
-            </button>
-            <button type="button" className="btn btn-primary" onClick={() => { limpiarFormulario(); setShowModal(true); }}>
-              <i className="bi bi-plus-circle" aria-hidden="true"></i>{' '}
-              Nuevo Usuario
-            </button>
-          </div>
+              }}>
+                <i className="bi bi-file-earmark-excel me-2" /> Exportar a Excel
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
+          <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
+            <i className="bi bi-arrow-left me-1" /> Volver
+          </Button>
+          <Button variant="primary" onClick={() => handleShowModal()}>
+            <i className="bi bi-plus-circle me-1" /> Nuevo Usuario
+          </Button>
         </div>
       </div>
 
-      {/* FILTROS */}
-      <div className="filtros-card mb-4">
-        <div className="filtros-header">
-          <div className="d-flex justify-content-between align-items-center">
-            <h5 className="mb-0"><i className="bi bi-funnel me-2" aria-hidden="true"></i>{' '}Filtros</h5>
-          </div>
-        </div>
-        <div className="filtros-body">
-          <div className="row g-3 align-items-end">
-            <div className="col-md-4">
-              <label htmlFor="buscarUsuario" className="filtros-label">Buscar por nombre o email:</label>
-              <div className="input-group">
-                <span className="input-group-text bg-gold-light"><i className="bi bi-search"></i></span>
-                <input id="buscarUsuario" type="text" className="form-control admin-input" placeholder="Escriba para buscar..."
-                  value={filtros.busqueda} onChange={(e) => setFiltros({...filtros, busqueda: e.target.value})} />
-              </div>
-            </div>
-            <div className="col-md-4">
-              <label htmlFor="filtrarRol" className="filtros-label">Filtrar por Rol:</label>
-              <select id="filtrarRol" className="form-select admin-select" value={filtros.rol}
-                onChange={(e) => setFiltros({...filtros, rol: e.target.value})}>
-                <option value="todos">Todos los roles</option>
-                <option value="administrador">Administradores</option>
-                <option value="auxiliar">Auxiliares</option>
-                <option value="cliente">Clientes</option>
-              </select>
-            </div>
-            <div className="col-md-4 d-flex justify-content-end">
-              <button type="button" className="btn btn-outline-secondary btn-clear-filters" onClick={limpiarFiltros}>
-                <i className="bi bi-x-circle me-1" aria-hidden="true"></i>{' '}
-                Limpiar filtros
-              </button>
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="badge-registros">
-              <i className="bi bi-people-fill me-1" aria-hidden="true"></i>{' '}
-              {usuariosFiltrados.length} registro(s) encontrado(s)
-            </span>
-          </div>
-        </div>
-      </div>
+      {mensaje.texto && (
+        <Alert variant={mensaje.tipo} dismissible onClose={() => setMensaje({ tipo: '', texto: '' })}>
+          {mensaje.texto}
+        </Alert>
+      )}
 
-      {/* TABLA */}
-      <div className="tabla-card">
-        <div className="table-responsive">
-          <table className="admin-table">
+      {/* Filtros */}
+      <Card className="shadow-sm border-0 mb-4 admin-card-table">
+        <Card.Body className="p-3 p-md-4">
+          <h6 className="fw-bold mb-3 d-flex align-items-center gap-2 text-navy">
+            <i className="bi bi-funnel text-gold" /> Filtros de Búsqueda
+          </h6>
+          <Row className="g-3 align-items-end">
+            <Col md={5}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold mb-1">Buscar Usuario</Form.Label>
+                <InputGroup>
+                  <InputGroup.Text className="bg-light">
+                    <i className="bi bi-search" />
+                  </InputGroup.Text>
+                  <Form.Control
+                    placeholder="Buscar por nombre o email..."
+                    value={filtros.busqueda}
+                    onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
+                  />
+                </InputGroup>
+              </Form.Group>
+            </Col>
+            <Col md={3}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold mb-1">Filtrar por Rol</Form.Label>
+                <Form.Select
+                  value={filtros.rol}
+                  onChange={(e) => setFiltros({ ...filtros, rol: e.target.value })}
+                >
+                  <option value="todos">Todos los roles</option>
+                  <option value="administrador">Administradores</option>
+                  <option value="auxiliar">Auxiliares</option>
+                  <option value="cliente">Clientes</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={2}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
+                <Form.Select
+                  value={filtros.estado}
+                  onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
+                >
+                  <option value="todos">Todos</option>
+                  <option value="activo">Activos</option>
+                  <option value="inactivo">Inactivos</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={2}>
+              <Button
+                variant="outline-secondary"
+                className="w-100"
+                onClick={() => setFiltros({ busqueda: '', rol: 'todos', estado: 'todos' })}
+              >
+                <i className="bi bi-arrow-clockwise me-1" /> Limpiar
+              </Button>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
+
+      {/* Tabla de Usuarios */}
+      <Card className="shadow-sm border-0 admin-card-table">
+        <Card.Body className="p-0">
+          <Table responsive hover className="admin-table align-middle mb-0">
             <thead>
-              <tr><th>ID</th><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr>
+              <tr>
+                <th className="d-none d-md-table-cell" style={{ width: '50px' }}>ID</th>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th className="d-none d-lg-table-cell" style={{ width: '130px' }}>Teléfono</th>
+                <th style={{ width: '110px' }}>Rol</th>
+                <th className="d-none d-sm-table-cell" style={{ width: '100px' }}>Estado</th>
+                <th className="text-center" style={{ minWidth: '110px' }}>Acciones</th>
+              </tr>
             </thead>
             <tbody>
               {usuariosFiltrados.length === 0 ? (
-                <tr><td colSpan="7" className="text-center text-muted">No hay usuarios para mostrar</td></tr>
+                <tr>
+                  <td colSpan="7" className="text-center py-4 text-muted">
+                    No hay usuarios registrados
+                  </td>
+                </tr>
               ) : (
-                usuariosPaginados.map(usuario => (
+                usuariosPaginados.map((usuario) => (
                   <tr key={usuario.id}>
-                    <td>{usuario.id}</td>
-                    <td>{usuario.nombre}</td>
-                    <td>{usuario.email}</td>
-                    <td>{usuario.telefono || '-'}</td>
-                    <td><span className={`badge-rol ${usuario.rol}`}>{usuario.rol}</span></td>
-                    <td><span className={`badge-estado ${usuario.activo ? 'activo' : 'inactivo'}`}>
-                      {usuario.activo ? 'Activo' : 'Inactivo'}
-                    </span></td>
-                    <td>
-                      <div className="btn-group btn-group-sm">
-                        <button type="button" className="btn-action edit" onClick={() => handleEditar(usuario)} title="Editar">
-                          <i className="bi bi-pencil"></i>
-                        </button>
-                        <button type="button" className={`btn-action toggle ${usuario.activo ? 'deactivate' : 'activate'}`}
-                          onClick={() => handleToggleActivo(usuario)} title={usuario.activo ? 'Desactivar' : 'Activar'}>
-                          <i className={`bi ${usuario.activo ? 'bi-toggle-on' : 'bi-toggle-off'}`}></i>
-                        </button>
-                        <button type="button" className="btn-action delete" onClick={() => handleEliminar(usuario.id)} title="Eliminar">
-                          <i className="bi bi-trash"></i>
-                        </button>
+                    <td className="align-middle d-none d-md-table-cell">{usuario.id}</td>
+                    <td className="align-middle fw-bold">
+                      <div>{usuario.nombre} {usuario.apellido || ''}</div>
+                      <small className="d-lg-none text-muted d-block">{usuario.telefono || ''}</small>
+                    </td>
+                    <td className="align-middle">{usuario.email}</td>
+                    <td className="align-middle d-none d-lg-table-cell">{usuario.telefono || '-'}</td>
+                    <td className="align-middle">
+                      <Badge bg={usuario.rol === 'administrador' ? 'danger' : usuario.rol === 'auxiliar' ? 'warning' : 'info'}>
+                        {usuario.rol}
+                      </Badge>
+                    </td>
+                    <td className="align-middle d-none d-sm-table-cell">
+                      <Badge bg={usuario.activo ? 'success' : 'secondary'}>
+                        {usuario.activo ? 'Activo' : 'Inactivo'}
+                      </Badge>
+                    </td>
+                    <td className="align-middle text-center">
+                      <div className="action-btn-group">
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          className="btn-action-table"
+                          onClick={() => handleShowModal(usuario)}
+                          title="Editar usuario"
+                        >
+                          <SvgIcon name="pencil" />
+                          <span className="btn-text">Editar</span>
+                        </Button>
+                        <Button
+                          variant={usuario.activo ? 'outline-warning' : 'outline-success'}
+                          size="sm"
+                          className="btn-action-table"
+                          onClick={() => handleToggleActivo(usuario)}
+                          title={usuario.activo ? 'Desactivar usuario' : 'Activar usuario'}
+                        >
+                          <SvgIcon name={usuario.activo ? 'x-circle' : 'check-circle'} />
+                          <span className="btn-text">{usuario.activo ? 'Desactivar' : 'Activar'}</span>
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          className="btn-action-table"
+                          onClick={() => handleEliminar(usuario.id)}
+                          title="Eliminar usuario"
+                        >
+                          <SvgIcon name="trash" />
+                          <span className="btn-text">Eliminar</span>
+                        </Button>
                       </div>
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
-          </table>
-        </div>
-      </div>
+          </Table>
+        </Card.Body>
+      </Card>
 
       {/* Paginación */}
       {totalPaginas > 1 && (
-        <div className="paginacion-card mt-3">
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <small className="text-muted">
-                <i className="bi bi-file-text me-1" />{' '}
-                Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> - Mostrando <strong>{usuariosPaginados.length}</strong> de <strong>{usuariosFiltrados.length}</strong> registros
-              </small>
-            </div>
-            <div className="btn-group">
-              <button type="button" className="btn-paginacion" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
-                <i className="bi bi-chevron-bar-left"></i>
-              </button>
-              <button type="button" className="btn-paginacion" onClick={() => setPaginaActual(p => p-1)} disabled={paginaActual === 1}>
-                <i className="bi bi-chevron-left me-1"></i> Anterior
-              </button>
-              <button type="button" className="btn-paginacion active" disabled>
-                {paginaActual} / {totalPaginas}
-              </button>
-              <button type="button" className="btn-paginacion" onClick={() => setPaginaActual(p => p+1)} disabled={paginaActual === totalPaginas}>
-                Siguiente <i className="bi bi-chevron-right ms-1"></i>
-              </button>
-              <button type="button" className="btn-paginacion" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
-                <i className="bi bi-chevron-bar-right"></i>
-              </button>
-            </div>
-          </div>
+        <div className="d-flex justify-content-between align-items-center mt-3">
+          <small className="text-muted">
+            Página {paginaActual} de {totalPaginas} - Mostrando {usuariosPaginados.length} de {usuariosFiltrados.length} registros
+          </small>
+          <ButtonGroup size="sm">
+            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
+              ««
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1}>
+              Anterior
+            </Button>
+            <Button variant="primary" disabled>
+              {paginaActual} / {totalPaginas}
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas}>
+              Siguiente
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
+              »»
+            </Button>
+          </ButtonGroup>
         </div>
       )}
 
-      {/* MODAL */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-container modal-lg">
-            <div className="modal-header-custom">
-              <h5>{editando ? 'Editar Usuario' : 'Nuevo Usuario'}</h5>
-              <button type="button" className="btn-close-custom" onClick={() => { setShowModal(false); limpiarFormulario(); }}>×</button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="modal-body-custom">
-                <div className="row">
-                  <div className="col-md-4 mb-3">
-                    <label htmlFor="usuario-nombre" className="form-label fw-bold">Nombre</label>
-                    <input id="usuario-nombre" type="text" className="admin-input w-100" value={usuarioActual.nombre}
-                      onChange={(e) => setUsuarioActual({...usuarioActual, nombre: e.target.value})} />
-                  </div>
-                  <div className="col-md-4 mb-3">
-                    <label htmlFor="usuario-apellido" className="form-label fw-bold">Apellido</label>
-                    <input id="usuario-apellido" type="text" className="admin-input w-100" value={usuarioActual.apellido}
-                      onChange={(e) => setUsuarioActual({...usuarioActual, apellido: e.target.value})} />
-                  </div>
-                  <div className="col-md-4 mb-3">
-                    <label htmlFor="usuario-email" className="form-label fw-bold">Email *</label>
-                    <input id="usuario-email" type="email" className="admin-input w-100" value={usuarioActual.email}
-                      onChange={(e) => setUsuarioActual({...usuarioActual, email: e.target.value})} required />
-                  </div>
-                </div>
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="usuario-password" className="form-label fw-bold">Contraseña {editando ? '(dejar vacío para no cambiar)' : '*'}</label>
-                    <input id="usuario-password" type="password" className="admin-input w-100" value={usuarioActual.password}
-                      onChange={(e) => setUsuarioActual({...usuarioActual, password: e.target.value})} required={!editando} />
-                  </div>
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="usuario-telefono" className="form-label fw-bold">Teléfono</label>
-                    <input id="usuario-telefono" type="text" className="admin-input w-100" value={usuarioActual.telefono}
-                      onChange={(e) => setUsuarioActual({...usuarioActual, telefono: e.target.value})} />
-                  </div>
-                </div>
-                <div className="mb-3">
-                  <label htmlFor="usuario-direccion" className="form-label fw-bold">Dirección</label>
-                  <textarea id="usuario-direccion" className="admin-input w-100" rows="2" value={usuarioActual.direccion}
-                    onChange={(e) => setUsuarioActual({...usuarioActual, direccion: e.target.value})}></textarea>
-                </div>
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="usuario-rol" className="form-label fw-bold">Rol *</label>
-                    <select id="usuario-rol" className="admin-select w-100" value={usuarioActual.rol}
-                      onChange={(e) => setUsuarioActual({...usuarioActual, rol: e.target.value})} required>
-                      <option value="cliente">Cliente</option>
-                      <option value="auxiliar">Auxiliar</option>
-                      <option value="administrador">Administrador</option>
-                    </select>
-                  </div>
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="usuario-activo" className="form-label fw-bold">Estado *</label>
-                    <select id="usuario-activo" className="admin-select w-100" value={usuarioActual.activo}
-                      onChange={(e) => setUsuarioActual({...usuarioActual, activo: e.target.value === 'true'})}>
-                      <option value="true">Activo</option>
-                      <option value="false">Inactivo</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div className="modal-footer-custom">
-                <button type="button" className="btn-cancelar" onClick={() => { setShowModal(false); limpiarFormulario(); }}>Cancelar</button>
-                <button type="submit" className="btn-guardar">{editando ? 'Actualizar' : 'Crear'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Modal Usuario */}
+      <Modal show={showModal} onHide={handleCloseModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title className="h5 fw-bold text-navy">
+            {editando ? 'Editar Usuario' : 'Nuevo Usuario'}
+          </Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleSubmit}>
+          <Modal.Body>
+            <Row className="g-2 mb-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Nombre <span className="text-danger">*</span></Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={usuarioActual.nombre}
+                    onChange={(e) => setUsuarioActual({ ...usuarioActual, nombre: e.target.value })}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Apellido</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={usuarioActual.apellido}
+                    onChange={(e) => setUsuarioActual({ ...usuarioActual, apellido: e.target.value })}
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
 
-      <style>{`
-        .admin-title {
-          background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e));
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-          font-weight: 700;
-        }
-        .btn-exportar {
-          background: linear-gradient(135deg, #10b981, #059669);
-          color: white;
-          border: none;
-          border-radius: 0.75rem;
-          padding: 0.5rem 1rem;
-          font-weight: 600;
-          transition: all 0.3s ease;
-        }
-        .btn-exportar:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(16,185,129,0.3);
-        }
-        .btn-nuevo {
-          background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e));
-          color: var(--fnt-black, #000);
-          border: none;
-          border-radius: 0.75rem;
-          padding: 0.5rem 1rem;
-          font-weight: 600;
-          transition: all 0.3s ease;
-        }
-        .btn-nuevo:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(145,105,52,0.3);
-        }
-        .filtros-card {
-          background: var(--bg-positiva, #DBE1ED);
-          border-radius: 1rem;
-          overflow: hidden;
-        }
-        .filtros-header {
-          background: var(--bg-negativo, #192847);
-          color: white;
-          padding: 0.75rem 1.25rem;
-        }
-        .filtros-body {
-          padding: 1.25rem;
-        }
-        .filtros-label {
-          font-weight: 600;
-          color: var(--bg-negativo, #192847);
-          margin-bottom: 0.5rem;
-          display: block;
-        }
-        .admin-input, .admin-select {
-          border-radius: 0.75rem;
-          border: 1px solid #d1d5db;
-          padding: 0.5rem 0.75rem;
-          transition: all 0.3s;
-          background: white;
-        }
-        .admin-input:focus, .admin-select:focus {
-          border-color: var(--bs-gold, #f5c271);
-          box-shadow: 0 0 0 3px rgba(145,105,52,0.1);
-          outline: none;
-        }
-        .badge-registros {
-          background: var(--bs-gold, #f5c271);
-          color: var(--fnt-black, #000);
-          padding: 0.35rem 0.75rem;
-          border-radius: 2rem;
-          font-size: 0.85rem;
-          font-weight: 500;
-          display: inline-block;
-        }
-        .tabla-card {
-          background: white;
-          border-radius: 1rem;
-          overflow: hidden;
-          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        }
-        .admin-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        .admin-table thead {
-          background: var(--bg-positiva, #DBE1ED);
-          color: var(--bg-negativo, #192847);
-        }
-        .admin-table th, .admin-table td {
-          padding: 0.75rem 1rem;
-          text-align: left;
-          border-bottom: 1px solid #e5e7eb;
-        }
-        .admin-table tbody tr:hover {
-          background: rgba(145,105,52,0.05);
-        }
-        .badge-rol {
-          display: inline-block;
-          padding: 0.25rem 0.75rem;
-          border-radius: 2rem;
-          font-size: 0.75rem;
-          font-weight: 600;
-        }
-        .badge-rol.administrador { background: #dc3545; color: white; }
-        .badge-rol.auxiliar { background: #ffc107; color: #000; }
-        .badge-rol.cliente { background: #0dcaf0; color: #000; }
-        .badge-estado {
-          display: inline-block;
-          padding: 0.25rem 0.75rem;
-          border-radius: 2rem;
-          font-size: 0.75rem;
-          font-weight: 600;
-        }
-        .badge-estado.activo { background: #10b981; color: white; }
-        .badge-estado.inactivo { background: #6c757d; color: white; }
-        .btn-action {
-          background: transparent;
-          border: 1px solid;
-          border-radius: 0.5rem;
-          padding: 0.25rem 0.5rem;
-          margin: 0 0.125rem;
-          transition: all 0.2s;
-        }
-        .btn-action.edit { border-color: var(--bs-gold, #f5c271); color: var(--bs-gold-dark, #c7984e); }
-        .btn-action.edit:hover { background: var(--bs-gold, #f5c271); color: black; }
-        .btn-action.toggle.deactivate { border-color: #ffc107; color: #ffc107; }
-        .btn-action.toggle.deactivate:hover { background: #ffc107; color: black; }
-        .btn-action.toggle.activate { border-color: #10b981; color: #10b981; }
-        .btn-action.toggle.activate:hover { background: #10b981; color: white; }
-        .btn-action.delete { border-color: #dc3545; color: #dc3545; }
-        .btn-action.delete:hover { background: #dc3545; color: white; }
-        .paginacion-card {
-          background: white;
-          border-radius: 1rem;
-          padding: 0.75rem 1rem;
-          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        }
-        .btn-paginacion {
-          background: transparent;
-          border: 1px solid var(--bs-gold, #f5c271);
-          color: var(--bs-gold-dark, #c7984e);
-          border-radius: 0.5rem;
-          padding: 0.25rem 0.75rem;
-          margin: 0 0.25rem;
-          transition: all 0.2s;
-        }
-        .btn-paginacion:hover:not(:disabled) {
-          background: var(--bs-gold, #f5c271);
-          color: black;
-        }
-        .btn-paginacion.active {
-          background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e));
-          color: black;
-          border: none;
-        }
-        .btn-paginacion:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0,0,0,0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1050;
-        }
-        .modal-container {
-          background: white;
-          border-radius: 1.5rem;
-          width: 90%;
-          max-width: 800px;
-          max-height: 90vh;
-          overflow-y: auto;
-        }
-        .modal-header-custom {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 1rem 1.5rem;
-          border-bottom: 1px solid #e5e7eb;
-          background: var(--bg-positiva, #DBE1ED);
-          border-radius: 1.5rem 1.5rem 0 0;
-        }
-        .modal-header-custom h5 {
-          margin: 0;
-          color: var(--bg-negativo, #192847);
-          font-weight: 600;
-        }
-        .btn-close-custom {
-          background: none;
-          border: none;
-          font-size: 1.5rem;
-          cursor: pointer;
-          color: var(--bg-negativo, #192847);
-        }
-        .modal-body-custom {
-          padding: 1.5rem;
-        }
-        .modal-footer-custom {
-          display: flex;
-          justify-content: flex-end;
-          gap: 0.5rem;
-          padding: 1rem 1.5rem;
-          border-top: 1px solid #e5e7eb;
-        }
-        .btn-cancelar {
-          background: transparent;
-          border: 2px solid var(--bs-gold, #f5c271);
-          color: var(--bs-gold-dark, #c7984e);
-          border-radius: 0.75rem;
-          padding: 0.5rem 1rem;
-          font-weight: 600;
-          transition: all 0.3s;
-        }
-        .btn-cancelar:hover {
-          background: var(--bs-gold, #f5c271);
-          color: black;
-        }
-        .btn-guardar {
-          background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e));
-          border: none;
-          border-radius: 0.75rem;
-          padding: 0.5rem 1rem;
-          font-weight: 600;
-          color: var(--fnt-black, #000);
-          transition: all 0.3s;
-        }
-        .btn-guardar:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(145,105,52,0.3);
-        }
-      `}</style>
-    </div>
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-semibold">Email <span className="text-danger">*</span></Form.Label>
+              <Form.Control
+                type="email"
+                value={usuarioActual.email}
+                onChange={(e) => setUsuarioActual({ ...usuarioActual, email: e.target.value })}
+                required
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-semibold">
+                Contraseña {editando ? '(opcional)' : <span className="text-danger">*</span>}
+              </Form.Label>
+              <Form.Control
+                type="password"
+                placeholder={editando ? 'Dejar en blanco para mantener actual' : 'Ingrese contraseña'}
+                value={usuarioActual.password}
+                onChange={(e) => setUsuarioActual({ ...usuarioActual, password: e.target.value })}
+                required={!editando}
+              />
+            </Form.Group>
+
+            <Row className="g-2 mb-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Teléfono</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={usuarioActual.telefono}
+                    onChange={(e) => setUsuarioActual({ ...usuarioActual, telefono: e.target.value })}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Rol</Form.Label>
+                  <Form.Select
+                    value={usuarioActual.rol}
+                    onChange={(e) => setUsuarioActual({ ...usuarioActual, rol: e.target.value })}
+                  >
+                    <option value="cliente">Cliente</option>
+                    <option value="auxiliar">Auxiliar</option>
+                    <option value="administrador">Administrador</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-semibold">Dirección</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={2}
+                value={usuarioActual.direccion}
+                onChange={(e) => setUsuarioActual({ ...usuarioActual, direccion: e.target.value })}
+              />
+            </Form.Group>
+
+            <Form.Check
+              type="checkbox"
+              id="usuario-activo"
+              label="Usuario activo"
+              checked={usuarioActual.activo}
+              onChange={(e) => setUsuarioActual({ ...usuarioActual, activo: e.target.checked })}
+            />
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="outline-secondary" onClick={handleCloseModal}>
+              Cancelar
+            </Button>
+            <Button variant="primary" type="submit">
+              {editando ? 'Actualizar' : 'Crear'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+    </Container>
   );
 }
 

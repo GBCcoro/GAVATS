@@ -129,42 +129,6 @@ const LoginPage = () => {
                   Crear cuenta nueva
                 </Link>
               </div>
-
-              <div className="mt-4">
-                <Alert variant="info" className="login-alert-info mb-0">
-                  <strong>
-                    <i className="bi bi-info-circle me-2"></i>{' '}
-                    Cuentas de Prueba
-                  </strong>
-                  <hr className="my-2" />
-                  <div className="test-accounts">
-                    <div className="account-item">
-                      <strong className="account-role">👨‍💼 Administrador</strong>
-                      <div className="account-credentials">
-                        <small>📧 admin@gavat.com</small>
-                        <br />
-                        <small>🔑 admin123</small>
-                      </div>
-                    </div>
-                    <div className="account-item">
-                      <strong className="account-role">👨‍🔧 Auxiliar</strong>
-                      <div className="account-credentials">
-                        <small>📧 auxiliar@gavat.com</small>
-                        <br />
-                        <small>🔑 aux123</small>
-                      </div>
-                    </div>
-                    <div className="account-item">
-                      <strong className="account-role">👤 Cliente</strong>
-                      <div className="account-credentials">
-                        <small>📧 cliente1@gavat.com</small>
-                        <br />
-                        <small>🔑 cliente1</small>
-                      </div>
-                    </div>
-                  </div>
-                </Alert>
-              </div>
             </Card.Body>
           </Card>
         </Col>
@@ -256,40 +220,9 @@ const LoginPage = () => {
           border: none;
           color: #155724;
         }
-        .login-alert-info {
-          border-radius: 0.75rem;
-          background-color: #cfe2ff;
-          border: none;
-          color: #084298;
-        }
         .login-hr {
           background-color: var(--gray-300, #d1d5db);
           opacity: 0.5;
-        }
-        .test-accounts {
-          display: flex;
-          flex-direction: column;
-          gap: 0.75rem;
-        }
-        .account-item {
-          background-color: rgba(255, 255, 255, 0.5);
-          border-left: 3px solid var(--bs-gold, #f5c271);
-          padding: 0.75rem;
-          border-radius: 0.5rem;
-        }
-        .account-role {
-          display: block;
-          color: #084298;
-          font-size: 0.9rem;
-          margin-bottom: 0.5rem;
-        }
-        .account-credentials {
-          font-family: monospace;
-          background-color: rgba(255, 255, 255, 0.7);
-          padding: 0.5rem;
-          border-radius: 0.25rem;
-          font-size: 0.85rem;
-          color: #084298;
         }
       `}</style>
     </Container>

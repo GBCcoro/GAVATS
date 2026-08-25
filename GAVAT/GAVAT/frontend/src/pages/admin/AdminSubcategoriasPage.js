@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { exportarSubcategoriasAPDF, exportarSubcategoriasAExcel } from '../../utils/exportUtils';
+import SvgIcon from '../../components/SvgIcon';
 
 const AdminSubcategoriasPage = () => {
   useAuth();
@@ -345,17 +346,17 @@ const AdminSubcategoriasPage = () => {
         </Card.Body>
       </Card>
 
-      <Card>
+      <Card className="shadow-sm border-0 admin-card-table">
         <Card.Body className="p-0">
-          <Table responsive hover className="mb-0">
-            <thead className="bg-light">
+          <Table responsive hover className="admin-table align-middle mb-0">
+            <thead>
               <tr>
-                <th>ID</th>
+                <th className="d-none d-md-table-cell" style={{ width: '50px' }}>ID</th>
                 <th>Nombre</th>
-                <th>Categoría</th>
-                <th>Descripción</th>
-                <th>Estado</th>
-                <th className="text-center">Acciones</th>
+                <th className="d-none d-lg-table-cell" style={{ width: '180px' }}>Categoría</th>
+                <th className="d-none d-sm-table-cell">Descripción</th>
+                <th style={{ width: '110px' }}>Estado</th>
+                <th className="text-center" style={{ minWidth: '110px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -368,39 +369,53 @@ const AdminSubcategoriasPage = () => {
               ) : (
                 subcategoriasPaginadas.map((sub) => (
                   <tr key={sub.id}>
-                    <td className="align-middle">{sub.id}</td>
-                    <td className="align-middle fw-bold">{sub.nombre}</td>
-                    <td className="align-middle">{obtenerNombreCategoria(sub.categoriaId)}</td>
-                    <td className="align-middle">{sub.descripcion || '-'}</td>
+                    <td className="align-middle d-none d-md-table-cell">{sub.id}</td>
+                    <td className="align-middle fw-bold">
+                      <div>{sub.nombre}</div>
+                      <small className="d-lg-none text-muted d-block">
+                        {obtenerNombreCategoria(sub.categoriaId)}
+                      </small>
+                    </td>
+                    <td className="align-middle d-none d-lg-table-cell">{obtenerNombreCategoria(sub.categoriaId)}</td>
+                    <td className="align-middle d-none d-sm-table-cell">{sub.descripcion || '-'}</td>
                     <td className="align-middle">
                       <Badge bg={sub.activo ? 'success' : 'secondary'}>
                         {sub.activo ? 'Activo' : 'Inactivo'}
                       </Badge>
                     </td>
                     <td className="align-middle text-center">
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        className="me-1"
-                        onClick={() => handleShowModal(sub)}
-                      >
-                        <i className="bi bi-pencil"></i>
-                      </Button>
-                      <Button
-                        variant={sub.activo ? 'outline-warning' : 'outline-success'}
-                        size="sm"
-                        className="me-1"
-                        onClick={() => handleToggleActivo(sub)}
-                      >
-                        <i className={`bi bi-${sub.activo ? 'x-circle' : 'check-circle'}`}></i>
-                      </Button>
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        onClick={() => handleDelete(sub.id)}
-                      >
-                        <i className="bi bi-trash"></i>
-                      </Button>
+                      <div className="action-btn-group">
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          className="btn-action-table"
+                          onClick={() => handleShowModal(sub)}
+                          title="Editar subcategoría"
+                        >
+                          <SvgIcon name="pencil" />
+                          <span className="btn-text">Editar</span>
+                        </Button>
+                        <Button
+                          variant={sub.activo ? 'outline-warning' : 'outline-success'}
+                          size="sm"
+                          className="btn-action-table"
+                          onClick={() => handleToggleActivo(sub)}
+                          title={sub.activo ? 'Desactivar subcategoría' : 'Activar subcategoría'}
+                        >
+                          <SvgIcon name={sub.activo ? 'x-circle' : 'check-circle'} />
+                          <span className="btn-text">{sub.activo ? 'Pausar' : 'Activar'}</span>
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          className="btn-action-table"
+                          onClick={() => handleDelete(sub.id)}
+                          title="Eliminar subcategoría"
+                        >
+                          <SvgIcon name="trash" />
+                          <span className="btn-text">Eliminar</span>
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))

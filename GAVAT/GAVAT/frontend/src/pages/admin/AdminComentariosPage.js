@@ -1,11 +1,18 @@
-
+/**
+ * ============================================
+ * ADMIN COMENTARIOS PAGE
+ * ============================================
+ * Moderación y gestión de comentarios de productos
+ */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import comentariosService from '../../services/comentariosService';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { exportarComentariosAPDF, exportarComentariosAExcel } from '../../utils/exportUtils';
+import SvgIcon from '../../components/SvgIcon';
 
 const AdminComentariosPage = () => {
   useAuth();
@@ -42,10 +49,8 @@ const AdminComentariosPage = () => {
         }
   });
   
-  // Comentarios filtrados y paginados
   const comentariosFiltrados = useMemo(() => {
     return comentarios.filter(comentario => {
-      // Filtro por búsqueda (nombre usuario, producto, texto)
       if (filtros.busqueda) {
         const busqueda = filtros.busqueda.toLowerCase();
         const coincide = 
@@ -55,7 +60,6 @@ const AdminComentariosPage = () => {
         if (!coincide) return false;
       }
       
-      // Filtro por estado
       if (filtros.estado !== 'todos') {
         const estado = filtros.estado === 'visible';
         if (comentario.estado !== estado) return false;
@@ -65,15 +69,12 @@ const AdminComentariosPage = () => {
     });
   }, [comentarios, filtros.busqueda, filtros.estado]);
   
-  // Aplicar paginación
   const totalPaginas = Math.ceil(comentariosFiltrados.length / registrosPorPagina);
   const comentariosPaginados = useMemo(() => {
     const inicio = (paginaActual - 1) * registrosPorPagina;
-    const fin = inicio + registrosPorPagina;
-    return comentariosFiltrados.slice(inicio, fin);
+    return comentariosFiltrados.slice(inicio, inicio + registrosPorPagina);
   }, [comentariosFiltrados, paginaActual, registrosPorPagina]);
   
-  // Resetear página cuando cambian los filtros
   useEffect(() => {
     setPaginaActual(1);
   }, [filtros.busqueda, filtros.estado]);
@@ -105,9 +106,9 @@ const AdminComentariosPage = () => {
   const handleToggleVisibilidad = async (id) => {
     try {
       await comentariosService.toggleComentario(id);
-      setMensaje({ tipo: 'success', texto: 'Visibilidad actualizada' });
+      setMensaje({ tipo: 'success', texto: 'Visibilidad del comentario actualizada' });
       setShowDetalleModal(false);
-      loadComentarios();
+      await loadComentarios();
     } catch (error) {
       console.error('Error al actualizar visibilidad:', error);
       setMensaje({ tipo: 'danger', texto: 'Error al actualizar visibilidad' });
@@ -116,12 +117,11 @@ const AdminComentariosPage = () => {
 
   const handleEliminar = async (id) => {
     if (!window.confirm('¿Estás seguro de que deseas eliminar este comentario?')) return;
-    
     try {
       await comentariosService.eliminarComentario(id);
       setMensaje({ tipo: 'success', texto: 'Comentario eliminado exitosamente' });
       setShowDetalleModal(false);
-      loadComentarios();
+      await loadComentarios();
     } catch (error) {
       console.error('Error al eliminar comentario:', error);
       setMensaje({ tipo: 'danger', texto: 'Error al eliminar el comentario' });
@@ -143,7 +143,7 @@ const AdminComentariosPage = () => {
     const estrellas = [];
     for (let i = 1; i <= 5; i++) {
       estrellas.push(
-        <i key={i} className={`bi bi-star${i <= calificacion ? '-fill' : ''}`} style={{ color: '#FFD700' }}></i>
+        <i key={i} className={`bi bi-star${i <= calificacion ? '-fill' : ''}`} style={{ color: '#FFD700' }} />
       );
     }
     return estrellas;
@@ -154,300 +154,292 @@ const AdminComentariosPage = () => {
   }
 
   return (
-    <div className="admin-comentarios-page">
-      <div className="admin-toolbar">
-        <div className="admin-title">
-          <h1>
-            <i className="bi bi-chat-dots"></i>{' '}
+    <Container className="py-4">
+      {/* Header Toolbar */}
+      <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+          <h1 className="h2 mb-1 fw-bold text-navy">
+            <i className="bi bi-chat-dots-fill me-2 text-gold" />
             Moderación de Comentarios
           </h1>
-          <p className="subtext">Gestiona y modera los comentarios de clientes sobre productos</p>
+          <p className="text-muted mb-0">
+            Total: {comentariosFiltrados.length} de {comentarios.length} comentario{comentarios.length !== 1 ? 's' : ''}
+          </p>
         </div>
-
-        <div className="action-groups">
-          <div className="export-actions">
-            <button
-              type="button"
-              className={`btn ${tipoExportacion === 'pdf' ? 'btn-primary' : 'btn-outline-primary'}`}
+        <div className="d-flex flex-wrap gap-2">
+          <Dropdown as={ButtonGroup}>
+            <Button
+              variant="primary"
               onClick={() => {
                 setTipoExportacion('pdf');
                 exportarComentariosAPDF(comentariosFiltrados);
               }}
             >
-              <i className="bi bi-file-earmark-pdf"></i>{' '}
-              Exportar a PDF
-            </button>
-            <button
-              type="button"
-              className={`btn ${tipoExportacion === 'excel' ? 'btn-primary' : 'btn-outline-primary'}`}
-              onClick={async () => {
+              <i className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} />
+              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+            </Button>
+            <Dropdown.Toggle split variant="primary" />
+            <Dropdown.Menu>
+              <Dropdown.Item onClick={() => {
+                setTipoExportacion('pdf');
+                exportarComentariosAPDF(comentariosFiltrados);
+              }}>
+                <i className="bi bi-file-earmark-pdf me-2" /> Exportar a PDF
+              </Dropdown.Item>
+              <Dropdown.Item onClick={async () => {
                 setTipoExportacion('excel');
                 await exportarComentariosAExcel(comentariosFiltrados);
-              }}
-            >
-              <i className="bi bi-file-earmark-excel"></i>{' '}
-              Exportar a Excel
-            </button>
-          </div>
-
-          <div className="nav-actions">
-            <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-              <i className="bi bi-arrow-left"></i>{' '}
-              Volver
-            </button>
-          </div>
+              }}>
+                <i className="bi bi-file-earmark-excel me-2" /> Exportar a Excel
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
+          <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
+            <i className="bi bi-arrow-left me-1" /> Volver
+          </Button>
         </div>
       </div>
 
       {mensaje.texto && (
-        <div className={`alert alert-${mensaje.tipo}`}>
+        <Alert variant={mensaje.tipo} dismissible onClose={() => setMensaje({ tipo: '', texto: '' })}>
           {mensaje.texto}
-        </div>
+        </Alert>
       )}
 
-      <section className="admin-card">
-        <div className="admin-card-header">
-          <i className="bi bi-funnel"></i>
-          <strong>Filtros</strong>
-        </div>
-        <div className="admin-card-body">
-          <div className="form-grid">
-            <div className="form-group">
-              <label htmlFor="buscar-comentarios">Buscar</label>
-              <div className="input-group">
-                <span className="input-icon"><i className="bi bi-search"></i></span>
-                <input
-                  type="text"
-                  id="buscar-comentarios"
-                  className="form-control"
-                  placeholder="Buscar por usuario, producto o contenido..."
-                  value={filtros.busqueda}
-                  onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="filtro-estado">Estado</label>
-              <select
-                id="filtro-estado"
-                className="form-select"
-                value={filtros.estado}
-                onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
-              >
-                <option value="todos">Todos</option>
-                <option value="visible">Visible</option>
-                <option value="oculto">Oculto</option>
-              </select>
-            </div>
-
-            <div className="form-group form-align-end">
-              <button
-                type="button"
-                className="btn btn-outline-secondary full-width"
+      {/* Filtros */}
+      <Card className="shadow-sm border-0 mb-4 admin-card-table">
+        <Card.Body className="p-3 p-md-4">
+          <h6 className="fw-bold mb-3 d-flex align-items-center gap-2 text-navy">
+            <i className="bi bi-funnel text-gold" /> Filtros de Búsqueda
+          </h6>
+          <Row className="g-3 align-items-end">
+            <Col md={6}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold mb-1">Buscar Comentarios</Form.Label>
+                <InputGroup>
+                  <InputGroup.Text className="bg-light">
+                    <i className="bi bi-search" />
+                  </InputGroup.Text>
+                  <Form.Control
+                    placeholder="Buscar por usuario, producto o contenido..."
+                    value={filtros.busqueda}
+                    onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
+                  />
+                </InputGroup>
+              </Form.Group>
+            </Col>
+            <Col md={3}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
+                <Form.Select
+                  value={filtros.estado}
+                  onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
+                >
+                  <option value="todos">Todos</option>
+                  <option value="visible">Visible</option>
+                  <option value="oculto">Oculto</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={3}>
+              <Button
+                variant="outline-secondary"
+                className="w-100"
                 onClick={() => setFiltros({ busqueda: '', estado: 'todos' })}
               >
-                <i className="bi bi-x-circle"></i>{' '}
-                Limpiar filtros
-              </button>
-            </div>
-          </div>
+                <i className="bi bi-arrow-clockwise me-1" /> Limpiar filtros
+              </Button>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
 
-          <div className="text-muted small">
-            Mostrando {comentariosFiltrados.length} de {comentarios.length} comentarios
-          </div>
-        </div>
-      </section>
-
-      <section className="admin-card">
-        <div className="table-responsive">
-          <table className="admin-table">
+      {/* Tabla de Comentarios */}
+      <Card className="shadow-sm border-0 admin-card-table">
+        <Card.Body className="p-0">
+          <Table responsive hover className="admin-table align-middle mb-0">
             <thead>
               <tr>
-                <th>Usuario</th>
+                <th style={{ width: '130px' }}>Usuario</th>
                 <th>Producto</th>
-                <th>Calificación</th>
-                <th>Comentario</th>
-                <th>Estado</th>
-                <th>Fecha</th>
-                <th className="text-center">Acciones</th>
+                <th style={{ width: '110px' }}>Calificación</th>
+                <th className="d-none d-sm-table-cell">Comentario</th>
+                <th style={{ width: '100px' }}>Estado</th>
+                <th className="d-none d-md-table-cell" style={{ width: '120px' }}>Fecha</th>
+                <th className="text-center" style={{ minWidth: '110px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {comentariosPaginados.length === 0 ? (
+              {comentariosFiltrados.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="text-center py-4 text-muted">
-                    {comentarios.length === 0 ? 'No hay comentarios' : 'No se encontraron comentarios con los filtros aplicados'}
+                    No hay comentarios registrados
                   </td>
                 </tr>
               ) : (
                 comentariosPaginados.map((comentario) => (
                   <tr key={comentario.id}>
-                    <td className="font-bold">{comentario.usuario?.nombre || '-'}</td>
-                    <td>{comentario.producto?.nombre || '-'}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '0.25rem' }}>
+                    <td className="align-middle fw-bold">{comentario.usuario?.nombre || '-'}</td>
+                    <td className="align-middle">{comentario.producto?.nombre || '-'}</td>
+                    <td className="align-middle">
+                      <div className="d-flex gap-1">
                         {renderizarEstrellas(comentario.calificacion)}
                       </div>
                     </td>
-                    <td>
+                    <td className="align-middle d-none d-sm-table-cell">
                       <div style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {comentario.comentario}
                       </div>
                     </td>
-                    <td>
-                      <span className={`badge ${comentario.estado ? 'bg-success' : 'bg-warning'}`}>
+                    <td className="align-middle">
+                      <Badge bg={comentario.estado ? 'success' : 'warning'}>
                         {comentario.estado ? 'Visible' : 'Oculto'}
-                      </span>
+                      </Badge>
                     </td>
-                    <td>{formatearFecha(comentario.fecha)}</td>
-                    <td className="text-center">
-                      <button 
-                        type="button" 
-                        className="btn btn-outline-primary btn-sm" 
-                        onClick={() => handleVerDetalle(comentario)}
-                        title="Ver detalles"
-                      >
-                        <i className="bi bi-eye"></i>
-                      </button>
-                      <button 
-                        type="button" 
-                        className={`btn btn-outline-${comentario.estado ? 'warning' : 'success'} btn-sm`}
-                        onClick={() => handleToggleVisibilidad(comentario.id)}
-                        title={comentario.estado ? 'Ocultar' : 'Mostrar'}
-                      >
-                        <i className={`bi bi-eye${comentario.estado ? '-slash' : ''}`}></i>
-                      </button>
-                      <button 
-                        type="button" 
-                        className="btn btn-outline-danger btn-sm" 
-                        onClick={() => handleEliminar(comentario.id)}
-                        title="Eliminar"
-                      >
-                        <i className="bi bi-trash"></i>
-                      </button>
+                    <td className="align-middle d-none d-md-table-cell">{formatearFecha(comentario.fecha)}</td>
+                    <td className="align-middle text-center">
+                      <div className="action-btn-group">
+                        <Button 
+                          variant="outline-primary" 
+                          size="sm" 
+                          className="btn-action-table" 
+                          onClick={() => handleVerDetalle(comentario)}
+                          title="Ver detalles del comentario"
+                        >
+                          <SvgIcon name="eye" />
+                          <span className="btn-text">Ver</span>
+                        </Button>
+                        <Button 
+                          variant={comentario.estado ? 'outline-warning' : 'outline-success'} 
+                          size="sm" 
+                          className="btn-action-table" 
+                          onClick={() => handleToggleVisibilidad(comentario.id)}
+                          title={comentario.estado ? 'Ocultar comentario' : 'Aprobar/Mostrar comentario'}
+                        >
+                          <SvgIcon name={comentario.estado ? 'x-circle' : 'check-circle'} />
+                          <span className="btn-text">{comentario.estado ? 'Ocultar' : 'Aprobar'}</span>
+                        </Button>
+                        <Button 
+                          variant="outline-danger" 
+                          size="sm" 
+                          className="btn-action-table" 
+                          onClick={() => handleEliminar(comentario.id)}
+                          title="Eliminar comentario"
+                        >
+                          <SvgIcon name="trash" />
+                          <span className="btn-text">Eliminar</span>
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
-          </table>
-        </div>
-      </section>
+          </Table>
+        </Card.Body>
+      </Card>
 
+      {/* Paginación */}
       {totalPaginas > 1 && (
-        <section className="admin-card pagination-card">
-          <div className="admin-pagination">
-            <div>
-              <small className="text-muted">
-                <i className="bi bi-chat-left"></i>{' '}
-                Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> - Mostrando <strong>{comentariosPaginados.length}</strong> de <strong>{comentariosFiltrados.length}</strong> registros
-              </small>
-            </div>
-            <div className="pagination-buttons">
-              <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
-                <i className="bi bi-chevron-bar-left"></i>
-              </button>
-              <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setPaginaActual(prev => prev - 1)} disabled={paginaActual === 1}>
-                <i className="bi bi-chevron-left"></i> Anterior
-              </button>
-              <button type="button" className="btn btn-primary btn-sm" disabled>
-                {paginaActual} / {totalPaginas}
-              </button>
-              <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setPaginaActual(prev => prev + 1)} disabled={paginaActual === totalPaginas}>
-                Siguiente <i className="bi bi-chevron-right"></i>
-              </button>
-              <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
-                <i className="bi bi-chevron-bar-right"></i>
-              </button>
-            </div>
-          </div>
-        </section>
+        <div className="d-flex justify-content-between align-items-center mt-3">
+          <small className="text-muted">
+            Página {paginaActual} de {totalPaginas} - Mostrando {comentariosPaginados.length} de {comentariosFiltrados.length} registros
+          </small>
+          <ButtonGroup size="sm">
+            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
+              ««
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1}>
+              Anterior
+            </Button>
+            <Button variant="primary" disabled>
+              {paginaActual} / {totalPaginas}
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas}>
+              Siguiente
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
+              »»
+            </Button>
+          </ButtonGroup>
+        </div>
       )}
 
-      {/* MODAL DETALLE COMENTARIO */}
-      {showDetalleModal && comentarioSeleccionado && (
-        <div className="modal-overlay">
-          <dialog
-            className="modal-dialog"
-            open
-            tabIndex={-1}
-            style={{ maxWidth: '600px' }}
-          >
-            <div className="modal-header">
-              <h2>Detalle del Comentario</h2>
-              <button type="button" className="close-button" onClick={() => setShowDetalleModal(false)}>
-                &times;
-              </button>
+      {/* Modal Detalle Comentario */}
+      <Modal show={showDetalleModal} onHide={() => setShowDetalleModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title className="h5 fw-bold text-navy">
+            Detalle del Comentario
+          </Modal.Title>
+        </Modal.Header>
+        {comentarioSeleccionado && (
+          <Modal.Body>
+            <Row className="mb-3">
+              <Col md={6}>
+                <strong>Usuario:</strong> {comentarioSeleccionado.usuario?.nombre || '-'}
+              </Col>
+              <Col md={6}>
+                <strong>Email:</strong> {comentarioSeleccionado.usuario?.email || '-'}
+              </Col>
+            </Row>
+
+            <div className="mb-3">
+              <strong>Producto:</strong> {comentarioSeleccionado.producto?.nombre || '-'}
             </div>
-            <div className="modal-body">
-              <div className="row mb-3">
-                <div className="col-md-6">
-                  <strong>Usuario:</strong> {comentarioSeleccionado.usuario?.nombre || '-'}
-                </div>
-                <div className="col-md-6">
-                  <strong>Email:</strong> {comentarioSeleccionado.usuario?.email || '-'}
-                </div>
-              </div>
 
-              <div className="row mb-3">
-                <div className="col-md-12">
-                  <strong>Producto:</strong> {comentarioSeleccionado.producto?.nombre || '-'}
+            <Row className="mb-3">
+              <Col md={6}>
+                <strong>Calificación:</strong>{' '}
+                <div className="d-inline-flex gap-1 ms-1">
+                  {renderizarEstrellas(comentarioSeleccionado.calificacion)}
                 </div>
-              </div>
+              </Col>
+              <Col md={6}>
+                <strong>Estado:</strong>{' '}
+                <Badge bg={comentarioSeleccionado.estado ? 'success' : 'warning'}>
+                  {comentarioSeleccionado.estado ? 'Visible' : 'Oculto'}
+                </Badge>
+              </Col>
+            </Row>
 
-              <div className="row mb-3">
-                <div className="col-md-6">
-                  <strong>Calificación:</strong> {renderizarEstrellas(comentarioSeleccionado.calificacion)}
-                </div>
-                <div className="col-md-6">
-                  <strong>Estado:</strong> <span className={`badge ${comentarioSeleccionado.estado ? 'bg-success' : 'bg-warning'}`}>
-                    {comentarioSeleccionado.estado ? 'Visible' : 'Oculto'}
-                  </span>
-                </div>
-              </div>
+            <div className="mb-3">
+              <strong>Fecha:</strong> {formatearFecha(comentarioSeleccionado.fecha)}
+            </div>
 
-              <div className="row mb-3">
-                <div className="col-md-12">
-                  <strong>Fecha:</strong> {formatearFecha(comentarioSeleccionado.fecha)}
-                </div>
-              </div>
+            <hr />
 
-              <hr />
-
-              <div className="row mb-3">
-                <div className="col-md-12">
-                  <strong>Comentario:</strong>
-                  <div className="alert alert-light mt-2">
-                    {comentarioSeleccionado.comentario}
-                  </div>
-                </div>
+            <div className="mb-2">
+              <strong>Comentario:</strong>
+              <div className="alert alert-light mt-2 mb-0">
+                {comentarioSeleccionado.comentario}
               </div>
             </div>
-            <div className="modal-footer">
-              <button type="button" className="btn btn-outline-secondary" onClick={() => setShowDetalleModal(false)}>
-                Cerrar
-              </button>
-              <button 
-                type="button" 
-                className={`btn btn-${comentarioSeleccionado.estado ? 'warning' : 'success'}`}
+          </Modal.Body>
+        )}
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={() => setShowDetalleModal(false)}>
+            Cerrar
+          </Button>
+          {comentarioSeleccionado && (
+            <>
+              <Button 
+                variant={comentarioSeleccionado.estado ? 'warning' : 'success'} 
                 onClick={() => handleToggleVisibilidad(comentarioSeleccionado.id)}
               >
-                <i className={`bi bi-eye${comentarioSeleccionado.estado ? '-slash' : ''}`}></i>
-                {comentarioSeleccionado.estado ? ' Ocultar' : ' Mostrar'}
-              </button>
-              <button 
-                type="button" 
-                className="btn btn-danger" 
+                <i className={`bi bi-eye${comentarioSeleccionado.estado ? '-slash' : ''} me-1`} />
+                {comentarioSeleccionado.estado ? 'Ocultar' : 'Aprobar/Mostrar'}
+              </Button>
+              <Button 
+                variant="danger" 
                 onClick={() => handleEliminar(comentarioSeleccionado.id)}
               >
-                <i className="bi bi-trash"></i> Eliminar
-              </button>
-            </div>
-          </dialog>
-        </div>
-      )}
-    </div>
+                <i className="bi bi-trash me-1" /> Eliminar
+              </Button>
+            </>
+          )}
+        </Modal.Footer>
+      </Modal>
+    </Container>
   );
 };
 

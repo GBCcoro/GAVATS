@@ -6,11 +6,13 @@
  */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { exportarCategoriasAPDF, exportarCategoriasAExcel } from '../../utils/exportUtils';
+import SvgIcon from '../../components/SvgIcon';
 
 const AdminCategoriasPage = () => {
   useAuth();
@@ -77,11 +79,8 @@ const AdminCategoriasPage = () => {
     setLoading(true);
     try {
       const response = await api.get('/admin/categorias');
-      
-      // El backend devuelve { success: true, count: X, data: { categorias: [...] } }
-      const categorias = response.data?.data?.categorias || response.data?.categorias || response.data?.data || [];
-      
-      setCategorias(Array.isArray(categorias) ? categorias : []);
+      const categoriasData = response.data?.data?.categorias || response.data?.categorias || response.data?.data || [];
+      setCategorias(Array.isArray(categoriasData) ? categoriasData : []);
     } catch (error) {
       console.error('Error al cargar categorías:', error);
       setMensaje({ tipo: 'danger', texto: 'Error al cargar las categorías' });
@@ -91,11 +90,9 @@ const AdminCategoriasPage = () => {
     }
   }, []);
 
-  // Cargar categorías al montar el componente
   useEffect(() => {
     loadCategorias();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadCategorias]);
 
   const handleShowModal = (categoria = null) => {
     if (categoria) {
@@ -103,7 +100,7 @@ const AdminCategoriasPage = () => {
       setFormData({
         nombre: categoria.nombre,
         descripcion: categoria.descripcion || '',
-        activo: categoria.activo
+        activo: Boolean(categoria.activo)
       });
     } else {
       setEditando(null);
@@ -119,20 +116,29 @@ const AdminCategoriasPage = () => {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditando(null);
-    setFormData({ nombre: '', descripcion: '', activo: true });
+    setFormData({
+      nombre: '',
+      descripcion: '',
+      activo: true
+    });
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: type === 'checkbox' ? checked : value
-    });
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!formData.nombre.trim()) {
+      setMensaje({ tipo: 'danger', texto: 'El nombre es obligatorio' });
+      return;
+    }
+
     try {
       if (editando) {
         await api.put(`/admin/categorias/${editando.id}`, formData);
@@ -143,7 +149,7 @@ const AdminCategoriasPage = () => {
       }
       
       handleCloseModal();
-      loadCategorias();
+      await loadCategorias();
     } catch (error) {
       console.error('Error al guardar categoría:', error);
       setMensaje({ 
@@ -154,12 +160,14 @@ const AdminCategoriasPage = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta categoría?')) return;
-    
+    if (!window.confirm('¿Estás seguro de eliminar esta categoría?')) {
+      return;
+    }
+
     try {
       await api.delete(`/admin/categorias/${id}`);
       setMensaje({ tipo: 'success', texto: 'Categoría eliminada exitosamente' });
-      loadCategorias();
+      await loadCategorias();
     } catch (error) {
       console.error('Error al eliminar categoría:', error);
       setMensaje({ 
@@ -172,8 +180,7 @@ const AdminCategoriasPage = () => {
   const handleToggleActivo = async (categoria) => {
     try {
       await api.put(`/admin/categorias/${categoria.id}`, {
-        nombre: categoria.nombre,
-        descripcion: categoria.descripcion,
+        ...categoria,
         activo: !categoria.activo
       });
       
@@ -182,10 +189,9 @@ const AdminCategoriasPage = () => {
         texto: `Categoría ${!categoria.activo ? 'activada' : 'desactivada'} exitosamente` 
       });
       
-      // Recargar categorías
       await loadCategorias();
     } catch (error) {
-      console.error('❌ Error al cambiar estado:', error);
+      console.error('Error al cambiar estado:', error);
       setMensaje({ tipo: 'danger', texto: 'Error al cambiar el estado' });
     }
   };
@@ -195,261 +201,264 @@ const AdminCategoriasPage = () => {
   }
 
   return (
-    <div className="admin-categorias-page">
-      <div className="admin-toolbar">
-        <div className="admin-title">
-          <h1>
-            <i className="bi bi-folder"></i>{' '}
+    <Container className="py-4">
+      {/* Header Toolbar */}
+      <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+          <h1 className="h2 mb-1 fw-bold text-navy">
+            <i className="bi bi-tags me-2 text-gold" />
             Gestión de Categorías
           </h1>
-          <p className="subtext">Administra las categorías de productos</p>
+          <p className="text-muted mb-0">
+            Total: {categoriasFiltradas.length} de {categorias.length} categoría{categorias.length !== 1 ? 's' : ''}
+          </p>
         </div>
-
-        <div className="action-groups">
-          <div className="export-actions">
-            <button
-              type="button"
-              className={`btn ${tipoExportacion === 'pdf' ? 'btn-primary' : 'btn-outline-primary'}`}
+        <div className="d-flex flex-wrap gap-2">
+          <Dropdown as={ButtonGroup}>
+            <Button
+              variant="primary"
               onClick={() => {
                 setTipoExportacion('pdf');
                 exportarCategoriasAPDF(categoriasFiltradas);
               }}
             >
-              <i className="bi bi-file-earmark-pdf"></i>{' '}
-              Exportar a PDF
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={async () => {
+              <i className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} />
+              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+            </Button>
+            <Dropdown.Toggle split variant="primary" />
+            <Dropdown.Menu>
+              <Dropdown.Item onClick={() => {
+                setTipoExportacion('pdf');
+                exportarCategoriasAPDF(categoriasFiltradas);
+              }}>
+                <i className="bi bi-file-earmark-pdf me-2" /> Exportar a PDF
+              </Dropdown.Item>
+              <Dropdown.Item onClick={async () => {
                 setTipoExportacion('excel');
                 await exportarCategoriasAExcel(categoriasFiltradas);
-              }}
-            >
-              <i className="bi bi-file-earmark-excel"></i>{' '}
-              Exportar a Excel
-            </button>
-          </div>
-
-          <div className="nav-actions">
-            <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-              <i className="bi bi-arrow-left"></i>{' '}
-              Volver
-            </button>
-            <button type="button" className="btn btn-primary" onClick={() => handleShowModal()}>
-              <i className="bi bi-plus-circle"></i>{' '}
-              Nueva Categoría
-            </button>
-          </div>
+              }}>
+                <i className="bi bi-file-earmark-excel me-2" /> Exportar a Excel
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
+          <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
+            <i className="bi bi-arrow-left me-1" /> Volver
+          </Button>
+          <Button variant="primary" onClick={() => handleShowModal()}>
+            <i className="bi bi-plus-circle me-1" /> Nueva Categoría
+          </Button>
         </div>
       </div>
 
       {mensaje.texto && (
-        <div className={`alert alert-${mensaje.tipo}`}>
+        <Alert variant={mensaje.tipo} dismissible onClose={() => setMensaje({ tipo: '', texto: '' })}>
           {mensaje.texto}
-        </div>
+        </Alert>
       )}
 
-      <section className="admin-card">
-        <div className="admin-card-header">
-          <i className="bi bi-funnel"></i>
-          <strong>Filtros</strong>
-        </div>
-        <div className="admin-card-body">
-          <div className="form-grid">
-            <div className="form-group">
-              <label htmlFor="buscar-categorias">Buscar</label>
-              <div className="input-group">
-                <span className="input-icon"><i className="bi bi-search"></i></span>
-                <input
-                  type="text"
-                  className="form-control"
-                  id="buscar-categorias"
-                  placeholder="Buscar por nombre o descripción..."
-                  value={filtros.busqueda}
-                  onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="estado-categorias">Estado</label>
-              <select
-                className="form-select"
-                id="estado-categorias"
-                value={filtros.estado}
-                onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
-              >
-                <option value="todos">Todos</option>
-                <option value="activos">Activos</option>
-                <option value="inactivos">Inactivos</option>
-              </select>
-            </div>
-
-            <div className="form-group form-align-end">
-              <button
-                type="button"
-                className="btn btn-outline-secondary full-width"
+      {/* Filtros */}
+      <Card className="shadow-sm border-0 mb-4 admin-card-table">
+        <Card.Body className="p-3 p-md-4">
+          <h6 className="fw-bold mb-3 d-flex align-items-center gap-2 text-navy">
+            <i className="bi bi-funnel text-gold" /> Filtros de Búsqueda
+          </h6>
+          <Row className="g-3 align-items-end">
+            <Col md={6}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold mb-1">Buscar Categoría</Form.Label>
+                <InputGroup>
+                  <InputGroup.Text className="bg-light">
+                    <i className="bi bi-search" />
+                  </InputGroup.Text>
+                  <Form.Control
+                    placeholder="Buscar por nombre o descripción..."
+                    value={filtros.busqueda}
+                    onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
+                  />
+                </InputGroup>
+              </Form.Group>
+            </Col>
+            <Col md={3}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
+                <Form.Select
+                  value={filtros.estado}
+                  onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
+                >
+                  <option value="todos">Todos los estados</option>
+                  <option value="activos">Activos</option>
+                  <option value="inactivos">Inactivos</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={3}>
+              <Button
+                variant="outline-secondary"
+                className="w-100"
                 onClick={() => setFiltros({ busqueda: '', estado: 'todos' })}
               >
-                <i className="bi bi-x-circle"></i>{' '}
-                Limpiar filtros
-              </button>
-            </div>
-          </div>
+                <i className="bi bi-arrow-clockwise me-1" /> Limpiar filtros
+              </Button>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
 
-          <div className="text-muted small">
-            Mostrando {categoriasFiltradas.length} de {categorias.length} categorías
-          </div>
-        </div>
-      </section>
-
-      <section className="admin-card">
-        <div className="table-responsive">
-          <table className="admin-table">
+      {/* Tabla de Categorías */}
+      <Card className="shadow-sm border-0 admin-card-table">
+        <Card.Body className="p-0">
+          <Table responsive hover className="admin-table align-middle mb-0">
             <thead>
               <tr>
-                <th>ID</th>
+                <th className="d-none d-md-table-cell" style={{ width: '50px' }}>ID</th>
                 <th>Nombre</th>
-                <th>Descripción</th>
-                <th>Estado</th>
-                <th className="text-center">Acciones</th>
+                <th className="d-none d-sm-table-cell">Descripción</th>
+                <th style={{ width: '110px' }}>Estado</th>
+                <th className="text-center" style={{ minWidth: '110px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {categoriasFiltradas.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="text-center py-4 text-muted">
-                    {categorias.length === 0 ? 'No hay categorías registradas' : 'No se encontraron categorías con los filtros aplicados'}
+                    No hay categorías registradas
                   </td>
                 </tr>
               ) : (
                 categoriasPaginadas.map((cat) => (
                   <tr key={cat.id}>
-                    <td>{cat.id}</td>
-                    <td className="font-bold">{cat.nombre}</td>
-                    <td>{cat.descripcion || '-'}</td>
-                    <td>
-                      <span className={`badge ${cat.activo ? 'badge-success' : 'badge-secondary'}`}>
-                        {cat.activo ? 'Activo' : 'Inactivo'}
-                      </span>
+                    <td className="align-middle d-none d-md-table-cell">{cat.id}</td>
+                    <td className="align-middle fw-bold">
+                      <div>{cat.nombre}</div>
+                      {cat.descripcion && (
+                        <small className="d-sm-none text-muted d-block">{cat.descripcion}</small>
+                      )}
                     </td>
-                    <td className="text-center">
-                      <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => handleShowModal(cat)}>
-                        <i className="bi bi-pencil"></i>
-                      </button>
-                      <button
-                        type="button"
-                        className={`btn ${cat.activo ? 'btn-outline-warning' : 'btn-outline-success'} btn-sm`}
-                        onClick={() => handleToggleActivo(cat)}
-                      >
-                        <i className={`bi bi-${cat.activo ? 'x-circle' : 'check-circle'}`}></i>
-                      </button>
-                      <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(cat.id)}>
-                        <i className="bi bi-trash"></i>
-                      </button>
+                    <td className="align-middle d-none d-sm-table-cell">{cat.descripcion || '-'}</td>
+                    <td className="align-middle">
+                      <Badge bg={cat.activo ? 'success' : 'secondary'}>
+                        {cat.activo ? 'Activo' : 'Inactivo'}
+                      </Badge>
+                    </td>
+                    <td className="align-middle text-center">
+                      <div className="action-btn-group">
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          className="btn-action-table"
+                          onClick={() => handleShowModal(cat)}
+                          title="Editar categoría"
+                        >
+                          <SvgIcon name="pencil" />
+                          <span className="btn-text">Editar</span>
+                        </Button>
+                        <Button
+                          variant={cat.activo ? 'outline-warning' : 'outline-success'}
+                          size="sm"
+                          className="btn-action-table"
+                          onClick={() => handleToggleActivo(cat)}
+                          title={cat.activo ? 'Desactivar categoría' : 'Activar categoría'}
+                        >
+                          <SvgIcon name={cat.activo ? 'x-circle' : 'check-circle'} />
+                          <span className="btn-text">{cat.activo ? 'Pausar' : 'Activar'}</span>
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          className="btn-action-table"
+                          onClick={() => handleDelete(cat.id)}
+                          title="Eliminar categoría"
+                        >
+                          <SvgIcon name="trash" />
+                          <span className="btn-text">Eliminar</span>
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
-          </table>
-        </div>
-      </section>
+          </Table>
+        </Card.Body>
+      </Card>
 
+      {/* Paginación */}
       {totalPaginas > 1 && (
-        <section className="admin-card pagination-card">
-          <div className="admin-pagination">
-            <div>
-              <small className="text-muted">
-                <i className="bi bi-file-text"></i>{' '}
-                Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> - Mostrando <strong>{categoriasPaginadas.length}</strong> de <strong>{categoriasFiltradas.length}</strong> registros
-              </small>
-            </div>
-            <div className="pagination-buttons">
-              <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1} title="Primera página">
-                <i className="bi bi-chevron-bar-left"></i>
-              </button>
-              <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setPaginaActual(prev => prev - 1)} disabled={paginaActual === 1} title="Página anterior">
-                <i className="bi bi-chevron-left"></i> Anterior
-              </button>
-              <button type="button" className="btn btn-primary btn-sm" disabled>
-                {paginaActual} / {totalPaginas}
-              </button>
-              <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setPaginaActual(prev => prev + 1)} disabled={paginaActual === totalPaginas} title="Página siguiente">
-                Siguiente <i className="bi bi-chevron-right"></i>
-              </button>
-              <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas} title="Última página">
-                <i className="bi bi-chevron-bar-right"></i>
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-dialog">
-            <div className="modal-header">
-              <h2>{editando ? 'Editar Categoría' : 'Nueva Categoría'}</h2>
-              <button type="button" className="close-button" onClick={handleCloseModal}>
-                &times;
-              </button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label htmlFor="categoria-nombre">Nombre <span className="text-danger">*</span></label>
-                  <input
-                    type="text"
-                    id="categoria-nombre"
-                    name="nombre"
-                    className="form-control"
-                    value={formData.nombre}
-                    onChange={handleChange}
-                    required
-                    placeholder="Ej: Electrónica"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="categoria-descripcion">Descripción</label>
-                  <textarea
-                    className="form-control"
-                    rows={3}
-                    id="categoria-descripcion"
-                    name="descripcion"
-                    value={formData.descripcion}
-                    onChange={handleChange}
-                    placeholder="Descripción de la categoría (opcional)"
-                  />
-                </div>
-
-                <div className="form-group form-checkbox">
-                  <label>
-                    <input
-                      type="checkbox"
-                      name="activo"
-                      checked={formData.activo}
-                      onChange={handleChange}
-                      />{' '}
-                      Categoría activa
-                  </label>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline-secondary" onClick={handleCloseModal}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  {editando ? 'Actualizar' : 'Crear'}
-                </button>
-              </div>
-            </form>
-          </div>
+        <div className="d-flex justify-content-between align-items-center mt-3">
+          <small className="text-muted">
+            Página {paginaActual} de {totalPaginas} - Mostrando {categoriasPaginadas.length} de {categoriasFiltradas.length} registros
+          </small>
+          <ButtonGroup size="sm">
+            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
+              ««
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1}>
+              Anterior
+            </Button>
+            <Button variant="primary" disabled>
+              {paginaActual} / {totalPaginas}
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas}>
+              Siguiente
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
+              »»
+            </Button>
+          </ButtonGroup>
         </div>
       )}
-    </div>
+
+      {/* Modal */}
+      <Modal show={showModal} onHide={handleCloseModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title className="h5 fw-bold text-navy">
+            {editando ? 'Editar Categoría' : 'Nueva Categoría'}
+          </Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleSubmit}>
+          <Modal.Body>
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-semibold">Nombre <span className="text-danger">*</span></Form.Label>
+              <Form.Control
+                type="text"
+                name="nombre"
+                value={formData.nombre}
+                onChange={handleChange}
+                required
+                placeholder="Ej: Joyería Fina"
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-semibold">Descripción</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                name="descripcion"
+                value={formData.descripcion}
+                onChange={handleChange}
+                placeholder="Descripción opcional de la categoría..."
+              />
+            </Form.Group>
+            <Form.Check
+              type="checkbox"
+              id="categoria-activo"
+              name="activo"
+              label="Categoría activa"
+              checked={formData.activo}
+              onChange={handleChange}
+            />
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="outline-secondary" onClick={handleCloseModal}>
+              Cancelar
+            </Button>
+            <Button variant="primary" type="submit">
+              {editando ? 'Actualizar' : 'Crear'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+    </Container>
   );
 };
 
