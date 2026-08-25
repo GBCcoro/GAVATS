@@ -11,6 +11,7 @@ import catalogoService from '../services/catalogoService';
 import carritoService from '../services/carritoService';
 import ProductCard from '../components/ProductCard';
 import LoadingSpinner from '../components/LoadingSpinner';
+import SvgIcon from '../components/SvgIcon';
 
 const CatalogoPage = () => {
   const [productos, setProductos] = useState([]);
@@ -180,7 +181,7 @@ const CatalogoPage = () => {
                 disabled={paginacion.pagina === 1}
                 onClick={() => handlePageChange(paginacion.pagina - 1)}
               >
-                <img src="/assests/icons/arrow_left.svg" alt="Anterior" width="16" height="16" className="me-1 pagination-icon-svg" />{' '}Anterior
+                <SvgIcon name="arrow_left" size={16} className="me-1" />{' '}Anterior
               </Button>
 
               <div className="d-flex align-items-center mx-3">
@@ -213,7 +214,7 @@ const CatalogoPage = () => {
                 disabled={paginacion.pagina === paginacion.totalPaginas}
                 onClick={() => handlePageChange(paginacion.pagina + 1)}
               >
-                Siguiente{' '}<img src="/assests/icons/arrow_right.svg" alt="Siguiente" width="16" height="16" className="ms-1 pagination-icon-svg" />
+                Siguiente{' '}<SvgIcon name="arrow_right" size={16} className="ms-1" />
               </Button>
             </div>
           )}

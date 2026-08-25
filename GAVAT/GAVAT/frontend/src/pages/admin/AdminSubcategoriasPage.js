@@ -262,11 +262,11 @@ const AdminSubcategoriasPage = () => {
             </Dropdown.Menu>
           </Dropdown>
           <button type="button" className="btn btn-dark me-2" onClick={() => navigate('/admin/dashboard')}>
-            <img src="/assests/icons/arrow_left.svg" alt="Volver" width="16" height="16" className="me-1 pagination-icon-svg" />{' '}
+            <SvgIcon name="arrow_left" size={16} className="me-1" />{' '}
             Volver
           </button>
           <button type="button" className="btn btn-dark" onClick={() => handleShowModal()}>
-            <img src="/assests/icons/plus-circle.svg" alt="Nueva" width="16" height="16" className="me-1 pagination-icon-svg" />{' '}
+            <SvgIcon name="plus-circle" size={16} className="me-1" />{' '}
             Nueva Subcategoría
           </button>
         </div>
@@ -453,7 +453,7 @@ const AdminSubcategoriasPage = () => {
                   disabled={paginaActual === 1}
                   title="Página anterior"
                 >
-                  <img src="/assests/icons/arrow_left.svg" alt="Anterior" width="16" height="16" className="me-1 pagination-icon-svg" /> Anterior
+                  <SvgIcon name="arrow_left" size={16} className="me-1" /> Anterior
                 </Button>
                 <Button variant="primary" size="sm" disabled>
                   {paginaActual} / {totalPaginas}
@@ -465,7 +465,7 @@ const AdminSubcategoriasPage = () => {
                   disabled={paginaActual === totalPaginas}
                   title="Página siguiente"
                 >
-                  Siguiente <img src="/assests/icons/arrow_right.svg" alt="Siguiente" width="16" height="16" className="ms-1 pagination-icon-svg" />
+                  Siguiente <SvgIcon name="arrow_right" size={16} className="ms-1" />
                 </Button>
                 <Button
                   variant="outline-primary"

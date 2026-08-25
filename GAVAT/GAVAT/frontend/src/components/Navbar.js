@@ -10,6 +10,7 @@ import React, { memo, useCallback, useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
+import SvgIcon from './SvgIcon';
 
 const NavigationBar = memo(() => {
   const { user, isAuthenticated, isAdmin, isAuxiliar, isCliente, logout } = useAuth();
@@ -172,7 +173,7 @@ const NavigationBar = memo(() => {
               <NavDropdown
                 title={
                   <>
-                    <img src="/assests/icons/access_flash.svg" alt="Administración" width="16" height="16" className="me-1 navbar-icon-svg" />
+                    <SvgIcon name="access_flash" size={16} className="me-1 navbar-icon-svg" />
                     <span className="text-gold">Administración</span>
                   </>
                 }
@@ -181,38 +182,38 @@ const NavigationBar = memo(() => {
                 align="end"
               >
                 <div className="dropdown-header-custom px-3 py-2 border-bottom mb-2 text-gold small fw-bold d-flex align-items-center">
-                  <img src="/assests/icons/access_flash.svg" alt="Panel" width="16" height="16" className="me-2 navbar-icon-svg" /> Panel Administrativo
+                  <SvgIcon name="access_flash" size={16} className="me-2 navbar-icon-svg" /> Panel Administrativo
                 </div>
                 <NavDropdown.Item as={Link} to="/admin/dashboard" onClick={handleLinkClick}>
-                  <img src="/assests/icons/access_flash.svg" alt="Dashboard" width="16" height="16" className="me-2 navbar-icon-svg" /> Dashboard
+                  <SvgIcon name="access_flash" size={16} className="me-2 navbar-icon-svg" /> Dashboard
                 </NavDropdown.Item>
                 <NavDropdown.Divider />
                 <NavDropdown.Item as={Link} to="/admin/categorias" onClick={handleLinkClick}>
-                  <img src="/assests/icons/category.svg" alt="Categorías" width="16" height="16" className="me-2 navbar-icon-svg" /> Categorías
+                  <SvgIcon name="category" size={16} className="me-2 navbar-icon-svg" /> Categorías
                 </NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/admin/subcategorias" onClick={handleLinkClick}>
-                  <img src="/assests/icons/subcategory.svg" alt="Subcategorías" width="16" height="16" className="me-2 navbar-icon-svg" /> Subcategorías
+                  <SvgIcon name="subcategory" size={16} className="me-2 navbar-icon-svg" /> Subcategorías
                 </NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/admin/productos" onClick={handleLinkClick}>
-                  <img src="/assests/icons/product.svg" alt="Productos" width="16" height="16" className="me-2 navbar-icon-svg" /> Productos
+                  <SvgIcon name="product" size={16} className="me-2 navbar-icon-svg" /> Productos
                 </NavDropdown.Item>
                 {isAdmin && (
                   <NavDropdown.Item as={Link} to="/admin/usuarios" onClick={handleLinkClick}>
-                    <img src="/assests/icons/account_white.svg" alt="Usuarios" width="16" height="16" className="me-2 navbar-icon-svg" /> Usuarios
+                    <SvgIcon name="account_white" size={16} className="me-2 navbar-icon-svg" /> Usuarios
                   </NavDropdown.Item>
                 )}
                 <NavDropdown.Item as={Link} to="/admin/facturas" onClick={handleLinkClick}>
-                  <img src="/assests/icons/bill.svg" alt="Facturas" width="16" height="16" className="me-2 navbar-icon-svg" /> Facturas
+                  <SvgIcon name="bill" size={16} className="me-2 navbar-icon-svg" /> Facturas
                 </NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/admin/pedidos" onClick={handleLinkClick}>
-                  <img src="/assests/icons/orders.svg" alt="Pedidos" width="16" height="16" className="me-2 navbar-icon-svg" /> Pedidos
+                  <SvgIcon name="orders" size={16} className="me-2 navbar-icon-svg" /> Pedidos
                 </NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/admin/comentarios" onClick={handleLinkClick}>
-                  <img src="/assests/icons/comment.svg" alt="Comentarios" width="16" height="16" className="me-2 navbar-icon-svg" /> Comentarios
+                  <SvgIcon name="comment" size={16} className="me-2 navbar-icon-svg" /> Comentarios
                 </NavDropdown.Item>
                 <NavDropdown.Divider />
                 <NavDropdown.Item as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick}>
-                  <img src="/assests/icons/orders.svg" alt="Pedidos" width="16" height="16" className="me-2 navbar-icon-svg" /> Mis Pedidos (Admin)
+                  <SvgIcon name="orders" size={16} className="me-2 navbar-icon-svg" /> Mis Pedidos (Admin)
                 </NavDropdown.Item>
               </NavDropdown>
             )}

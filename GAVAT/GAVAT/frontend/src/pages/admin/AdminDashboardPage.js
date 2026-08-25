@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Badge, Button, Spinner } from 'react-bootstrap';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import SvgIcon from '../../components/SvgIcon';
 
 const AdminDashboardPage = () => {
   const { user, isAdmin, isAuxiliar } = useAuth();
@@ -317,17 +318,7 @@ const AdminDashboardPage = () => {
                       className="stat-icon-wrap"
                       style={{ backgroundColor: card.iconBg, color: card.iconColor }}
                     >
-                      {card.icon.endsWith('.svg') ? (
-                        <img 
-                          src={`/assests/icons/${card.icon}`} 
-                          alt={card.title} 
-                          width="24" 
-                          height="24" 
-                          style={{ filter: card.iconColor === '#f5c271' ? 'none' : 'invert(29%) sepia(35%) saturate(885%) hue-rotate(180deg) brightness(91%) contrast(92%)' }} 
-                        />
-                      ) : (
-                        <i className={`bi ${card.icon}`} />
-                      )}
+                      <SvgIcon name={card.icon.replace('.svg', '')} size={24} />
                     </div>
                   </div>
                   <div className="d-flex align-items-baseline justify-content-between mt-auto">
@@ -351,7 +342,7 @@ const AdminDashboardPage = () => {
             <Card.Header className="panel-card-header d-flex align-items-center justify-content-between">
               <div className="d-flex align-items-center gap-2">
                 <div className="panel-header-icon bg-gold-subtle text-gold d-flex align-items-center justify-content-center">
-                  <img src="/assests/icons/access_flash.svg" alt="Accesos" width="20" height="20" />
+                  <SvgIcon name="access_flash" size={20} />
                 </div>
                 <div>
                   <h6 className="mb-0 fw-bold panel-header-title">Accesos Rápidos</h6>
@@ -370,11 +361,7 @@ const AdminDashboardPage = () => {
                     >
                       <div className="d-flex align-items-center gap-3">
                         <div className="action-tile-icon d-flex align-items-center justify-content-center">
-                          {action.icon.endsWith('.svg') ? (
-                            <img src={`/assests/icons/${action.icon}`} alt={action.title} width="20" height="20" />
-                          ) : (
-                            <i className={`bi ${action.icon}`} />
-                          )}
+                          <SvgIcon name={action.icon.replace('.svg', '')} size={20} />
                         </div>
                         <div className="flex-grow-1 overflow-hidden">
                           <div className="action-tile-title">{action.title}</div>
@@ -395,7 +382,7 @@ const AdminDashboardPage = () => {
             <Card.Header className="panel-card-header d-flex align-items-center justify-content-between">
               <div className="d-flex align-items-center gap-2">
                 <div className="panel-header-icon bg-info-subtle text-info d-flex align-items-center justify-content-center">
-                  <img src="/assests/icons/state.svg" alt="Estado" width="20" height="20" />
+                  <SvgIcon name="state" size={20} />
                 </div>
                 <div>
                   <h6 className="mb-0 fw-bold panel-header-title">Estado del Sistema</h6>
