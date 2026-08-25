@@ -65,7 +65,7 @@ const NavigationBar = memo(() => {
         {/* LOGO (Siempre a la izquierda) */}
         <Navbar.Brand as={Link} to="/" onClick={handleLinkClick} className="brand-logo d-flex align-items-center">
           <img 
-            src="/assests/icons/logo-gavat-fondo-negro.png" 
+            src="/assests/icons/logo-gavat-navbar.png" 
             alt="GAVAT" 
             className="navbar-brand-img"
           />
