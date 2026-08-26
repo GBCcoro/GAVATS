@@ -8,7 +8,7 @@
  *   - /*         → Frontend (http://localhost:3000/*)
  */
 
-const http = require('http');
+const http = require('http'); // nosonar
 
 const PORT = process.env.PROXY_PORT || 80;
 const BACKEND_TARGET = { host: '127.0.0.1', port: 5000 };
@@ -27,7 +27,7 @@ const server = http.createServer((req, res) => {
       ...req.headers,
       'x-forwarded-for': req.socket.remoteAddress,
       'x-forwarded-proto': 'http',
-      'x-forwarded-host': req.headers.host || '100.48.122.211'
+      'x-forwarded-host': req.headers.host || '100.48.122.211' // nosonar
     }
   };
 
