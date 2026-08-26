@@ -205,10 +205,7 @@ const AdminCategoriasPage = () => {
       {/* Header Toolbar */}
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-          <h1 className="h2 mb-1 fw-bold text-navy">
-            <i className="bi bi-tags me-2 text-gold" />
-            Gestión de Categorías
-          </h1>
+          <h1 className="h2 mb-1 fw-bold text-navy"><span className="bi bi-tags me-2 text-gold" aria-hidden="true"></span> Gestión de Categorías</h1>
           <p className="text-muted mb-0">
             Total: {categoriasFiltradas.length} de {categorias.length} categoría{categorias.length !== 1 ? 's' : ''}
           </p>
@@ -222,8 +219,7 @@ const AdminCategoriasPage = () => {
                 exportarCategoriasAPDF(categoriasFiltradas);
               }}
             >
-              <i className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} />
-              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span> Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
             </Button>
             <Dropdown.Toggle split variant="primary" />
             <Dropdown.Menu>
@@ -231,13 +227,13 @@ const AdminCategoriasPage = () => {
                 setTipoExportacion('pdf');
                 exportarCategoriasAPDF(categoriasFiltradas);
               }}>
-                <i className="bi bi-file-earmark-pdf me-2" /> Exportar a PDF
+                <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
               </Dropdown.Item>
               <Dropdown.Item onClick={async () => {
                 setTipoExportacion('excel');
                 await exportarCategoriasAExcel(categoriasFiltradas);
               }}>
-                <i className="bi bi-file-earmark-excel me-2" /> Exportar a Excel
+                <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
@@ -260,7 +256,7 @@ const AdminCategoriasPage = () => {
       <Card className="shadow-sm border-0 mb-4 admin-card-table">
         <Card.Body className="p-3 p-md-4">
           <h6 className="fw-bold mb-3 d-flex align-items-center gap-2 text-navy">
-            <i className="bi bi-funnel text-gold" /> Filtros de Búsqueda
+            <span className="bi bi-funnel text-gold" aria-hidden="true"></span> Filtros de Búsqueda
           </h6>
           <Row className="g-3 align-items-end">
             <Col md={6}>
@@ -268,7 +264,7 @@ const AdminCategoriasPage = () => {
                 <Form.Label className="small fw-semibold mb-1">Buscar Categoría</Form.Label>
                 <InputGroup>
                   <InputGroup.Text className="bg-light">
-                    <i className="bi bi-search" />
+                    <span className="bi bi-search" aria-hidden="true"></span>
                   </InputGroup.Text>
                   <Form.Control
                     placeholder="Buscar por nombre o descripción..."
@@ -297,7 +293,7 @@ const AdminCategoriasPage = () => {
                 className="w-100"
                 onClick={() => setFiltros({ busqueda: '', estado: 'todos' })}
               >
-                <i className="bi bi-arrow-clockwise me-1" /> Limpiar filtros
+                <span className="bi bi-arrow-clockwise me-1" aria-hidden="true"></span> Limpiar filtros
               </Button>
             </Col>
           </Row>

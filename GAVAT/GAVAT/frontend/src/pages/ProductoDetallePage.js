@@ -108,11 +108,11 @@ const ProductoDetallePage = () => {
     return (
       <Container className="py-5 text-center">
         <Card className="p-5 shadow-sm border-0 rounded-4 mx-auto" style={{ maxWidth: '500px' }}>
-          <i className="bi bi-exclamation-circle text-warning fs-1 mb-3" />
+          <span className="bi bi-exclamation-circle text-warning fs-1 mb-3" aria-hidden="true"></span>
           <h3 className="fw-bold text-navy">Producto no encontrado</h3>
           <p className="text-muted">El producto que estás buscando no existe o ya no está disponible.</p>
           <Button as={Link} to="/catalogo" variant="primary" className="mt-3">
-            <i className="bi bi-arrow-left me-2" /> Volver al catálogo
+            <span className="bi bi-arrow-left me-2" aria-hidden="true"></span> Volver al catálogo
           </Button>
         </Card>
       </Container>
@@ -121,12 +121,34 @@ const ProductoDetallePage = () => {
 
   const stockDisponible = producto.stock || 0;
 
+  const renderStockStatus = () => {
+    if (stockDisponible > 10) {
+      return (
+        <div className="d-inline-flex align-items-center text-success fw-semibold stock-status-pill in-stock">
+          <span className="bi bi-check-circle-fill me-2" aria-hidden="true"></span> En stock ({stockDisponible} disponibles)
+        </div>
+      );
+    }
+    if (stockDisponible > 0) {
+      return (
+        <div className="d-inline-flex align-items-center text-warning-dark fw-semibold stock-status-pill low-stock">
+          <span className="bi bi-exclamation-circle-fill me-2" aria-hidden="true"></span> ¡Pocas unidades disponibles! ({stockDisponible} disponibles)
+        </div>
+      );
+    }
+    return (
+      <div className="d-inline-flex align-items-center text-danger fw-semibold stock-status-pill out-of-stock">
+        <span className="bi bi-x-circle-fill me-2" aria-hidden="true"></span> Agotado temporalmente
+      </div>
+    );
+  };
+
   return (
     <Container className="py-4 py-lg-5">
       {/* Breadcrumb de navegación */}
       <Breadcrumb className="mb-4 product-breadcrumb">
         <Breadcrumb.Item linkAs={Link} linkProps={{ to: '/' }}>
-          <i className="bi bi-house-door me-1" /> Inicio
+          <span className="bi bi-house-door me-1" aria-hidden="true"></span> Inicio
         </Breadcrumb.Item>
         <Breadcrumb.Item linkAs={Link} linkProps={{ to: '/catalogo' }}>
           Catálogo
@@ -148,12 +170,11 @@ const ProductoDetallePage = () => {
           className="shadow-sm rounded-3 mb-4 d-flex justify-content-between align-items-center"
         >
           <div>
-            <i className={`bi bi-${mensaje.tipo === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill'} me-2`} />
-            {mensaje.texto}
+            <span className={`bi bi-${mensaje.tipo === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill'} me-2`} aria-hidden="true"></span> {mensaje.texto}
           </div>
           {mensaje.tipo === 'success' && (
             <Button as={Link} to="/carrito" variant="outline-success" size="sm" className="ms-3 fw-bold">
-              Ver Carrito <i className="bi bi-arrow-right ms-1" />
+              Ver Carrito <span className="bi bi-arrow-right ms-1" aria-hidden="true"></span>
             </Button>
           )}
         </Alert>
@@ -186,7 +207,7 @@ const ProductoDetallePage = () => {
                   )}
                   {stockDisponible <= 5 && stockDisponible > 0 && (
                     <Badge bg="warning" className="text-dark fw-bold shadow-sm">
-                      <i className="bi bi-lightning-fill me-1" /> ¡Últimas unidades!
+                      <span className="bi bi-lightning-fill me-1" aria-hidden="true"></span> ¡Últimas unidades!
                     </Badge>
                   )}
                 </div>
@@ -200,14 +221,12 @@ const ProductoDetallePage = () => {
                 <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
                   {producto.categoria && (
                     <span className="product-meta-pill">
-                      <i className="bi bi-tag me-1 text-gold" />
-                      {producto.categoria.nombre}
+                      <span className="bi bi-tag me-1 text-gold" aria-hidden="true"></span> {producto.categoria.nombre}
                     </span>
                   )}
                   {producto.subcategoria && (
                     <span className="product-meta-pill">
-                      <i className="bi bi-bookmark me-1 text-gold" />
-                      {producto.subcategoria.nombre}
+                      <span className="bi bi-bookmark me-1 text-gold" aria-hidden="true"></span> {producto.subcategoria.nombre}
                     </span>
                   )}
                   <span className="product-meta-sku ms-auto text-muted small">
@@ -234,22 +253,7 @@ const ProductoDetallePage = () => {
 
                 {/* Estado del stock */}
                 <div className="mb-4">
-                  {stockDisponible > 10 ? (
-                    <div className="d-inline-flex align-items-center text-success fw-semibold stock-status-pill in-stock">
-                      <i className="bi bi-check-circle-fill me-2" />
-                      En stock ({stockDisponible} disponibles)
-                    </div>
-                  ) : stockDisponible > 0 ? (
-                    <div className="d-inline-flex align-items-center text-warning-dark fw-semibold stock-status-pill low-stock">
-                      <i className="bi bi-exclamation-circle-fill me-2" />
-                      ¡Pocas unidades disponibles! ({stockDisponible} disponibles)
-                    </div>
-                  ) : (
-                    <div className="d-inline-flex align-items-center text-danger fw-semibold stock-status-pill out-of-stock">
-                      <i className="bi bi-x-circle-fill me-2" />
-                      Agotado temporalmente
-                    </div>
-                  )}
+                  {renderStockStatus()}
                 </div>
 
                 {/* Descripción */}
@@ -272,7 +276,7 @@ const ProductoDetallePage = () => {
                           disabled={cantidad <= 1}
                           title="Disminuir"
                         >
-                          <i className="bi bi-dash" />
+                          <span className="bi bi-dash" aria-hidden="true"></span>
                         </Button>
                         <input
                           type="number"
@@ -289,7 +293,7 @@ const ProductoDetallePage = () => {
                           disabled={cantidad >= stockDisponible}
                           title="Aumentar"
                         >
-                          <i className="bi bi-plus" />
+                          <span className="bi bi-plus" aria-hidden="true"></span>
                         </Button>
                       </div>
 
@@ -310,8 +314,7 @@ const ProductoDetallePage = () => {
                           className="btn-add-cart-luxury flex-grow-1"
                           size="lg"
                         >
-                          <i className="bi bi-box-arrow-in-right me-2" />
-                          Inicia Sesión para Comprar
+                          <span className="bi bi-box-arrow-in-right me-2" aria-hidden="true"></span> Inicia Sesión para Comprar
                         </Button>
                       )}
                     </div>
@@ -319,8 +322,7 @@ const ProductoDetallePage = () => {
                 ) : (
                   <div className="mb-4">
                     <Button variant="secondary" size="lg" disabled className="w-100 py-3 rounded-3">
-                      <i className="bi bi-slash-circle me-2" />
-                      Producto Agotado
+                      <span className="bi bi-slash-circle me-2" aria-hidden="true"></span> Producto Agotado
                     </Button>
                   </div>
                 )}
@@ -328,21 +330,21 @@ const ProductoDetallePage = () => {
                 {/* Beneficios de confianza */}
                 <div className="trust-badges-grid pt-3 border-top">
                   <div className="trust-badge-item">
-                    <i className="bi bi-shield-check text-gold fs-4" />
+                    <span className="bi bi-shield-check text-gold fs-4" aria-hidden="true"></span>
                     <div>
                       <span className="fw-bold d-block text-navy small">Autenticidad</span>
                       <span className="text-muted extra-small">100% garantizada</span>
                     </div>
                   </div>
                   <div className="trust-badge-item">
-                    <i className="bi bi-truck text-gold fs-4" />
+                    <span className="bi bi-truck text-gold fs-4" aria-hidden="true"></span>
                     <div>
                       <span className="fw-bold d-block text-navy small">Envío Seguro</span>
                       <span className="text-muted extra-small">A todo el país</span>
                     </div>
                   </div>
                   <div className="trust-badge-item">
-                    <i className="bi bi-gem text-gold fs-4" />
+                    <span className="bi bi-gem text-gold fs-4" aria-hidden="true"></span>
                     <div>
                       <span className="fw-bold d-block text-navy small">Calidad Premium</span>
                       <span className="text-muted extra-small">Máxima distinción</span>
@@ -358,10 +360,7 @@ const ProductoDetallePage = () => {
       {/* Sección de Comentarios y Reseñas */}
       <Card className="shadow-sm border-0 rounded-4 overflow-hidden mb-5">
         <Card.Body className="p-4 p-lg-5">
-          <h4 className="fw-bold text-navy mb-4 d-flex align-items-center gap-2">
-            <i className="bi bi-chat-quote-fill text-gold" />
-            Opiniones y Reseñas del Producto
-          </h4>
+          <h4 className="fw-bold text-navy mb-4 d-flex align-items-center gap-2"><span className="bi bi-chat-quote-fill text-gold" aria-hidden="true"></span> Opiniones y Reseñas del Producto</h4>
           <ProductoComentarios 
             productoId={producto.id}
             onComentarioCreado={handleComentarioCreado}
@@ -377,7 +376,7 @@ const ProductoDetallePage = () => {
           variant="outline-secondary"
           className="px-4 py-2 rounded-pill"
         >
-          <i className="bi bi-arrow-left me-2" /> Volver al catálogo
+          <span className="bi bi-arrow-left me-2" aria-hidden="true"></span> Volver al catálogo
         </Button>
       </div>
 

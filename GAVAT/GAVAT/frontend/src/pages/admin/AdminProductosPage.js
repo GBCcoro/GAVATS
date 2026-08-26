@@ -346,10 +346,7 @@ const AdminProductosPage = () => {
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h1>
-            <i className="bi bi-box-seam me-2"></i>{' '}
-            Gestión de Productos
-          </h1>
+          <h1><span className="bi bi-box-seam me-2" aria-hidden="true"></span> Gestión de Productos</h1>
           <p className="text-muted mb-0">
             Total: {productosFiltrados.length} de {productos.length} producto{productos.length !== 1 ? 's' : ''}
           </p>
@@ -364,8 +361,7 @@ const AdminProductosPage = () => {
                 exportarProductosAPDF(productosFiltrados);
               }}
             >
-              <i className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`}></i>
-              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span> Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
             </button>
             <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" />
             <Dropdown.Menu>
@@ -375,8 +371,7 @@ const AdminProductosPage = () => {
                   exportarProductosAPDF(productosFiltrados);
                 }}
               >
-                <i className="bi bi-file-earmark-pdf me-2"></i>{' '}
-                Exportar a PDF
+                <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
               </Dropdown.Item>
               <Dropdown.Item 
                 onClick={async () => {
@@ -384,8 +379,7 @@ const AdminProductosPage = () => {
                   await exportarProductosAExcel(productosFiltrados);
                 }}
               >
-                <i className="bi bi-file-earmark-excel me-2"></i>
-                {' '}Exportar a Excel
+                <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
@@ -409,17 +403,14 @@ const AdminProductosPage = () => {
       {/* Filtros */}
       <Card className="mb-4">
         <Card.Body>
-          <h5 className="mb-3">
-            <i className="bi bi-funnel me-2"></i>{' '}
-            Filtros
-          </h5>
+          <h5 className="mb-3"><span className="bi bi-funnel me-2" aria-hidden="true"></span> Filtros</h5>
           <Row className="g-3">
             <Col md={6}>
               <Form.Group>
                 <Form.Label className="small mb-1">Buscar</Form.Label>
                 <InputGroup>
                   <InputGroup.Text>
-                    <i className="bi bi-search"></i>
+                    <span className="bi bi-search" aria-hidden="true"></span>
                   </InputGroup.Text>
                   <Form.Control
                     placeholder="Nombre o descripción..."
@@ -502,8 +493,7 @@ const AdminProductosPage = () => {
                   setPaginaActual(1);
                 }}
               >
-                <i className="bi bi-arrow-clockwise me-1"></i>{' '}
-                Limpiar filtros
+                <span className="bi bi-arrow-clockwise me-1" aria-hidden="true"></span> Limpiar filtros
               </button>
             </Col>
           </Row>
@@ -614,8 +604,7 @@ const AdminProductosPage = () => {
         <Card.Footer className="text-muted">
           <div className="d-flex justify-content-between align-items-center">
             <small>
-              <i className="bi bi-file-text me-1"></i>{' '}
-              Mostrando <strong>{productosFiltrados.length === 0 ? '0-0' : `${indiceInicio + 1}-${Math.min(indiceFin, productosFiltrados.length)}`}</strong> de <strong>{productosFiltrados.length}</strong> producto{productosFiltrados.length !== 1 ? 's' : ''}
+              <span className="bi bi-file-text me-1" aria-hidden="true"></span> Mostrando <strong>{productosFiltrados.length === 0 ? '0-0' : `${indiceInicio + 1}-${Math.min(indiceFin, productosFiltrados.length)}`}</strong> de <strong>{productosFiltrados.length}</strong> producto{productosFiltrados.length !== 1 ? 's' : ''}
             </small>
             
             {/* Controles de paginación */}

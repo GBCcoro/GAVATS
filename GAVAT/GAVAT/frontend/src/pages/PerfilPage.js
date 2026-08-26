@@ -104,7 +104,7 @@ const PerfilPage = () => {
                 {/* Sección Email */}
                 <div className="perfil-item">
                   <div className="perfil-item-icon">
-                    <i className="bi bi-envelope" aria-hidden="true" />
+                    <span className="bi bi-envelope" aria-hidden="true"></span>
                   </div>
                   <div className="perfil-item-content">
                     <span className="perfil-item-label">Correo Electrónico</span>
@@ -116,7 +116,7 @@ const PerfilPage = () => {
                 {!isEditing ? (
                   <div className="perfil-item">
                     <div className="perfil-item-icon">
-                      <i className="bi bi-person" aria-hidden="true" />
+                      <span className="bi bi-person" aria-hidden="true"></span>
                     </div>
                     <div className="perfil-item-content">
                       <span className="perfil-item-label">Nombre Completo</span>
@@ -126,7 +126,7 @@ const PerfilPage = () => {
                 ) : (
                   <div className="perfil-item">
                     <div className="perfil-item-icon">
-                      <i className="bi bi-person" aria-hidden="true" />
+                      <span className="bi bi-person" aria-hidden="true"></span>
                     </div>
                     <div className="perfil-item-content w-100">
                       <Form.Label className="perfil-item-label" htmlFor="perfil-nombre">
@@ -148,7 +148,7 @@ const PerfilPage = () => {
                 {!isEditing ? (
                   <div className="perfil-item">
                     <div className="perfil-item-icon">
-                      <i className="bi bi-telephone" aria-hidden="true" />
+                      <span className="bi bi-telephone" aria-hidden="true"></span>
                     </div>
                     <div className="perfil-item-content">
                       <span className="perfil-item-label">Teléfono</span>
@@ -158,7 +158,7 @@ const PerfilPage = () => {
                 ) : (
                   <div className="perfil-item">
                     <div className="perfil-item-icon">
-                      <i className="bi bi-telephone" aria-hidden="true" />
+                      <span className="bi bi-telephone" aria-hidden="true"></span>
                     </div>
                     <div className="perfil-item-content w-100">
                       <Form.Label className="perfil-item-label" htmlFor="perfil-telefono">
@@ -180,7 +180,7 @@ const PerfilPage = () => {
                 {isCliente && (!isEditing ? (
                       <div className="perfil-item">
                         <div className="perfil-item-icon">
-                          <i className="bi bi-geo-alt" aria-hidden="true" />
+                          <span className="bi bi-geo-alt" aria-hidden="true"></span>
                         </div>
                         <div className="perfil-item-content">
                             <span className="perfil-item-label">Dirección de Envío</span>
@@ -190,7 +190,7 @@ const PerfilPage = () => {
                     ) : (
                       <div className="perfil-item">
                         <div className="perfil-item-icon">
-                          <i className="bi bi-geo-alt" aria-hidden="true" />
+                          <span className="bi bi-geo-alt" aria-hidden="true"></span>
                         </div>
                         <div className="perfil-item-content w-100">
                             <Form.Label className="perfil-item-label" htmlFor="perfil-direccion">
@@ -212,7 +212,7 @@ const PerfilPage = () => {
                 {/* Sección Rol */}
                 <div className="perfil-item">
                   <div className="perfil-item-icon">
-                    <i className="bi bi-shield" aria-hidden="true" />
+                    <span className="bi bi-shield" aria-hidden="true"></span>
                   </div>
                   <div className="perfil-item-content">
                     <span className="perfil-item-label">Rol</span>
@@ -227,7 +227,7 @@ const PerfilPage = () => {
                 {/* Sección Fecha de Registro */}
                 <div className="perfil-item">
                   <div className="perfil-item-icon">
-                    <i className="bi bi-calendar" aria-hidden="true" />
+                    <span className="bi bi-calendar" aria-hidden="true"></span>
                   </div>
                   <div className="perfil-item-content">
                     <span className="perfil-item-label">Miembro desde</span>
@@ -245,8 +245,7 @@ const PerfilPage = () => {
                     className="w-100 perfil-btn-edit"
                     onClick={() => setIsEditing(true)}
                   >
-                    <i className="bi bi-pencil me-2" aria-hidden="true" />{' '}
-                    Editar Perfil
+                    <span className="bi bi-pencil me-2" aria-hidden="true"></span> Editar Perfil
                   </Button>
                 ) : (
                   <div className="d-grid gap-2 d-md-flex">
@@ -257,8 +256,7 @@ const PerfilPage = () => {
                         onClick={handleSave}
                         disabled={loading}
                       >
-                        <i className="bi bi-check me-2" aria-hidden="true" />{' '}
-                        {loading ? 'Guardando...' : 'Guardar Cambios'}
+                        <span className="bi bi-check me-2" aria-hidden="true"></span> {loading ? 'Guardando...' : 'Guardar Cambios'}
                       </Button>
                       <Button 
                         variant="secondary" 
@@ -274,8 +272,7 @@ const PerfilPage = () => {
                         }}
                         disabled={loading}
                       >
-                        <i className="bi bi-x me-2" aria-hidden="true" />{' '}
-                        Cancelar
+                        <span className="bi bi-x me-2" aria-hidden="true"></span> Cancelar
                       </Button>
                     </div>
                 )}
@@ -288,25 +285,20 @@ const PerfilPage = () => {
             <Card className="perfil-card-info mt-4 shadow-sm">
               <Card.Body>
                 <h5 className="mb-3">
-                  <i className="bi bi-lock-fill me-2" aria-hidden="true" />{' '}
-                  Permisos de Administrador
+                  <span className="bi bi-lock-fill me-2" aria-hidden="true"></span> Permisos de Administrador
                 </h5>
                 <ul className="perfil-permissions">
                   <li>
-                    <i className="bi bi-check-circle-fill me-2 text-success" aria-hidden="true" />{' '}
-                    Acceso total al panel de administración
+                    <span className="bi bi-check-circle-fill me-2 text-success" aria-hidden="true"></span> Acceso total al panel de administración
                   </li>
                   <li>
-                    <i className="bi bi-check-circle-fill me-2 text-success" aria-hidden="true" />{' '}
-                    Gestión de usuarios, categorías y productos
+                    <span className="bi bi-check-circle-fill me-2 text-success" aria-hidden="true"></span> Gestión de usuarios, categorías y productos
                   </li>
                   <li>
-                    <i className="bi bi-check-circle-fill me-2 text-success" aria-hidden="true" />{' '}
-                    Generación de facturas y reportes
+                    <span className="bi bi-check-circle-fill me-2 text-success" aria-hidden="true"></span> Generación de facturas y reportes
                   </li>
                   <li>
-                    <i className="bi bi-check-circle-fill me-2 text-success" aria-hidden="true" />{' '}
-                    Moderación de comentarios
+                    <span className="bi bi-check-circle-fill me-2 text-success" aria-hidden="true"></span> Moderación de comentarios
                   </li>
                 </ul>
               </Card.Body>
@@ -317,21 +309,17 @@ const PerfilPage = () => {
             <Card className="perfil-card-info mt-4 shadow-sm">
               <Card.Body>
                 <h5 className="mb-3">
-                  <i className="bi bi-info-circle-fill me-2" aria-hidden="true" />{' '}
-                  Permisos de Auxiliar
+                  <span className="bi bi-info-circle-fill me-2" aria-hidden="true"></span> Permisos de Auxiliar
                 </h5>
                 <ul className="perfil-permissions">
                   <li>
-                    <i className="bi bi-check-circle-fill me-2 text-success" aria-hidden="true" />{' '}
-                    Acceso limitado al panel de administración
+                    <span className="bi bi-check-circle-fill me-2 text-success" aria-hidden="true"></span> Acceso limitado al panel de administración
                   </li>
                   <li>
-                    <i className="bi bi-check-circle-fill me-2 text-success" aria-hidden="true" />{' '}
-                    Gestión de categorías, subcategorías y productos
+                    <span className="bi bi-check-circle-fill me-2 text-success" aria-hidden="true"></span> Gestión de categorías, subcategorías y productos
                   </li>
                   <li>
-                    <i className="bi bi-check-circle-fill me-2 text-success" aria-hidden="true" />{' '}
-                    Visualización de pedidos y facturas
+                    <span className="bi bi-check-circle-fill me-2 text-success" aria-hidden="true"></span> Visualización de pedidos y facturas
                   </li>
                 </ul>
               </Card.Body>
@@ -342,21 +330,17 @@ const PerfilPage = () => {
             <Card className="perfil-card-info mt-4 shadow-sm">
               <Card.Body>
                 <h5 className="mb-3">
-                  <i className="bi bi-bag-check-fill me-2" aria-hidden="true" />{' '}
-                  Mi Actividad
+                  <span className="bi bi-bag-check-fill me-2" aria-hidden="true"></span> Mi Actividad
                 </h5>
                 <ul className="perfil-permissions">
                   <li>
-                    <i className="bi bi-cart-check me-2" aria-hidden="true" />{' '}
-                    Compra productos en nuestro catálogo
+                    <span className="bi bi-cart-check me-2" aria-hidden="true"></span> Compra productos en nuestro catálogo
                   </li>
                   <li>
-                    <i className="bi bi-box-seam me-2" aria-hidden="true" />{' '}
-                    Visualiza tus pedidos en "Mis Pedidos"
+                    <span className="bi bi-box-seam me-2" aria-hidden="true"></span> Visualiza tus pedidos en "Mis Pedidos"
                   </li>
                   <li>
-                    <i className="bi bi-chat-left-dots me-2" aria-hidden="true" />{' '}
-                    Deja comentarios en los productos
+                    <span className="bi bi-chat-left-dots me-2" aria-hidden="true"></span> Deja comentarios en los productos
                   </li>
                 </ul>
               </Card.Body>
