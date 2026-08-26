@@ -53,6 +53,10 @@ const NavigationBar = memo(() => {
 
   const isActive = useCallback((path) => location.pathname === path, [location]);
 
+  if (location.pathname.startsWith('/admin')) {
+    return null;
+  }
+
   return (
     <Navbar 
       ref={navbarRef}

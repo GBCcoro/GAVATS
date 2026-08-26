@@ -7,14 +7,13 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { Row, Col, Button, Spinner } from 'react-bootstrap';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import SvgIcon from '../../components/SvgIcon';
 
 const AdminDashboardPage = () => {
-  const { user } = useAuth();
+  useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -148,71 +147,7 @@ const AdminDashboardPage = () => {
     : defaultProductosMasComprados;
 
   return (
-    <div className="admin-layout-container">
-      {/* Sidebar de administración a la izquierda */}
-      <div className="admin-sidebar d-none d-md-flex flex-column text-white">
-        <div className="sidebar-brand-section p-4 border-bottom border-secondary">
-          <h4 className="fw-bold mb-0 text-white brand-text-sidebar">DASHBOARD</h4>
-        </div>
-        <div className="sidebar-menu-wrapper flex-grow-1 p-3">
-          <div className="sidebar-section-header mb-2">MENÚ PRINCIPAL</div>
-          <div className="d-flex flex-column gap-1">
-            <Link to="/admin/dashboard" className="sidebar-nav-link active">
-              <SvgIcon name="access_flash" size={18} className="me-2" />
-              <span>Dashboard</span>
-            </Link>
-            <Link to="/admin/usuarios" className="sidebar-nav-link">
-              <SvgIcon name="account_white" size={18} className="me-2" />
-              <span>Gestión de Usuarios</span>
-            </Link>
-            <Link to="/admin/pedidos" className="sidebar-nav-link">
-              <SvgIcon name="orders" size={18} className="me-2" />
-              <span>Lista de Pedidos</span>
-            </Link>
-            <Link to="/admin/comentarios" className="sidebar-nav-link">
-              <SvgIcon name="comment" size={18} className="me-2" />
-              <span>Gestión de Comentarios</span>
-            </Link>
-            <Link to="/admin/categorias" className="sidebar-nav-link">
-              <SvgIcon name="category" size={18} className="me-2" />
-              <span>Gestión de Categorías</span>
-            </Link>
-            <Link to="/admin/subcategorias" className="sidebar-nav-link">
-              <SvgIcon name="subcategory" size={18} className="me-2" />
-              <span>Gestión de Subcategorías</span>
-            </Link>
-            <Link to="/admin/productos" className="sidebar-nav-link">
-              <SvgIcon name="product" size={18} className="me-2" />
-              <span>Gestión de Productos</span>
-            </Link>
-            <Link to="/admin/facturas" className="sidebar-nav-link">
-              <SvgIcon name="bill" size={18} className="me-2" />
-              <span>Gestión de Facturas</span>
-            </Link>
-          </div>
-        </div>
-        <div className="sidebar-footer p-4 border-top border-secondary text-center text-white-50 small">
-          GAVAT © 2026
-        </div>
-      </div>
-
-      {/* Área principal del Dashboard a la derecha */}
-      <div className="admin-main-view flex-grow-1">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h2 className="fw-bold mb-0 text-navy h3">Dashboard Principal</h2>
-          <div className="d-flex align-items-center gap-2">
-            <span className="text-muted small d-none d-sm-inline">
-              Hola, <strong>{user?.nombre || 'Administrador'}</strong>
-            </span>
-            <div 
-              className="d-flex align-items-center justify-content-center text-white rounded-circle shadow-sm"
-              style={{ width: '40px', height: '40px', backgroundColor: '#8f6a34', fontWeight: 'bold', fontSize: '1.1rem' }}
-            >
-              {(user?.nombre || 'Admin')[0].toUpperCase()}
-            </div>
-          </div>
-        </div>
-
+    <div>
         {loading ? (
           <div className="text-center py-5">
             <Spinner animation="border" variant="warning" />
@@ -322,57 +257,8 @@ const AdminDashboardPage = () => {
             </div>
           </>
         )}
-      </div>
 
       <style>{`
-        .admin-layout-container {
-          display: flex;
-          min-height: calc(100vh - 72px);
-          background-color: #f8fafc;
-        }
-        .admin-sidebar {
-          width: 280px;
-          background-color: #192847;
-          padding: 1.5rem 1rem;
-          flex-shrink: 0;
-          border-right: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .brand-text-sidebar {
-          letter-spacing: 0.1em;
-          font-family: 'Libre Baskerville', serif;
-        }
-        .sidebar-section-header {
-          font-size: 0.72rem;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: #a0aec0;
-          font-weight: 700;
-          padding-left: 0.75rem;
-        }
-        .sidebar-nav-link {
-          display: flex;
-          align-items: center;
-          color: rgba(255, 255, 255, 0.75) !important;
-          padding: 0.8rem 1rem;
-          border-radius: 8px;
-          text-decoration: none;
-          font-weight: 500;
-          font-size: 0.95rem;
-          transition: all 0.2s ease;
-        }
-        .sidebar-nav-link:hover {
-          color: #fff !important;
-          background-color: rgba(255, 255, 255, 0.06);
-        }
-        .sidebar-nav-link.active {
-          background-color: #8f6a34;
-          color: #fff !important;
-          font-weight: 600;
-        }
-        .admin-main-view {
-          padding: 2.25rem;
-          overflow-y: auto;
-        }
         .metric-card-custom {
           background: #fff;
           border-radius: 12px;

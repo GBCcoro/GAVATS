@@ -11,6 +11,7 @@ import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminLayout from './components/AdminLayout';
 
 // Páginas públicas
 import HomePage from './pages/HomePage';
@@ -64,54 +65,20 @@ function AppContent() {
             {/* Rutas de administración - PROTEGIDAS */}
             <Route path="/admin" element={
               <ProtectedRoute requireAdmin={true}>
-                <AdminDashboardPage />
+                <AdminLayout />
               </ProtectedRoute>
-            } />
-            <Route path="/admin/dashboard" element={
-              <ProtectedRoute requireAdmin={true}>
-                <AdminDashboardPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/categorias" element={
-              <ProtectedRoute requireAdmin={true}>
-                <AdminCategoriasPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/subcategorias" element={
-              <ProtectedRoute requireAdmin={true}>
-                <AdminSubcategoriasPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/productos" element={
-              <ProtectedRoute requireAdmin={true}>
-                <AdminProductosPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/mis-pedidos" element={
-              <ProtectedRoute requireAdmin={true}>
-                <MisPedidosPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/facturas" element={
-              <ProtectedRoute requireAdmin={true}>
-                <AdminFacturasPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/comentarios" element={
-              <ProtectedRoute requireAdmin={true}>
-                <AdminComentariosPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/usuarios" element={
-              <ProtectedRoute requireAdmin={true}>
-                <AdminUsuariosPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/pedidos" element={
-              <ProtectedRoute requireAdmin={true}>
-                <AdminPedidosPage />
-              </ProtectedRoute>
-            } />
+            }>
+              <Route index element={<AdminDashboardPage />} />
+              <Route path="dashboard" element={<AdminDashboardPage />} />
+              <Route path="categorias" element={<AdminCategoriasPage />} />
+              <Route path="subcategorias" element={<AdminSubcategoriasPage />} />
+              <Route path="productos" element={<AdminProductosPage />} />
+              <Route path="mis-pedidos" element={<MisPedidosPage />} />
+              <Route path="facturas" element={<AdminFacturasPage />} />
+              <Route path="comentarios" element={<AdminComentariosPage />} />
+              <Route path="usuarios" element={<AdminUsuariosPage />} />
+              <Route path="pedidos" element={<AdminPedidosPage />} />
+            </Route>
             
             {/* Ruta por defecto */}
             <Route path="*" element={<Navigate to="/" replace />} />
