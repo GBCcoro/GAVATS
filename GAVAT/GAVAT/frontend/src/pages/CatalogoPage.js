@@ -248,7 +248,7 @@ const CatalogoPage = () => {
 
       <Row>
         {/* Filtros laterales */}
-        <Col md={3} className="mb-4">
+        <Col lg={3} className="mb-4">
           <div className="filtros-card p-3 rounded">
             <h5 className="filtros-title mb-3">
               <i className="bi bi-funnel me-2"></i>{' '}
@@ -316,7 +316,7 @@ const CatalogoPage = () => {
         </Col>
 
         {/* Grid de productos */}
-        <Col md={9}>{renderProductosContent()}</Col>
+        <Col lg={9}>{renderProductosContent()}</Col>
       </Row>
 
       {/* Estilos personalizados usando variables globales */}
