@@ -7,15 +7,9 @@
 
 import React, { memo } from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const Footer = memo(() => {
-  const location = useLocation();
-
-  if (location.pathname.startsWith('/admin')) {
-    return null;
-  }
-
   return (
     <footer className="bg-negativo text-light mt-5 py-4">
       <Container>

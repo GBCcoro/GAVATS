@@ -7,15 +7,18 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Row, Col, Button, Spinner } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
+import { Container, Row, Col, Card, Badge, Button, Spinner } from 'react-bootstrap';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import SvgIcon from '../../components/SvgIcon';
 
 const AdminDashboardPage = () => {
-  useAuth();
+  const { user, isAdmin, isAuxiliar } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
 
   const [stats, setStats] = useState({
     categorias: 0,
@@ -25,10 +28,7 @@ const AdminDashboardPage = () => {
     pedidos: 0,
     pedidosPendientes: 0,
     facturas: 0,
-    comentarios: 0,
-    ventasTotales: 0,
-    productosVendidos: 0,
-    productosMasComprados: []
+    comentarios: 0
   });
 
   const loadStats = useCallback(async (isRefresh = false) => {
@@ -46,8 +46,7 @@ const AdminDashboardPage = () => {
         api.get('/admin/usuarios'),
         api.get('/admin/pedidos'),
         api.get('/admin/facturas'),
-        api.get('/admin/comentarios'),
-        api.get('/admin/pedidos/estadisticas')
+        api.get('/admin/comentarios')
       ]);
 
       const extractData = (result) => {
@@ -57,7 +56,7 @@ const AdminDashboardPage = () => {
         return result.value?.data || [];
       };
 
-      const [categorias, subcategorias, productos, usuarios, pedidos, facturas, comentarios, pedidosStats] = results;
+      const [categorias, subcategorias, productos, usuarios, pedidos, facturas, comentarios] = results;
 
       const getArray = (data) => {
         if (Array.isArray(data)) return data;
@@ -87,14 +86,6 @@ const AdminDashboardPage = () => {
       const facturasData = getArray(extractData(facturas));
       const comentariosData = getArray(extractData(comentarios));
 
-      const statsObj = pedidosStats.status === 'fulfilled' && pedidosStats.value?.data?.success
-        ? pedidosStats.value.data.data
-        : null;
-
-      const ventasTotalesVal = statsObj?.ventasTotales ? parseFloat(statsObj.ventasTotales) : 0;
-      const productosMasVendidosVal = statsObj?.productosMasVendidos || [];
-      const totalUnidadesVendidasVal = productosMasVendidosVal.reduce((acc, item) => acc + item.unidadesVendidas, 0);
-
       const pedidosPendientes = Array.isArray(pedidosData)
         ? pedidosData.filter(p => p.estado === 'pendiente').length
         : 0;
@@ -105,13 +96,11 @@ const AdminDashboardPage = () => {
         productos: productosData.length,
         usuarios: usuariosData.length,
         pedidos: pedidosData.length,
-        pedidosPendientes: statsObj?.pedidosPorEstado?.find(p => p.estado === 'pendiente')?.cantidad || pedidosPendientes,
+        pedidosPendientes: pedidosPendientes,
         facturas: facturasData.length,
-        comentarios: comentariosData.length,
-        ventasTotales: ventasTotalesVal,
-        productosVendidos: totalUnidadesVendidasVal,
-        productosMasComprados: productosMasVendidosVal
+        comentarios: comentariosData.length
       });
+      setLastUpdated(new Date());
     } catch (error) {
       console.error('Error al cargar estadísticas del dashboard:', error);
     } finally {
@@ -124,225 +113,548 @@ const AdminDashboardPage = () => {
     loadStats();
   }, [loadStats]);
 
-  const formatCOP = (num) => {
-    return Math.round(num).toLocaleString('es-CO') + ' cop';
-  };
-
-  const defaultProductosMasComprados = [
-    { nombre: 'Ventana Doble Vidrio', unidadesVendidas: 245, ventasTotales: 98000, categoria: 'Ventanas y Puertas', tendencia: '+12%' },
-    { nombre: 'Puerta Corredera', unidadesVendidas: 189, ventasTotales: 75600, categoria: 'Ventanas y Puertas', tendencia: '+12%' },
-    { nombre: 'Ventanal Panorámico', unidadesVendidas: 156, ventasTotales: 124800, categoria: 'Ventanas y Puertas', tendencia: '+12%' },
-    { nombre: 'Marco Aluminio', unidadesVendidas: 134, ventasTotales: 40200, categoria: 'Ventanas y Puertas', tendencia: '+12%' },
-    { nombre: 'Vidrio Templado', unidadesVendidas: 98, ventasTotales: 29400, categoria: 'Ventanas y Puertas', tendencia: '+12%' }
+  const dashboardCards = [
+    {
+      title: 'Productos',
+      subtitle: 'Catálogo disponible',
+      value: stats.productos,
+      icon: 'product.svg',
+      colorClass: 'card-stat-gold',
+      iconBg: 'rgba(245, 194, 113, 0.2)',
+      iconColor: '#f5c271',
+      link: '/admin/productos',
+      show: true
+    },
+    {
+      title: 'Categorías',
+      subtitle: 'Familias de producto',
+      value: stats.categorias,
+      icon: 'category.svg',
+      colorClass: 'card-stat-navy',
+      iconBg: 'rgba(56, 189, 248, 0.15)',
+      iconColor: '#38bdf8',
+      link: '/admin/categorias',
+      show: true
+    },
+    {
+      title: 'Subcategorías',
+      subtitle: 'Líneas y divisiones',
+      value: stats.subcategorias,
+      icon: 'subcategory.svg',
+      colorClass: 'card-stat-teal',
+      iconBg: 'rgba(45, 212, 191, 0.15)',
+      iconColor: '#2dd4bf',
+      link: '/admin/subcategorias',
+      show: true
+    },
+    {
+      title: 'Usuarios',
+      subtitle: 'Clientes y personal',
+      value: stats.usuarios,
+      icon: 'account_black.svg',
+      colorClass: 'card-stat-purple',
+      iconBg: 'rgba(168, 85, 247, 0.15)',
+      iconColor: '#a855f7',
+      link: '/admin/usuarios',
+      show: isAdmin
+    },
+    {
+      title: 'Pedidos Totales',
+      subtitle: 'Órdenes procesadas',
+      value: stats.pedidos,
+      icon: 'orders.svg',
+      colorClass: 'card-stat-blue',
+      iconBg: 'rgba(99, 102, 241, 0.15)',
+      iconColor: '#6366f1',
+      link: '/admin/pedidos',
+      show: true
+    },
+    {
+      title: 'Por Atender',
+      subtitle: 'Pedidos pendientes',
+      value: stats.pedidosPendientes,
+      icon: 'orders.svg',
+      colorClass: 'card-stat-red',
+      iconBg: 'rgba(244, 63, 94, 0.15)',
+      iconColor: '#f43f5e',
+      link: '/admin/pedidos?estado=pendiente',
+      show: true
+    },
+    {
+      title: 'Facturas',
+      subtitle: 'Documentos generados',
+      value: stats.facturas,
+      icon: 'bill.svg',
+      colorClass: 'card-stat-amber',
+      iconBg: 'rgba(251, 191, 36, 0.15)',
+      iconColor: '#fbbf24',
+      link: '/admin/facturas',
+      show: isAdmin || isAuxiliar
+    },
+    {
+      title: 'Comentarios',
+      subtitle: 'Opiniones y reseñas',
+      value: stats.comentarios,
+      icon: 'comment.svg',
+      colorClass: 'card-stat-emerald',
+      iconBg: 'rgba(16, 185, 129, 0.15)',
+      iconColor: '#10b981',
+      link: '/admin/comentarios',
+      show: true
+    }
   ];
 
-  const displayProductos = stats.productosMasComprados && stats.productosMasComprados.length > 0
-    ? stats.productosMasComprados.map(item => ({
-        nombre: item.nombre,
-        unidadesVendidas: item.unidadesVendidas,
-        ventasTotales: parseFloat(item.ventasTotales),
-        categoria: 'General',
-        tendencia: '+12%'
-      }))
-    : defaultProductosMasComprados;
+  const quickActions = [
+    {
+      title: 'Agregar Producto',
+      description: 'Crear nuevo artículo con foto, precio y stock',
+      icon: 'product.svg',
+      link: '/admin/productos',
+      btnClass: 'btn-action-gold'
+    },
+    {
+      title: 'Nueva Categoría',
+      description: 'Organizar secciones y catálogos de venta',
+      icon: 'category.svg',
+      link: '/admin/categorias',
+      btnClass: 'btn-action-navy'
+    },
+    {
+      title: 'Gestionar Pedidos',
+      description: 'Consultar estados, pagos y despachos',
+      icon: 'orders.svg',
+      link: '/admin/pedidos',
+      btnClass: 'btn-action-emerald'
+    },
+    {
+      title: 'Ver Tienda Online',
+      description: 'Navegar por el catálogo como cliente',
+      icon: 'shop.svg',
+      link: '/catalogo',
+      btnClass: 'btn-action-outline'
+    }
+  ];
 
   return (
-    <div>
-        {loading ? (
-          <div className="text-center py-5">
-            <Spinner animation="border" variant="warning" />
-            <p className="text-muted mt-3">Cargando métricas del sistema...</p>
-          </div>
-        ) : (
-          <>
-            {/* Tarjetas de Métricas Principales */}
-            <Row className="g-3 mb-4">
-              <Col xs={12} sm={6} lg={3}>
-                <div className="metric-card-custom">
-                  <div>
-                    <span className="metric-card-label d-block">Ventas Totales</span>
-                    <span className="metric-card-value d-block">{formatCOP(stats.ventasTotales || 367900)}</span>
-                  </div>
-                  <div className="metric-card-icon-wrap">
-                    <SvgIcon name="cash" size={24} />
-                  </div>
-                </div>
-              </Col>
-              <Col xs={12} sm={6} lg={3}>
-                <div className="metric-card-custom">
-                  <div>
-                    <span className="metric-card-label d-block">Productos Vendidos</span>
-                    <span className="metric-card-value d-block">{stats.productosVendidos || 822}</span>
-                  </div>
-                  <div className="metric-card-icon-wrap">
-                    <SvgIcon name="product" size={24} />
-                  </div>
-                </div>
-              </Col>
-              <Col xs={12} sm={6} lg={3}>
-                <div className="metric-card-custom">
-                  <div>
-                    <span className="metric-card-label d-block">Pedidos Pendientes</span>
-                    <span className="metric-card-value d-block">{stats.pedidosPendientes || 24}</span>
-                  </div>
-                  <div className="metric-card-icon-wrap">
-                    <SvgIcon name="orders" size={24} />
-                  </div>
-                </div>
-              </Col>
-              <Col xs={12} sm={6} lg={3}>
-                <div className="metric-card-custom">
-                  <div>
-                    <span className="metric-card-label d-block">Nuevos Clientes</span>
-                    <span className="metric-card-value d-block">{stats.usuarios || 156}</span>
-                  </div>
-                  <div className="metric-card-icon-wrap">
-                    <SvgIcon name="account_white" size={24} />
-                  </div>
-                </div>
-              </Col>
-            </Row>
-
-            {/* Productos Más Comprados */}
-            <div className="products-table-card mb-4">
-              <div className="products-table-card-header d-flex justify-content-between align-items-center">
-                <h5 className="products-table-title mb-0">Productos Más Comprados</h5>
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  onClick={() => loadStats(true)}
-                  disabled={loading || refreshing}
-                >
-                  {refreshing ? 'Sincronizando...' : 'Actualizar'}
-                </Button>
-              </div>
-              <div className="p-3 p-md-4">
-                <div className="table-responsive">
-                  <table className="table align-middle mb-0">
-                    <thead>
-                      <tr className="text-muted small">
-                        <th>Producto</th>
-                        <th>Ventas</th>
-                        <th>Ingresos</th>
-                        <th>Tendencia</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayProductos.map((prod, idx) => (
-                        <tr key={idx}>
-                          <td>
-                            <div className="d-flex align-items-center gap-3">
-                              <div className="product-thumbnail-placeholder">
-                                60x60
-                              </div>
-                              <div>
-                                <strong className="d-block text-navy">{prod.nombre}</strong>
-                                <span className="text-muted small">{prod.categoria}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="fw-semibold text-navy">{prod.unidadesVendidas}</td>
-                          <td className="fw-semibold text-navy">{formatCOP(prod.ventasTotales)}</td>
-                          <td>
-                            <span className="trend-badge-custom">
-                              <i className="bi bi-arrow-up-right small" /> {prod.tendencia}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+    <Container className="py-4 py-lg-5 admin-dashboard-container">
+      {/* Header / Hero Banner */}
+      <div className="admin-header-card p-4 p-md-5 mb-4 shadow-sm">
+        <Row className="align-items-center g-3">
+          <Col md={8}>
+            <div className="d-flex align-items-center gap-2 mb-2">
+              <Badge className="badge-admin-role px-3 py-1">
+                <i className="bi bi-shield-check me-1" />
+                {isAdmin ? 'Administrador' : isAuxiliar ? 'Auxiliar' : 'Personal'}
+              </Badge>
+              <span className="text-white-50 small">
+                • Sesión iniciada como <strong>{user?.nombre || user?.email}</strong>
+              </span>
             </div>
-          </>
-        )}
+            <h1 className="admin-main-title mb-2">
+              Panel de Administración
+            </h1>
+            <p className="admin-main-subtitle mb-0">
+              Monitorea el inventario, atiende pedidos y gestiona todas las operaciones de la tienda GAVAT.
+            </p>
+          </Col>
+          <Col md={4} className="text-md-end">
+            <Button
+              variant="outline-light"
+              className="btn-refresh-stats shadow-sm"
+              onClick={() => loadStats(true)}
+              disabled={loading || refreshing}
+            >
+              {refreshing ? (
+                <>
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  Actualizando...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-arrow-clockwise me-2" />
+                  Actualizar Métricas
+                </>
+              )}
+            </Button>
+            <div className="text-white-50 small mt-2">
+              Última sincronización: {lastUpdated.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </div>
+          </Col>
+        </Row>
+      </div>
 
+      {/* Grid de Métricas Principales */}
+      <div className="section-title-wrap mb-3 d-flex align-items-center justify-content-between">
+        <h5 className="section-heading mb-0">
+          <i className="bi bi-bar-chart-fill me-2 text-gold" />
+          Resumen General del Sistema
+        </h5>
+        <span className="text-muted small">Haz clic en cualquier tarjeta para gestionar</span>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-5">
+          <Spinner animation="border" variant="warning" />
+          <p className="text-muted mt-3">Cargando métricas del sistema...</p>
+        </div>
+      ) : (
+        <Row className="g-3 mb-5">
+          {dashboardCards.filter(card => card.show).map((card) => (
+            <Col xs={12} sm={6} lg={3} key={card.link}>
+              <Card
+                className="stat-card shadow-sm h-100"
+                onClick={() => navigate(card.link)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && navigate(card.link)}
+              >
+                <Card.Body className="p-3 p-md-4 d-flex flex-column justify-content-between">
+                  <div className="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                      <span className="stat-card-title d-block">{card.title}</span>
+                      <span className="stat-card-subtitle text-muted small">{card.subtitle}</span>
+                    </div>
+                    <div
+                      className="stat-icon-wrap"
+                      style={{ backgroundColor: card.iconBg, color: card.iconColor }}
+                    >
+                      <SvgIcon name={card.icon.replace('.svg', '')} size={24} />
+                    </div>
+                  </div>
+                  <div className="d-flex align-items-baseline justify-content-between mt-auto">
+                    <span className="stat-card-number">{card.value}</span>
+                    <span className="stat-card-link-hint">
+                      Gestionar <i className="bi bi-chevron-right ms-1 small" />
+                    </span>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
+
+      {/* Sección Inferior: Accesos Rápidos & Información del Sistema */}
+      <Row className="g-4">
+        {/* Accesos Rápidos */}
+        <Col lg={7}>
+          <Card className="panel-card shadow-sm h-100">
+            <Card.Header className="panel-card-header d-flex align-items-center justify-content-between">
+              <div className="d-flex align-items-center gap-2">
+                <div className="panel-header-icon bg-gold-subtle text-gold d-flex align-items-center justify-content-center">
+                  <SvgIcon name="access_flash" size={20} />
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold panel-header-title">Accesos Rápidos</h6>
+                  <small className="text-muted">Acciones frecuentes del día a día</small>
+                </div>
+              </div>
+            </Card.Header>
+            <Card.Body className="p-3 p-md-4">
+              <Row className="g-3">
+                {quickActions.map((action) => (
+                  <Col sm={6} key={action.title}>
+                    <button
+                      type="button"
+                      className="quick-action-tile w-100 text-start"
+                      onClick={() => navigate(action.link)}
+                    >
+                      <div className="d-flex align-items-center gap-3">
+                        <div className="action-tile-icon d-flex align-items-center justify-content-center">
+                          <SvgIcon name={action.icon.replace('.svg', '')} size={20} />
+                        </div>
+                        <div className="flex-grow-1 overflow-hidden">
+                          <div className="action-tile-title">{action.title}</div>
+                          <div className="action-tile-desc text-muted">{action.description}</div>
+                        </div>
+                      </div>
+                    </button>
+                  </Col>
+                ))}
+              </Row>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* Información del Sistema */}
+        <Col lg={5}>
+          <Card className="panel-card shadow-sm h-100">
+            <Card.Header className="panel-card-header d-flex align-items-center justify-content-between">
+              <div className="d-flex align-items-center gap-2">
+                <div className="panel-header-icon bg-info-subtle text-info d-flex align-items-center justify-content-center">
+                  <SvgIcon name="state" size={20} />
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold panel-header-title">Estado del Sistema</h6>
+                  <small className="text-muted">Diagnóstico y conectividad</small>
+                </div>
+              </div>
+            </Card.Header>
+            <Card.Body className="p-3 p-md-4">
+              <div className="system-info-list d-flex flex-column gap-3">
+                <div className="info-item d-flex align-items-center justify-content-between p-2 rounded">
+                  <div className="d-flex align-items-center gap-2">
+                    <i className="bi bi-check-circle-fill text-success fs-5" />
+                    <div>
+                      <strong className="d-block small">Servidor Backend</strong>
+                      <span className="text-muted extra-small">Express HTTP Engine</span>
+                    </div>
+                  </div>
+                  <Badge bg="success" className="px-2 py-1">En Línea (200 OK)</Badge>
+                </div>
+
+                <div className="info-item d-flex align-items-center justify-content-between p-2 rounded">
+                  <div className="d-flex align-items-center gap-2">
+                    <i className="bi bi-database-fill-check text-primary fs-5" />
+                    <div>
+                      <strong className="d-block small">Base de Datos</strong>
+                      <span className="text-muted extra-small">MySQL Relational DB</span>
+                    </div>
+                  </div>
+                  <Badge bg="primary" className="px-2 py-1">Conectada</Badge>
+                </div>
+
+                <div className="info-item d-flex align-items-center justify-content-between p-2 rounded">
+                  <div className="d-flex align-items-center gap-2">
+                    <i className="bi bi-person-badge-fill text-warning fs-5" />
+                    <div>
+                      <strong className="d-block small">Rol Autenticado</strong>
+                      <span className="text-muted extra-small">{user?.email}</span>
+                    </div>
+                  </div>
+                  <Badge bg="warning" text="dark" className="px-2 py-1 text-capitalize">
+                    {user?.rol || 'Administrador'}
+                  </Badge>
+                </div>
+
+                <div className="info-item d-flex align-items-center justify-content-between p-2 rounded">
+                  <div className="d-flex align-items-center gap-2">
+                    <i className="bi bi-hdd-network-fill text-info fs-5" />
+                    <div>
+                      <strong className="d-block small">Entorno</strong>
+                      <span className="text-muted extra-small">Plataforma GAVAT v1.0</span>
+                    </div>
+                  </div>
+                  <Badge bg="secondary" className="px-2 py-1">Producción</Badge>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Estilos dedicados para un confort de lectura premium */}
       <style>{`
-        .metric-card-custom {
-          background: #fff;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
-          padding: 1.5rem;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
-          transition: transform 0.2s ease;
+        .admin-dashboard-container {
+          max-width: 1280px;
         }
-        .metric-card-custom:hover {
+
+        /* Banner Hero */
+        .admin-header-card {
+          background: linear-gradient(135deg, #192847 0%, #101c33 100%);
+          border-radius: 1.25rem;
+          color: #ffffff;
+          border: 1px solid rgba(245, 194, 113, 0.2);
+          position: relative;
+          overflow: hidden;
+        }
+        .admin-header-card::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          right: -20%;
+          width: 400px;
+          height: 400px;
+          background: radial-gradient(circle, rgba(245, 194, 113, 0.15) 0%, transparent 70%);
+          pointer-events: none;
+        }
+        .badge-admin-role {
+          background: rgba(245, 194, 113, 0.2);
+          color: var(--bs-gold, #f5c271);
+          border: 1px solid rgba(245, 194, 113, 0.4);
+          font-weight: 600;
+          font-size: 0.82rem;
+          border-radius: 2rem;
+        }
+        .admin-main-title {
+          font-size: 1.85rem;
+          font-weight: 800;
+          letter-spacing: -0.5px;
+          background: linear-gradient(135deg, #ffffff 40%, var(--bs-gold, #f5c271) 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+        }
+        .admin-main-subtitle {
+          font-size: 0.95rem;
+          color: rgba(255, 255, 255, 0.8);
+          max-width: 600px;
+          line-height: 1.5;
+        }
+        .btn-refresh-stats {
+          border-radius: 0.75rem;
+          font-weight: 600;
+          padding: 0.6rem 1.2rem;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          background: rgba(255, 255, 255, 0.08);
+          transition: all 0.25s ease;
+        }
+        .btn-refresh-stats:hover {
+          background: var(--bs-gold, #f5c271);
+          color: #192847;
+          border-color: var(--bs-gold, #f5c271);
           transform: translateY(-2px);
         }
-        .metric-card-label {
-          color: #718096;
-          font-size: 0.82rem;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.02em;
-        }
-        .metric-card-value {
+
+        /* Section Headings */
+        .section-heading {
+          font-weight: 700;
+          font-size: 1.15rem;
           color: #192847;
-          font-size: 1.6rem;
-          font-weight: 800;
-          margin-top: 0.25rem;
+        }
+        .text-gold {
+          color: var(--bs-gold-dark, #c7984e) !important;
+        }
+
+        /* Stat Cards */
+        .stat-card {
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          border-radius: 1rem;
+          background: #ffffff;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
+        }
+        .stat-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 12px 28px rgba(25, 40, 71, 0.1) !important;
+          border-color: rgba(245, 194, 113, 0.5);
+        }
+        .stat-card-title {
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: #192847;
           line-height: 1.2;
         }
-        .metric-card-icon-wrap {
-          width: 48px;
-          height: 48px;
-          background-color: #8f6a34;
-          color: #fff;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 4px 6px rgba(143, 106, 52, 0.2);
+        .stat-card-subtitle {
+          font-size: 0.78rem;
         }
-        .products-table-card {
-          background: #fff;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+        .stat-icon-wrap {
+          width: 44px;
+          height: 44px;
+          border-radius: 0.75rem;
+          display: grid;
+          place-items: center;
+          font-size: 1.35rem;
+          flex-shrink: 0;
         }
-        .products-table-card-header {
-          padding: 1.5rem;
-          border-bottom: 1px solid #e2e8f0;
-        }
-        .products-table-title {
-          font-family: 'Libre Baskerville', serif;
-          font-weight: 700;
+        .stat-card-number {
+          font-size: 2.1rem;
+          font-weight: 800;
           color: #192847;
-          font-size: 1.15rem;
+          letter-spacing: -1px;
+          line-height: 1;
         }
-        .product-thumbnail-placeholder {
-          width: 48px;
-          height: 48px;
-          background-color: #f1f5f9;
-          border-radius: 8px;
-          color: #94a3b8;
-          font-size: 0.72rem;
-          font-weight: 700;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 1px solid #e2e8f0;
-        }
-        .trend-badge-custom {
-          background-color: #8f6a34;
-          color: #fff;
-          padding: 0.3rem 0.6rem;
-          border-radius: 30px;
+        .stat-card-link-hint {
           font-size: 0.8rem;
           font-weight: 600;
-          display: inline-flex;
-          align-items: center;
-          gap: 2px;
+          color: var(--bs-gold-dark, #c7984e);
+          opacity: 0.85;
+          transition: opacity 0.2s ease;
         }
-        .text-navy {
-          color: #192847 !important;
+        .stat-card:hover .stat-card-link-hint {
+          opacity: 1;
+          color: #916934;
+        }
+
+        /* Panels (Bottom section) */
+        .panel-card {
+          border-radius: 1rem;
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          background: #ffffff;
+        }
+        .panel-card-header {
+          background: #ffffff;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+          padding: 1rem 1.25rem;
+          border-radius: 1rem 1rem 0 0 !important;
+        }
+        .panel-header-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 0.5rem;
+          display: grid;
+          place-items: center;
+          font-size: 1.1rem;
+        }
+        .bg-gold-subtle {
+          background-color: rgba(245, 194, 113, 0.2);
+        }
+        .bg-info-subtle {
+          background-color: rgba(56, 189, 248, 0.15);
+        }
+        .panel-header-title {
+          color: #192847;
+          font-size: 1rem;
+        }
+
+        /* Quick Action Tiles */
+        .quick-action-tile {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 0.85rem;
+          padding: 0.9rem 1rem;
+          transition: all 0.22s ease;
+          cursor: pointer;
+        }
+        .quick-action-tile:hover {
+          background: #ffffff;
+          border-color: var(--bs-gold, #f5c271);
+          box-shadow: 0 6px 18px rgba(25, 40, 71, 0.08);
+          transform: translateY(-2px);
+        }
+        .action-tile-icon {
+          width: 38px;
+          height: 38px;
+          border-radius: 0.5rem;
+          background: rgba(25, 40, 71, 0.08);
+          color: #192847;
+          display: grid;
+          place-items: center;
+          font-size: 1.2rem;
+          flex-shrink: 0;
+          transition: all 0.2s ease;
+        }
+        .quick-action-tile:hover .action-tile-icon {
+          background: var(--bs-gold, #f5c271);
+          color: #192847;
+        }
+        .action-tile-title {
+          font-weight: 700;
+          font-size: 0.92rem;
+          color: #192847;
+          line-height: 1.2;
+          margin-bottom: 2px;
+        }
+        .action-tile-desc {
+          font-size: 0.78rem;
+          line-height: 1.3;
+        }
+
+        /* System Info */
+        .info-item {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          transition: all 0.2s ease;
+        }
+        .info-item:hover {
+          background: #ffffff;
+          border-color: #cbd5e1;
+        }
+        .extra-small {
+          font-size: 0.72rem;
         }
       `}</style>
-    </div>
+    </Container>
   );
 };
 
