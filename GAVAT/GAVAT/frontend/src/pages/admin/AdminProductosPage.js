@@ -95,6 +95,12 @@ const AdminProductosPage = () => {
   
   const fileInputRef = useRef(null);
   const [modalPreviewFoto, setModalPreviewFoto] = useState(false);
+  const [zoomNivel, setZoomNivel] = useState(1);
+
+  const handleZoomIn = () => setZoomNivel(prev => Math.min(Number((prev + 0.25).toFixed(2)), 3.5));
+  const handleZoomOut = () => setZoomNivel(prev => Math.max(Number((prev - 0.25).toFixed(2)), 0.5));
+  const handleResetZoom = () => setZoomNivel(1);
+  const handleToggleZoom = () => setZoomNivel(prev => (prev === 1 ? 2 : 1));
   
   // Productos filtrados
   const productosFiltrados = useMemo(() => {
@@ -531,20 +537,17 @@ const AdminProductosPage = () => {
             <Button
               variant="primary"
               onClick={async () => {
-                setTipoExportacion('pdf');
-                exportarProductosAPDF(productosFiltrados);
+                if (tipoExportacion === 'pdf') {
+                  exportarProductosAPDF(productosFiltrados);
+                } else {
+                  await exportarProductosAExcel(productosFiltrados);
+                }
               }}
             >
-<Button
-  variant="primary"
-  onClick={() => {
-    exportarProductosAPDF(productosFiltrados);
-  }}
->
-  <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
-  Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
-</Button>
-<Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" />
+              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
+              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+            </Button>
+            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" />
             <Dropdown.Menu>
               <Dropdown.Item 
                 onClick={() => {
@@ -1167,7 +1170,7 @@ const AdminProductosPage = () => {
         </Form>
       </Modal>
 
-      {/* Modal para Visualizar / Cambiar / Eliminar Foto */}
+      {/* Modal para Visualizar / Cambiar / Eliminar Foto con Lupa y Zoom */}
       <Modal
         show={modalPreviewFoto}
         onHide={() => setModalPreviewFoto(false)}
@@ -1176,8 +1179,40 @@ const AdminProductosPage = () => {
       >
         <div className="modal-preview-foto-header">
           <div className="fw-semibold text-navy small d-flex align-items-center gap-2">
-            <i className="bi bi-image text-primary" /> Vista Previa de Imagen
+            <i className="bi bi-image text-primary" /> Fotografía del Producto
           </div>
+
+          {/* Barra de controles de Lupa / Zoom */}
+          <div className="zoom-toolbar">
+            <button
+              type="button"
+              onClick={handleZoomOut}
+              disabled={zoomNivel <= 0.5}
+              title="Reducir zoom (-)"
+            >
+              <i className="bi bi-dash-lg" />
+            </button>
+            <span className="zoom-badge">
+              {Math.round(zoomNivel * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={handleZoomIn}
+              disabled={zoomNivel >= 3.5}
+              title="Aumentar zoom (+)"
+            >
+              <i className="bi bi-plus-lg" />
+            </button>
+            <div className="vr mx-1 my-auto" style={{ height: '16px' }} />
+            <button
+              type="button"
+              onClick={handleResetZoom}
+              title="Restablecer tamaño original (100%)"
+            >
+              <i className="bi bi-aspect-ratio" />
+            </button>
+          </div>
+
           <button 
             type="button" 
             className="btn-close" 
@@ -1185,41 +1220,56 @@ const AdminProductosPage = () => {
             aria-label="Cerrar"
           />
         </div>
+
         <Modal.Body className="p-3 p-md-4 text-center bg-light">
           <div className="modal-preview-foto-wrapper mb-3">
             <img
               src={previewImagen}
               alt="Vista detallada del producto"
-              className="img-fluid rounded"
-              style={{ maxHeight: '440px', objectFit: 'contain', width: '100%' }}
+              className="modal-preview-foto-img"
+              style={{ 
+                transform: `scale(${zoomNivel})`, 
+                transformOrigin: 'center center',
+                cursor: zoomNivel > 1 ? 'zoom-out' : 'zoom-in'
+              }}
+              onClick={handleToggleZoom}
+              title={zoomNivel > 1 ? "Haz clic para alejar" : "Haz clic para agrandar con la lupa (200%)"}
               onError={(e) => { e.target.src = '/producto-default.jpg'; }}
             />
           </div>
-          <div className="d-flex justify-content-center gap-2">
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              className="d-flex align-items-center gap-1 px-3 py-1"
-              style={{ borderRadius: '8px', fontSize: '0.85rem' }}
-              onClick={() => {
-                setModalPreviewFoto(false);
-                setTimeout(() => fileInputRef.current?.click(), 150);
-              }}
-            >
-              <i className="bi bi-arrow-repeat" /> Cambiar foto
-            </Button>
-            <Button
-              variant="outline-danger"
-              size="sm"
-              className="d-flex align-items-center gap-1 px-3 py-1"
-              style={{ borderRadius: '8px', fontSize: '0.85rem' }}
-              onClick={(e) => {
-                handleQuitarImagen(e);
-                setModalPreviewFoto(false);
-              }}
-            >
-              <i className="bi bi-trash3" /> Eliminar foto
-            </Button>
+
+          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-1">
+            <small className="text-muted text-start" style={{ fontSize: '0.78rem' }}>
+              <i className="bi bi-info-circle me-1" />
+              Haz clic en la imagen o usa los botones para acercar o alejar
+            </small>
+
+            <div className="d-flex gap-2 ms-auto">
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                className="d-flex align-items-center gap-1 px-3 py-1"
+                style={{ borderRadius: '8px', fontSize: '0.85rem' }}
+                onClick={() => {
+                  setModalPreviewFoto(false);
+                  setTimeout(() => fileInputRef.current?.click(), 150);
+                }}
+              >
+                <i className="bi bi-arrow-repeat" /> Cambiar foto
+              </Button>
+              <Button
+                variant="outline-danger"
+                size="sm"
+                className="d-flex align-items-center gap-1 px-3 py-1"
+                style={{ borderRadius: '8px', fontSize: '0.85rem' }}
+                onClick={(e) => {
+                  handleQuitarImagen(e);
+                  setModalPreviewFoto(false);
+                }}
+              >
+                <i className="bi bi-trash3" /> Eliminar foto
+              </Button>
+            </div>
           </div>
         </Modal.Body>
       </Modal>
