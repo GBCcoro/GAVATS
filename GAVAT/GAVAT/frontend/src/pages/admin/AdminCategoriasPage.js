@@ -179,20 +179,20 @@ const AdminCategoriasPage = () => {
 
   const handleToggleActivo = async (categoria) => {
     try {
-      await api.put(`/admin/categorias/${categoria.id}`, {
-        ...categoria,
-        activo: !categoria.activo
-      });
+      const res = await api.patch(`/admin/categorias/${categoria.id}/toggle`);
       
       setMensaje({ 
         tipo: 'success', 
-        texto: `Categoría ${!categoria.activo ? 'activada' : 'desactivada'} exitosamente` 
+        texto: res.data?.message || `Categoría ${!categoria.activo ? 'activada' : 'desactivada'} exitosamente` 
       });
       
       await loadCategorias();
     } catch (error) {
       console.error('Error al cambiar estado:', error);
-      setMensaje({ tipo: 'danger', texto: 'Error al cambiar el estado' });
+      setMensaje({ 
+        tipo: 'danger', 
+        texto: error.response?.data?.message || 'Error al cambiar el estado' 
+      });
     }
   };
 

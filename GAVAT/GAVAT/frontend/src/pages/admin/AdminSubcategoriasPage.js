@@ -187,20 +187,18 @@ const AdminSubcategoriasPage = () => {
 
   const handleToggleActivo = async (subcategoria) => {
     try {
-      await api.put(`/admin/subcategorias/${subcategoria.id}`, {
-        nombre: subcategoria.nombre,
-        descripcion: subcategoria.descripcion,
-        categoriaId: subcategoria.categoriaId,
-        activo: !subcategoria.activo
-      });
+      const res = await api.patch(`/admin/subcategorias/${subcategoria.id}/toggle`);
       setMensaje({ 
         tipo: 'success', 
-        texto: `Subcategoría ${!subcategoria.activo ? 'activada' : 'desactivada'} exitosamente` 
+        texto: res.data?.message || `Subcategoría ${!subcategoria.activo ? 'activada' : 'desactivada'} exitosamente` 
       });
-      await loadData(); // Esperar a que se recarguen los datos
+      await loadData();
     } catch (error) {
       console.error('Error al cambiar estado:', error);
-      setMensaje({ tipo: 'danger', texto: 'Error al cambiar el estado' });
+      setMensaje({ 
+        tipo: 'danger', 
+        texto: error.response?.data?.message || 'Error al cambiar el estado' 
+      });
     }
   };
 

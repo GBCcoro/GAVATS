@@ -93,6 +93,8 @@ const AdminProductosPage = () => {
     activo: true
   });
   
+  const fileInputRef = useRef(null);
+  
   // Productos filtrados
   const productosFiltrados = useMemo(() => {
     return productos.filter(prod => {
@@ -193,7 +195,7 @@ const AdminProductosPage = () => {
         activo: producto.activo
       });
       setImagenArchivo(null);
-      setPreviewImagen(producto.imagen ? getImageUrl(producto.imagen) : '/producto-default.jpg');
+      setPreviewImagen(producto.imagen ? getImageUrl(producto.imagen) : '');
     } else {
       setEditando(null);
       setFormData({
@@ -225,6 +227,9 @@ const AdminProductosPage = () => {
     });
     setImagenArchivo(null);
     setPreviewImagen('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleChange = (e) => {
@@ -251,7 +256,16 @@ const AdminProductosPage = () => {
     } else if (editando?.imagen) {
       setPreviewImagen(getImageUrl(editando.imagen));
     } else {
-      setPreviewImagen('/producto-default.jpg');
+      setPreviewImagen('');
+    }
+  };
+
+  const handleQuitarImagen = (e) => {
+    e.stopPropagation();
+    setImagenArchivo(null);
+    setPreviewImagen('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -265,7 +279,9 @@ const AdminProductosPage = () => {
       formDataToSend.append('precio', String(Number.parseFloat(formData.precio)));
       formDataToSend.append('stock', String(Number.parseInt(formData.stock, 10)));
       formDataToSend.append('categoriaId', String(formData.categoriaId));
-      formDataToSend.append('subcategoriaId', formData.subcategoriaId || '');
+      if (formData.subcategoriaId) {
+        formDataToSend.append('subcategoriaId', String(formData.subcategoriaId));
+      }
       formDataToSend.append('activo', String(formData.activo));
 
       if (imagenArchivo) {
@@ -324,7 +340,7 @@ const AdminProductosPage = () => {
     });
   };
 
-  // Confirmación en pantalla para eliminar producto individual
+  // Confirmación en pantalla para eliminar producto individual (DELETE)
   const solicitarEliminar = (producto) => {
     setModalConfirmacion({
       show: true,
@@ -336,26 +352,34 @@ const AdminProductosPage = () => {
       textoCancelar: 'Cancelar',
       onConfirm: async () => {
         try {
-          await api.delete(`/admin/productos/${producto.id}`);
-          setMensaje({ tipo: 'success', texto: `Producto "${producto.nombre}" eliminado exitosamente` });
+          const res = await api.delete(`/admin/productos/${producto.id}`);
+          
+          // Eliminar de inmediato del estado local
+          setProductos(prev => prev.filter(p => p.id !== producto.id));
           setSeleccionados(prev => {
             const nuevo = new Set(prev);
             nuevo.delete(producto.id);
             return nuevo;
           });
-          loadData();
+          
+          setMensaje({ 
+            tipo: 'success', 
+            texto: res.data?.message || `Producto "${producto.nombre}" eliminado exitosamente` 
+          });
+          
+          await loadData();
         } catch (error) {
           console.error('Error al eliminar producto:', error);
           setMensaje({ 
             tipo: 'danger', 
-            texto: error.response?.data?.message || 'Error al eliminar el producto' 
+            texto: error.response?.data?.message || error.response?.data?.error || 'Error al eliminar el producto' 
           });
         }
       }
     });
   };
 
-  // Confirmación en pantalla para cambiar estado individual
+  // Confirmación en pantalla para cambiar estado individual (UPDATE / TOGGLE)
   const solicitarCambioEstado = (producto) => {
     const nuevoEstado = !producto.activo;
     setModalConfirmacion({
@@ -368,36 +392,31 @@ const AdminProductosPage = () => {
       textoCancelar: 'Cancelar',
       onConfirm: async () => {
         try {
-          await api.put(`/admin/productos/${producto.id}`, {
-            nombre: producto.nombre,
-            descripcion: producto.descripcion,
-            precio: Number.parseFloat(producto.precio),
-            stock: Number.parseInt(producto.stock),
-            categoriaId: producto.categoriaId,
-            subcategoriaId: producto.subcategoriaId || null,
-            imagen: producto.imagen,
-            activo: nuevoEstado
-          });
+          const res = await api.patch(`/admin/productos/${producto.id}/toggle`);
+          const nuevoEstadoRes = res.data?.data?.producto?.activo ?? nuevoEstado;
           
           setProductos(prevProductos => 
             prevProductos.map(p => 
-              p.id === producto.id ? { ...p, activo: nuevoEstado } : p
+              p.id === producto.id ? { ...p, activo: nuevoEstadoRes } : p
             )
           );
           
           setMensaje({ 
             tipo: 'success', 
-            texto: `Producto "${producto.nombre}" ${nuevoEstado ? 'activado' : 'desactivado'} exitosamente` 
+            texto: res.data?.message || `Producto "${producto.nombre}" ${nuevoEstadoRes ? 'activado' : 'desactivado'} exitosamente` 
           });
         } catch (error) {
           console.error('Error al cambiar estado:', error);
-          setMensaje({ tipo: 'danger', texto: 'Error al cambiar el estado del producto' });
+          setMensaje({ 
+            tipo: 'danger', 
+            texto: error.response?.data?.message || 'Error al cambiar el estado del producto' 
+          });
         }
       }
     });
   };
 
-  // Confirmación en pantalla para eliminación masiva
+  // Confirmación en pantalla para eliminación masiva (DELETE)
   const solicitarEliminacionMasiva = () => {
     const count = seleccionados.size;
     if (count === 0) return;
@@ -413,13 +432,21 @@ const AdminProductosPage = () => {
       onConfirm: async () => {
         try {
           const ids = Array.from(seleccionados);
-          await Promise.allSettled(ids.map(id => api.delete(`/admin/productos/${id}`)));
-          setMensaje({ 
-            tipo: 'success', 
-            texto: `${count} producto${count !== 1 ? 's eliminados' : ' eliminado'} exitosamente` 
-          });
+          const idsSet = new Set(ids);
+          
+          // Eliminar de inmediato del estado local
+          setProductos(prev => prev.filter(p => !idsSet.has(p.id)));
           setSeleccionados(new Set());
-          loadData();
+          
+          const resultados = await Promise.allSettled(ids.map(id => api.delete(`/admin/productos/${id}`)));
+          const exitosos = resultados.filter(r => r.status === 'fulfilled').length;
+          
+          setMensaje({ 
+            tipo: exitosos > 0 ? 'success' : 'danger', 
+            texto: `${exitosos} producto${exitosos !== 1 ? 's eliminados' : ' eliminado'} exitosamente` 
+          });
+          
+          await loadData();
         } catch (error) {
           console.error('Error en eliminación masiva:', error);
           setMensaje({ tipo: 'danger', texto: 'Error al eliminar los productos seleccionados' });
@@ -428,7 +455,7 @@ const AdminProductosPage = () => {
     });
   };
 
-  // Confirmación en pantalla para cambio de estado masivo
+  // Confirmación en pantalla para cambio de estado masivo (UPDATE / TOGGLE)
   const solicitarCambioEstadoMasivo = () => {
     const count = seleccionados.size;
     if (count === 0) return;
@@ -447,32 +474,19 @@ const AdminProductosPage = () => {
       textoCancelar: 'Cancelar',
       onConfirm: async () => {
         try {
-          await Promise.allSettled(
-            productosSeleccionados.map(prod => 
-              api.put(`/admin/productos/${prod.id}`, {
-                nombre: prod.nombre,
-                descripcion: prod.descripcion,
-                precio: Number.parseFloat(prod.precio),
-                stock: Number.parseInt(prod.stock),
-                categoriaId: prod.categoriaId,
-                subcategoriaId: prod.subcategoriaId || null,
-                imagen: prod.imagen,
-                activo: nuevoEstado
-              })
-            )
+          const productosParaCambiar = productosSeleccionados.filter(p => p.activo !== nuevoEstado);
+          const resultados = await Promise.allSettled(
+            productosParaCambiar.map(prod => api.patch(`/admin/productos/${prod.id}/toggle`))
           );
           
-          setProductos(prevProductos => 
-            prevProductos.map(p => 
-              seleccionados.has(p.id) ? { ...p, activo: nuevoEstado } : p
-            )
-          );
+          const exitosos = resultados.filter(r => r.status === 'fulfilled').length;
           
           setMensaje({ 
-            tipo: 'success', 
-            texto: `${count} producto${count !== 1 ? 's actualizados' : ' actualizado'} a ${nuevoEstado ? 'Activo' : 'Inactivo'}` 
+            tipo: exitosos > 0 ? 'success' : 'danger', 
+            texto: `${exitosos} de ${productosParaCambiar.length || count} producto${count !== 1 ? 's actualizados' : ' actualizado'} a ${nuevoEstado ? 'Activo' : 'Inactivo'}` 
           });
           setSeleccionados(new Set());
+          loadData();
         } catch (error) {
           console.error('Error al actualizar estado masivo:', error);
           setMensaje({ tipo: 'danger', texto: 'Error al cambiar estado de los productos' });
@@ -896,64 +910,117 @@ const AdminProductosPage = () => {
         </Card.Footer>
       </Card>
 
-      {/* Modal para crear/editar producto */}
-      <Modal show={showModal} onHide={handleCloseModal} centered dialogClassName="modal-producto-form">
-        <Modal.Header closeButton>
-          <Modal.Title className="fw-bold text-navy">
-            {editando ? 'Editar Producto' : 'Nuevo Producto'}
-          </Modal.Title>
-        </Modal.Header>
+      {/* Modal para crear/editar producto (Diseño Minimalista) */}
+      <Modal 
+        show={showModal} 
+        onHide={handleCloseModal} 
+        centered 
+        dialogClassName="modal-producto-form"
+        backdrop="static"
+      >
+        <div className="product-minimal-header">
+          <div>
+            <h6 className="fw-bold mb-0 text-navy fs-6">
+              {editando ? 'Editar Producto' : 'Nuevo Producto'}
+            </h6>
+            <small className="text-muted" style={{ fontSize: '0.8rem' }}>
+              {editando ? `ID #${editando.id} — ${editando.nombre}` : 'Ingresa los datos para registrar el producto'}
+            </small>
+          </div>
+          <button 
+            type="button" 
+            className="btn-close" 
+            onClick={handleCloseModal}
+            aria-label="Cerrar"
+          />
+        </div>
+
         <Form onSubmit={handleSubmit}>
-          <Modal.Body>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Nombre <span className="text-danger">*</span></Form.Label>
+          <Modal.Body className="p-3 p-sm-4">
+            {/* Cabecera del formulario: Avatar de Imagen + Nombre del Producto */}
+            <div className="d-flex gap-3 align-items-center mb-3">
+              <div className="d-flex flex-column align-items-center">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="d-none"
+                  accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                  onChange={handleImagenChange}
+                />
+                <div 
+                  className={`product-minimal-avatar-box ${previewImagen ? 'has-img' : ''}`}
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Haz clic para seleccionar o cambiar imagen"
+                >
+                  {previewImagen ? (
+                    <>
+                      <img
+                        src={previewImagen}
+                        alt="Vista previa"
+                        onError={(e) => {
+                          e.target.src = '/producto-default.jpg';
+                        }}
+                      />
+                      <div className="product-minimal-avatar-overlay">
+                        <i className="bi bi-camera-fill fs-6 mb-1" />
+                        <span>Cambiar</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center text-muted">
+                      <i className="bi bi-camera text-secondary fs-4 d-block mb-0" />
+                      <span style={{ fontSize: '0.65rem' }} className="fw-semibold text-secondary">FOTO</span>
+                    </div>
+                  )}
+                </div>
+
+                {previewImagen ? (
+                  <button
+                    type="button"
+                    className="btn btn-link btn-sm p-0 text-danger text-decoration-none mt-1 d-flex align-items-center gap-1"
+                    style={{ fontSize: '0.72rem' }}
+                    onClick={handleQuitarImagen}
+                    title="Quitar imagen seleccionada"
+                  >
+                    <i className="bi bi-x-circle" /> Quitar
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-link btn-sm p-0 text-primary text-decoration-none mt-1"
+                    style={{ fontSize: '0.72rem' }}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Subir foto
+                  </button>
+                )}
+              </div>
+
+              <div className="flex-grow-1">
+                <Form.Group>
+                  <Form.Label className="small fw-semibold text-secondary mb-1">
+                    Nombre del Producto <span className="text-danger">*</span>
+                  </Form.Label>
                   <Form.Control
                     type="text"
                     name="nombre"
                     value={formData.nombre}
                     onChange={handleChange}
                     required
-                    placeholder="Nombre del producto"
+                    placeholder="Ej: Camiseta Oversize, Zapatillas..."
+                    className="product-minimal-input"
                   />
                 </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Precio <span className="text-danger">*</span></Form.Label>
-                  <Form.Control
-                    type="number"
-                    name="precio"
-                    value={formData.precio}
-                    onChange={handleChange}
-                    required
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
+              </div>
+            </div>
 
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Stock <span className="text-danger">*</span></Form.Label>
-                  <Form.Control
-                    type="number"
-                    name="stock"
-                    value={formData.stock}
-                    onChange={handleChange}
-                    required
-                    min="0"
-                    placeholder="Cantidad disponible"
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Categoría <span className="text-danger">*</span></Form.Label>
+            {/* Categoría y Subcategoría */}
+            <Row className="g-3 mb-3">
+              <Col sm={6}>
+                <Form.Group>
+                  <Form.Label className="small fw-semibold text-secondary mb-1">
+                    Categoría <span className="text-danger">*</span>
+                  </Form.Label>
                   <Form.Select
                     name="categoriaId"
                     value={formData.categoriaId}
@@ -962,27 +1029,36 @@ const AdminProductosPage = () => {
                       setFormData(prev => ({ ...prev, subcategoriaId: '' }));
                     }}
                     required
+                    className="product-minimal-input"
                   >
-                    <option value="">Selecciona una categoría</option>
+                    <option value="">Selecciona categoría...</option>
                     {categorias.filter(c => c.activo).map((cat) => (
                       <option key={cat.id} value={cat.id}>{cat.nombre}</option>
                     ))}
                   </Form.Select>
                 </Form.Group>
               </Col>
-            </Row>
 
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Subcategoría</Form.Label>
+              <Col sm={6}>
+                <Form.Group>
+                  <Form.Label className="small fw-semibold text-secondary mb-1">
+                    Subcategoría {!editando && <span className="text-danger">*</span>}
+                  </Form.Label>
                   <Form.Select
                     name="subcategoriaId"
                     value={formData.subcategoriaId}
                     onChange={handleChange}
                     disabled={!formData.categoriaId || subcategoriasFiltradas.length === 0}
+                    required={!editando}
+                    className="product-minimal-input"
                   >
-                    <option value="">Sin subcategoría</option>
+                    <option value="">
+                      {!formData.categoriaId 
+                        ? 'Elige categoría primero' 
+                        : subcategoriasFiltradas.length === 0 
+                          ? 'Sin subcategorías' 
+                          : 'Selecciona subcategoría...'}
+                    </option>
                     {subcategoriasFiltradas
                       .filter(s => s.activo)
                       .map((sub) => (
@@ -992,63 +1068,100 @@ const AdminProductosPage = () => {
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Imagen del producto</Form.Label>
+            </Row>
+
+            {/* Precio y Stock */}
+            <Row className="g-3 mb-3">
+              <Col sm={6}>
+                <Form.Group>
+                  <Form.Label className="small fw-semibold text-secondary mb-1">
+                    Precio ($) <span className="text-danger">*</span>
+                  </Form.Label>
+                  <InputGroup>
+                    <InputGroup.Text className="bg-light border-end-0 text-muted" style={{ borderRadius: '8px 0 0 8px', fontSize: '0.9rem' }}>
+                      $
+                    </InputGroup.Text>
+                    <Form.Control
+                      type="number"
+                      name="precio"
+                      value={formData.precio}
+                      onChange={handleChange}
+                      required
+                      min="0.01"
+                      step="0.01"
+                      placeholder="0.00"
+                      className="product-minimal-input border-start-0"
+                      style={{ borderRadius: '0 8px 8px 0' }}
+                    />
+                  </InputGroup>
+                </Form.Group>
+              </Col>
+
+              <Col sm={6}>
+                <Form.Group>
+                  <Form.Label className="small fw-semibold text-secondary mb-1">
+                    Stock Disponible <span className="text-danger">*</span>
+                  </Form.Label>
                   <Form.Control
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/gif"
-                    onChange={handleImagenChange}
+                    type="number"
+                    name="stock"
+                    value={formData.stock}
+                    onChange={handleChange}
+                    required
+                    min="0"
+                    placeholder="0"
+                    className="product-minimal-input"
                   />
-                  {previewImagen && (
-                    <div className="mt-3 border rounded p-2 bg-light text-center">
-                      <img
-                        src={previewImagen}
-                        alt="Vista previa del producto"
-                        style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '0.75rem' }}
-                        onError={(e) => {
-                          e.target.src = '/producto-default.jpg';
-                        }}
-                      />
-                    </div>
-                  )}
-                  <Form.Text className="text-muted">
-                    Si no eliges una nueva imagen, se mantendrá la actual.
-                  </Form.Text>
                 </Form.Group>
               </Col>
             </Row>
 
+            {/* Descripción */}
             <Form.Group className="mb-3">
-              <Form.Label>Descripción</Form.Label>
+              <Form.Label className="small fw-semibold text-secondary mb-1">
+                Descripción
+              </Form.Label>
               <Form.Control
                 as="textarea"
-                rows={3}
+                rows={2}
                 name="descripcion"
                 value={formData.descripcion}
                 onChange={handleChange}
-                placeholder="Descripción del producto (opcional)"
+                placeholder="Detalles sobre características o materiales (opcional)..."
+                className="product-minimal-input"
               />
             </Form.Group>
 
-            <Form.Group className="mb-3">
+            {/* Estado Activo */}
+            <div className="pt-1">
               <Form.Check
-                type="checkbox"
-                name="activo"
-                label="Producto activo"
+                type="switch"
+                id="minimal-switch-activo"
+                label="Producto activo (visible en catálogo para clientes)"
                 checked={formData.activo}
                 onChange={handleChange}
+                name="activo"
+                className="small text-secondary fw-medium"
               />
-            </Form.Group>
+            </div>
           </Modal.Body>
-          <Modal.Footer>
-            <Button variant="outline-secondary" onClick={handleCloseModal}>
+
+          <div className="product-minimal-footer">
+            <button 
+              type="button"
+              onClick={handleCloseModal}
+              className="btn-minimal-cancel"
+            >
               Cancelar
-            </Button>
-            <Button variant="primary" type="submit">
-              {editando ? 'Actualizar' : 'Crear'}
-            </Button>
-          </Modal.Footer>
+            </button>
+            <button 
+              type="submit"
+              className="btn-minimal-submit"
+            >
+              <i className={`bi bi-${editando ? 'check2' : 'plus-lg'}`} />
+              {editando ? 'Actualizar Producto' : 'Guardar Producto'}
+            </button>
+          </div>
         </Form>
       </Modal>
 

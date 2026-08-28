@@ -477,29 +477,52 @@ const eliminarProducto = async (req, res) => {
         message: 'Producto no encontrado'
       });
     }
+
+    // Limpiar todas las dependencias relacionadas para permitir la eliminación real
+    try {
+      const DetallePedido = require('../models/DetallePedido');
+      await DetallePedido.destroy({ where: { productoId: id } });
+    } catch (e) {
+      console.warn('Advertencia al limpiar DetallePedido:', e.message);
+    }
+
+    try {
+      const Carrito = require('../models/Carrito');
+      await Carrito.destroy({ where: { productoId: id } });
+    } catch (e) {
+      console.warn('Advertencia al limpiar Carrito:', e.message);
+    }
+
+    try {
+      const Comentario = require('../models/Comentario');
+      await Comentario.destroy({ where: { productoId: id } });
+    } catch (e) {
+      console.warn('Advertencia al limpiar Comentario:', e.message);
+    }
     
     // Si tiene imagen almacenada en disco, eliminarla
-    if (producto.imagen && typeof producto.imagen === 'string' && !producto.imagen.startsWith('data:')) {
+    if (producto.imagen && typeof producto.imagen === 'string' && !producto.imagen.startsWith('data:') && !producto.imagen.startsWith('http')) {
       const rutaImagen = path.join(__dirname, '../uploads', producto.imagen);
       try {
-        await fs.promises.unlink(rutaImagen);
+        await fs.unlink(rutaImagen);
       } catch (err) {
         // Ignorar si el archivo no existe
       }
     }
 
+    // Eliminar definitivamente el producto de la base de datos
     await producto.destroy();
     
     res.json({
       success: true,
-      message: 'Producto eliminado exitosamente'
+      message: 'Producto eliminado exitosamente de la base de datos'
     });
     
   } catch (error) {
     console.error('Error en eliminarProducto:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al eliminar producto',
+      message: error.message || 'Error al eliminar producto',
       error: error.message
     });
   }
