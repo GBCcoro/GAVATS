@@ -94,6 +94,7 @@ const AdminProductosPage = () => {
   });
   
   const fileInputRef = useRef(null);
+  const [modalPreviewFoto, setModalPreviewFoto] = useState(false);
   
   // Productos filtrados
   const productosFiltrados = useMemo(() => {
@@ -939,7 +940,7 @@ const AdminProductosPage = () => {
           <Modal.Body className="p-3 p-sm-4">
             {/* Cabecera del formulario: Avatar de Imagen + Nombre del Producto */}
             <div className="d-flex gap-3 align-items-center mb-3">
-              <div className="d-flex flex-column align-items-center">
+              <div className="position-relative d-inline-block flex-shrink-0">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -947,10 +948,18 @@ const AdminProductosPage = () => {
                   accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
                   onChange={handleImagenChange}
                 />
+                
+                {/* Avatar / Imagen */}
                 <div 
                   className={`product-minimal-avatar-box ${previewImagen ? 'has-img' : ''}`}
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Haz clic para seleccionar o cambiar imagen"
+                  onClick={() => {
+                    if (previewImagen) {
+                      setModalPreviewFoto(true);
+                    } else {
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                  title={previewImagen ? "Haz clic para ver, cambiar o eliminar la foto" : "Haz clic para seleccionar una foto"}
                 >
                   {previewImagen ? (
                     <>
@@ -962,8 +971,8 @@ const AdminProductosPage = () => {
                         }}
                       />
                       <div className="product-minimal-avatar-overlay">
-                        <i className="bi bi-camera-fill fs-6 mb-1" />
-                        <span>Cambiar</span>
+                        <i className="bi bi-eye-fill fs-5 mb-0" />
+                        <span style={{ fontSize: '0.62rem' }}>VER</span>
                       </div>
                     </>
                   ) : (
@@ -974,24 +983,18 @@ const AdminProductosPage = () => {
                   )}
                 </div>
 
-                {previewImagen ? (
+                {/* Botón flotante de eliminar foto en icono */}
+                {previewImagen && (
                   <button
                     type="button"
-                    className="btn btn-link btn-sm p-0 text-danger text-decoration-none mt-1 d-flex align-items-center gap-1"
-                    style={{ fontSize: '0.72rem' }}
-                    onClick={handleQuitarImagen}
-                    title="Quitar imagen seleccionada"
+                    className="btn-trash-avatar"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleQuitarImagen(e);
+                    }}
+                    title="Eliminar foto"
                   >
-                    <i className="bi bi-x-circle" /> Quitar
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn-link btn-sm p-0 text-primary text-decoration-none mt-1"
-                    style={{ fontSize: '0.72rem' }}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    Subir foto
+                    <i className="bi bi-trash3-fill" />
                   </button>
                 )}
               </div>
@@ -1163,6 +1166,63 @@ const AdminProductosPage = () => {
             </button>
           </div>
         </Form>
+      </Modal>
+
+      {/* Modal para Visualizar / Cambiar / Eliminar Foto */}
+      <Modal
+        show={modalPreviewFoto}
+        onHide={() => setModalPreviewFoto(false)}
+        centered
+        dialogClassName="modal-preview-foto-dialog"
+      >
+        <div className="modal-preview-foto-header">
+          <div className="fw-semibold text-navy small d-flex align-items-center gap-2">
+            <i className="bi bi-image text-primary" /> Vista Previa de Imagen
+          </div>
+          <button 
+            type="button" 
+            className="btn-close" 
+            onClick={() => setModalPreviewFoto(false)}
+            aria-label="Cerrar"
+          />
+        </div>
+        <Modal.Body className="p-3 p-md-4 text-center bg-light">
+          <div className="modal-preview-foto-wrapper mb-3">
+            <img
+              src={previewImagen}
+              alt="Vista detallada del producto"
+              className="img-fluid rounded"
+              style={{ maxHeight: '440px', objectFit: 'contain', width: '100%' }}
+              onError={(e) => { e.target.src = '/producto-default.jpg'; }}
+            />
+          </div>
+          <div className="d-flex justify-content-center gap-2">
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              className="d-flex align-items-center gap-1 px-3 py-1"
+              style={{ borderRadius: '8px', fontSize: '0.85rem' }}
+              onClick={() => {
+                setModalPreviewFoto(false);
+                setTimeout(() => fileInputRef.current?.click(), 150);
+              }}
+            >
+              <i className="bi bi-arrow-repeat" /> Cambiar foto
+            </Button>
+            <Button
+              variant="outline-danger"
+              size="sm"
+              className="d-flex align-items-center gap-1 px-3 py-1"
+              style={{ borderRadius: '8px', fontSize: '0.85rem' }}
+              onClick={(e) => {
+                handleQuitarImagen(e);
+                setModalPreviewFoto(false);
+              }}
+            >
+              <i className="bi bi-trash3" /> Eliminar foto
+            </Button>
+          </div>
+        </Modal.Body>
       </Modal>
 
       {/* Modal de Confirmación Compacto con estilo Dashboard */}
