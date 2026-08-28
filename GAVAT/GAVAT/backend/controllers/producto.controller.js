@@ -421,17 +421,30 @@ const toggleProducto = async (req, res) => {
     // Si se va a activar, verificar que la categoría y subcategoría estén activas
     if (!producto.activo) {
       const categoria = await Categoria.findByPk(producto.categoriaId);
-      if (!categoria || !categoria.activo) {
+      if (!categoria) {
         return res.status(400).json({
           success: false,
-          message: `No se puede activar el producto porque la categoría "${categoria ? categoria.nombre : producto.categoriaId}" está inactiva`
+          message: `No se puede activar el producto porque la categoría con ID ${producto.categoriaId} no existe`
         });
       }
-      const subcategoria = await Subcategoria.findByPk(producto.subcategoriaId);
-      if (!subcategoria || !subcategoria.activo) {
+      if (!categoria.activo) {
         return res.status(400).json({
           success: false,
-          message: `No se puede activar el producto porque la subcategoría "${subcategoria ? subcategoria.nombre : producto.subcategoriaId}" está inactiva`
+          message: `No se puede activar el producto porque la categoría "${categoria.nombre}" está inactiva`
+        });
+      }
+      
+      const subcategoria = await Subcategoria.findByPk(producto.subcategoriaId);
+      if (!subcategoria) {
+        return res.status(400).json({
+          success: false,
+          message: `No se puede activar el producto porque la subcategoría con ID ${producto.subcategoriaId} no existe`
+        });
+      }
+      if (!subcategoria.activo) {
+        return res.status(400).json({
+          success: false,
+          message: `No se puede activar el producto porque la subcategoría "${subcategoria.nombre}" está inactiva`
         });
       }
     }

@@ -216,10 +216,7 @@ const AdminSubcategoriasPage = () => {
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h1>
-            <i className="bi bi-folder2 me-2"></i>{' '}
-            Gestión de Subcategorías
-          </h1>
+          <h1><span className="bi bi-folder2 me-2" aria-hidden="true"></span> Gestión de Subcategorías</h1>
           <p className="text-muted mb-0">Administra las subcategorías de productos</p>
         </div>
         <div>
@@ -234,8 +231,7 @@ const AdminSubcategoriasPage = () => {
                 }
               }}
             >
-              <i className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`}></i>
-              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span> Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
             </Button>
             <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" />
             <Dropdown.Menu>
@@ -245,8 +241,7 @@ const AdminSubcategoriasPage = () => {
                   exportarSubcategoriasAPDF(subcategoriasFiltradas, categorias);
                 }}
               >
-                <i className="bi bi-file-earmark-pdf me-2"></i>{' '}
-                Exportar a PDF
+                <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
               </Dropdown.Item>
               <Dropdown.Item 
                 onClick={async () => {
@@ -254,8 +249,7 @@ const AdminSubcategoriasPage = () => {
                   await exportarSubcategoriasAExcel(subcategoriasFiltradas, categorias);
                 }}
               >
-                <i className="bi bi-file-earmark-excel me-2"></i>{' '}
-                Exportar a Excel
+                <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
@@ -295,17 +289,14 @@ const AdminSubcategoriasPage = () => {
       {/* Sección de filtros */}
       <Card className="mb-3">
         <Card.Header className="bg-light">
-          <h5 className="mb-0">
-            <i className="bi bi-funnel me-2"></i>{' '}
-            Filtros
-          </h5>
+          <h5 className="mb-0"><span className="bi bi-funnel me-2" aria-hidden="true"></span> Filtros</h5>
         </Card.Header>
         <Card.Body>
           <Row className="g-3 mb-3">
             <Col md={3}>
               <InputGroup>
                 <InputGroup.Text>
-                  <i className="bi bi-search"></i>
+                  <span className="bi bi-search" aria-hidden="true"></span>
                 </InputGroup.Text>
                 <Form.Control
                   type="text"
@@ -344,16 +335,14 @@ const AdminSubcategoriasPage = () => {
                 className="btn btn-dark btn-sm w-100"
                 onClick={() => setFiltros({ busqueda: '', categoriaId: 'todas', estado: 'todos' })}
               >
-                <i className="bi bi-x-circle me-1"></i>
-                {' '}Limpiar
+                <span className="bi bi-x-circle me-1" aria-hidden="true"></span> Limpiar
               </button>
             </Col>
           </Row>
           <Row>
             <Col>
               <div className="text-muted small">
-                <i className="bi bi-info-circle me-1"></i>
-                Mostrando {subcategoriasFiltradas.length} de {subcategorias.length} subcategorías
+                <span className="bi bi-info-circle me-1" aria-hidden="true"></span> Mostrando {subcategoriasFiltradas.length} de {subcategorias.length} subcategorías
               </div>
             </Col>
           </Row>
@@ -446,8 +435,7 @@ const AdminSubcategoriasPage = () => {
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <small className="text-muted">
-                  <i className="bi bi-file-text me-1"></i>{' '}
-                  Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> - Mostrando <strong>{subcategoriasPaginadas.length}</strong> de <strong>{subcategoriasFiltradas.length}</strong> registros
+                  <span className="bi bi-file-text me-1" aria-hidden="true"></span> Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> - Mostrando <strong>{subcategoriasPaginadas.length}</strong> de <strong>{subcategoriasFiltradas.length}</strong> registros
                 </small>
               </div>
               <div className="btn-group">
@@ -458,7 +446,7 @@ const AdminSubcategoriasPage = () => {
                   disabled={paginaActual === 1}
                   title="Primera página"
                 >
-                  <i className="bi bi-chevron-bar-left"></i>
+                  <span className="bi bi-chevron-bar-left" aria-hidden="true"></span>
                 </Button>
                 <Button
                   variant="outline-primary"
@@ -488,7 +476,7 @@ const AdminSubcategoriasPage = () => {
                   disabled={paginaActual === totalPaginas}
                   title="Última página"
                 >
-                  <i className="bi bi-chevron-bar-right"></i>
+                  <span className="bi bi-chevron-bar-right" aria-hidden="true"></span>
                 </Button>
               </div>
             </div>

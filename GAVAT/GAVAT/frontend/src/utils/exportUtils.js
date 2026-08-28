@@ -288,8 +288,8 @@ export const exportarUsuariosAPDF = (usuarios) => {
 export const exportarPedidosAPDF = (pedidos) => {
   const tableData = pedidos.map(ped => [
     `#${ped.id}`,
-    ped.Usuario?.nombre || '-',
-    ped.Usuario?.email || '-',
+    ped.usuario?.nombre || ped.Usuario?.nombre || '-',
+    ped.usuario?.email || ped.Usuario?.email || '-',
     `$${Number(ped.total).toLocaleString('es-CO')}`,
     ped.estado,
     new Date(ped.createdAt).toLocaleDateString('es-CO'),
@@ -705,7 +705,7 @@ export const exportarFacturasAPDF = (facturas) => {
     margin: { top: 10 }
   });
 
-  const finalY = doc.lastAutoTable.finalY + 10;
+  const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : startY + 10;
   doc.setFontSize(11);
   doc.text(`Total de facturas: ${facturas.length}`, 14, finalY);
   doc.text(`Emitidas: ${facturas.filter(f => f.estado === 'emitida').length}`, 14, finalY + 7);
@@ -834,7 +834,7 @@ export const exportarComentariosAPDF = (comentarios) => {
     margin: { top: 10 }
   });
 
-  const finalY = doc.lastAutoTable.finalY + 10;
+  const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : startY + 10;
   doc.setFontSize(11);
   doc.text(`Total de comentarios: ${comentarios.length}`, 14, finalY);
   doc.text(`Visibles: ${comentarios.filter(c => c.estado === true).length}`, 14, finalY + 7);
@@ -1008,8 +1008,8 @@ export const exportarPedidosAExcel = async (pedidos) => {
     const row = worksheet.getRow(rowIndex);
     row.values = [
       ped.id,
-      ped.Usuario?.nombre || '',
-      ped.Usuario?.email || '',
+      ped.usuario?.nombre || ped.Usuario?.nombre || '',
+      ped.usuario?.email || ped.Usuario?.email || '',
       ped.telefono,
       Number(ped.total),
       ped.estado,

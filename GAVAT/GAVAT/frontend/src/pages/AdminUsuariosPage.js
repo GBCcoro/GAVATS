@@ -44,6 +44,12 @@ function AdminUsuariosPage() {
   const [paginaActual, setPaginaActual] = useState(1);
   const registrosPorPagina = 25;
 
+  const getRolBadgeVariant = (rol) => {
+    if (rol === 'administrador') return 'danger';
+    if (rol === 'auxiliar') return 'warning';
+    return 'info';
+  };
+
   const cargarUsuarios = useCallback(async () => {
     setLoading(true);
     try {
@@ -178,10 +184,7 @@ function AdminUsuariosPage() {
       {/* Header Toolbar */}
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-          <h1 className="h2 mb-1 fw-bold text-navy">
-            <i className="bi bi-people-fill me-2 text-gold" />
-            Gestión de Usuarios
-          </h1>
+          <h1 className="h2 mb-1 fw-bold text-navy"><span className="bi bi-people-fill me-2 text-gold" aria-hidden="true"></span> Gestión de Usuarios</h1>
           <p className="text-muted mb-0">
             Total: {usuariosFiltrados.length} de {usuarios.length} usuario{usuarios.length !== 1 ? 's' : ''}
           </p>
@@ -195,8 +198,7 @@ function AdminUsuariosPage() {
                 exportarUsuariosAPDF(usuariosFiltrados);
               }}
             >
-              <i className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} />
-              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span> Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
             </Button>
             <Dropdown.Toggle split variant="primary" />
             <Dropdown.Menu>
@@ -204,21 +206,21 @@ function AdminUsuariosPage() {
                 setTipoExportacion('pdf');
                 exportarUsuariosAPDF(usuariosFiltrados);
               }}>
-                <i className="bi bi-file-earmark-pdf me-2" /> Exportar a PDF
+                <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
               </Dropdown.Item>
               <Dropdown.Item onClick={async () => {
                 setTipoExportacion('excel');
                 await exportarUsuariosAExcel(usuariosFiltrados);
               }}>
-                <i className="bi bi-file-earmark-excel me-2" /> Exportar a Excel
+                <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
           <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-            <i className="bi bi-arrow-left me-1" /> Volver
+            <span className="bi bi-arrow-left me-1" aria-hidden="true"></span> Volver
           </Button>
           <Button variant="primary" onClick={() => handleShowModal()}>
-            <i className="bi bi-plus-circle me-1" /> Nuevo Usuario
+            <span className="bi bi-plus-circle me-1" aria-hidden="true"></span> Nuevo Usuario
           </Button>
         </div>
       </div>
@@ -249,7 +251,7 @@ function AdminUsuariosPage() {
       <Card className="shadow-sm border-0 mb-4 admin-card-table">
         <Card.Body className="p-3 p-md-4">
           <h6 className="fw-bold mb-3 d-flex align-items-center gap-2 text-navy">
-            <i className="bi bi-funnel text-gold" /> Filtros de Búsqueda
+            <span className="bi bi-funnel text-gold" aria-hidden="true"></span> Filtros de Búsqueda
           </h6>
           <Row className="g-3 align-items-end">
             <Col md={5}>
@@ -257,7 +259,7 @@ function AdminUsuariosPage() {
                 <Form.Label className="small fw-semibold mb-1">Buscar Usuario</Form.Label>
                 <InputGroup>
                   <InputGroup.Text className="bg-light">
-                    <i className="bi bi-search" />
+                    <span className="bi bi-search" aria-hidden="true"></span>
                   </InputGroup.Text>
                   <Form.Control
                     placeholder="Buscar por nombre o email..."
@@ -300,7 +302,7 @@ function AdminUsuariosPage() {
                 className="w-100"
                 onClick={() => setFiltros({ busqueda: '', rol: 'todos', estado: 'todos' })}
               >
-                <i className="bi bi-arrow-clockwise me-1" /> Limpiar
+                <span className="bi bi-arrow-clockwise me-1" aria-hidden="true"></span> Limpiar
               </Button>
             </Col>
           </Row>
@@ -340,7 +342,7 @@ function AdminUsuariosPage() {
                     <td className="align-middle">{usuario.email}</td>
                     <td className="align-middle d-none d-lg-table-cell">{usuario.telefono || '-'}</td>
                     <td className="align-middle">
-                      <Badge bg={usuario.rol === 'administrador' ? 'danger' : usuario.rol === 'auxiliar' ? 'warning' : 'info'}>
+                      <Badge bg={getRolBadgeVariant(usuario.rol)}>
                         {usuario.rol}
                       </Badge>
                     </td>

@@ -43,3 +43,22 @@ Thumbs.db
 *~
 *.tmp
 *.temp
+
+# Archivos comprimidos
+*.rar
+*.zip
+*.7z
+*.tar.gz
+
+# Archivos generados y subidas de la app
+**/facturas/*
+**/uploads/*
+!**/uploads/.gitkeep
+
+# Salidas y resultados de pruebas locales
+**/test-output*.txt
+**/test-result*.txt
+
+# Caché y configuración del agente de IA
+.gemini/
+.agents/

@@ -15,6 +15,12 @@ import SvgIcon from '../../components/SvgIcon';
 
 const AdminDashboardPage = () => {
   const { user, isAdmin, isAuxiliar } = useAuth();
+  let rolText = 'Personal';
+  if (isAdmin) {
+    rolText = 'Administrador';
+  } else if (isAuxiliar) {
+    rolText = 'Auxiliar';
+  }
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -59,23 +65,14 @@ const AdminDashboardPage = () => {
       const [categorias, subcategorias, productos, usuarios, pedidos, facturas, comentarios] = results;
 
       const getArray = (data) => {
+        if (!data) return [];
         if (Array.isArray(data)) return data;
-        if (data?.data?.categorias) return data.data.categorias;
-        if (data?.categorias) return data.categorias;
-        if (data?.data?.subcategorias) return data.data.subcategorias;
-        if (data?.subcategorias) return data.subcategorias;
-        if (data?.data?.productos) return data.data.productos;
-        if (data?.productos) return data.productos;
-        if (data?.data?.usuarios) return data.data.usuarios;
-        if (data?.usuarios) return data.usuarios;
-        if (data?.data?.pedidos) return data.data.pedidos;
-        if (data?.pedidos) return data.pedidos;
-        if (data?.data?.facturas) return data.data.facturas;
-        if (data?.facturas) return data.facturas;
-        if (data?.data?.comentarios) return data.data.comentarios;
-        if (data?.comentarios) return data.comentarios;
-        if (Array.isArray(data?.data)) return data.data;
-        return [];
+        if (Array.isArray(data.data)) return data.data;
+
+        const target = data.data || data;
+        const keys = ['categorias', 'subcategorias', 'productos', 'usuarios', 'pedidos', 'facturas', 'comentarios'];
+        const foundKey = Object.keys(target || {}).find(k => keys.includes(k) && Array.isArray(target[k]));
+        return foundKey ? target[foundKey] : [];
       };
 
       const categoriasData = getArray(extractData(categorias));
@@ -242,10 +239,7 @@ const AdminDashboardPage = () => {
         <Row className="align-items-center g-3">
           <Col md={8}>
             <div className="d-flex align-items-center gap-2 mb-2">
-              <Badge className="badge-admin-role px-3 py-1">
-                <i className="bi bi-shield-check me-1" />
-                {isAdmin ? 'Administrador' : isAuxiliar ? 'Auxiliar' : 'Personal'}
-              </Badge>
+              <Badge className="badge-admin-role px-3 py-1"><span className="bi bi-shield-check me-1" aria-hidden="true"></span> {rolText}</Badge>
               <span className="text-white-50 small">
                 • Sesión iniciada como <strong>{user?.nombre || user?.email}</strong>
               </span>
@@ -271,8 +265,7 @@ const AdminDashboardPage = () => {
                 </>
               ) : (
                 <>
-                  <i className="bi bi-arrow-clockwise me-2" />
-                  Actualizar Métricas
+                  <span className="bi bi-arrow-clockwise me-2" aria-hidden="true"></span> Actualizar Métricas
                 </>
               )}
             </Button>
@@ -285,10 +278,7 @@ const AdminDashboardPage = () => {
 
       {/* Grid de Métricas Principales */}
       <div className="section-title-wrap mb-3 d-flex align-items-center justify-content-between">
-        <h5 className="section-heading mb-0">
-          <i className="bi bi-bar-chart-fill me-2 text-gold" />
-          Resumen General del Sistema
-        </h5>
+        <h5 className="section-heading mb-0"><span className="bi bi-bar-chart-fill me-2 text-gold" aria-hidden="true"></span> Resumen General del Sistema</h5>
         <span className="text-muted small">Haz clic en cualquier tarjeta para gestionar</span>
       </div>
 
@@ -324,7 +314,7 @@ const AdminDashboardPage = () => {
                   <div className="d-flex align-items-baseline justify-content-between mt-auto">
                     <span className="stat-card-number">{card.value}</span>
                     <span className="stat-card-link-hint">
-                      Gestionar <i className="bi bi-chevron-right ms-1 small" />
+                      Gestionar <span className="bi bi-chevron-right ms-1 small" aria-hidden="true"></span>
                     </span>
                   </div>
                 </Card.Body>
@@ -394,7 +384,7 @@ const AdminDashboardPage = () => {
               <div className="system-info-list d-flex flex-column gap-3">
                 <div className="info-item d-flex align-items-center justify-content-between p-2 rounded">
                   <div className="d-flex align-items-center gap-2">
-                    <i className="bi bi-check-circle-fill text-success fs-5" />
+                    <span className="bi bi-check-circle-fill text-success fs-5" aria-hidden="true"></span>
                     <div>
                       <strong className="d-block small">Servidor Backend</strong>
                       <span className="text-muted extra-small">Express HTTP Engine</span>
@@ -405,7 +395,7 @@ const AdminDashboardPage = () => {
 
                 <div className="info-item d-flex align-items-center justify-content-between p-2 rounded">
                   <div className="d-flex align-items-center gap-2">
-                    <i className="bi bi-database-fill-check text-primary fs-5" />
+                    <span className="bi bi-database-fill-check text-primary fs-5" aria-hidden="true"></span>
                     <div>
                       <strong className="d-block small">Base de Datos</strong>
                       <span className="text-muted extra-small">MySQL Relational DB</span>
@@ -416,7 +406,7 @@ const AdminDashboardPage = () => {
 
                 <div className="info-item d-flex align-items-center justify-content-between p-2 rounded">
                   <div className="d-flex align-items-center gap-2">
-                    <i className="bi bi-person-badge-fill text-warning fs-5" />
+                    <span className="bi bi-person-badge-fill text-warning fs-5" aria-hidden="true"></span>
                     <div>
                       <strong className="d-block small">Rol Autenticado</strong>
                       <span className="text-muted extra-small">{user?.email}</span>
@@ -429,7 +419,7 @@ const AdminDashboardPage = () => {
 
                 <div className="info-item d-flex align-items-center justify-content-between p-2 rounded">
                   <div className="d-flex align-items-center gap-2">
-                    <i className="bi bi-hdd-network-fill text-info fs-5" />
+                    <span className="bi bi-hdd-network-fill text-info fs-5" aria-hidden="true"></span>
                     <div>
                       <strong className="d-block small">Entorno</strong>
                       <span className="text-muted extra-small">Plataforma GAVAT v1.0</span>

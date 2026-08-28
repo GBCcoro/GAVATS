@@ -168,10 +168,7 @@ const AdminFacturasPage = () => {
       {/* Header Toolbar */}
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-          <h1 className="h2 mb-1 fw-bold text-navy">
-            <i className="bi bi-file-earmark-pdf me-2 text-gold" />
-            Gestión de Facturas
-          </h1>
+          <h1 className="h2 mb-1 fw-bold text-navy"><span className="bi bi-file-earmark-pdf me-2 text-gold" aria-hidden="true"></span> Gestión de Facturas</h1>
           <p className="text-muted mb-0">
             Total: {facturasFiltradas.length} de {facturas.length} factura{facturas.length !== 1 ? 's' : ''}
           </p>
@@ -185,8 +182,7 @@ const AdminFacturasPage = () => {
                 exportarFacturasAPDF(facturasFiltradas);
               }}
             >
-              <i className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} />
-              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span> Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
             </Button>
             <Dropdown.Toggle split variant="primary" />
             <Dropdown.Menu>
@@ -194,18 +190,18 @@ const AdminFacturasPage = () => {
                 setTipoExportacion('pdf');
                 exportarFacturasAPDF(facturasFiltradas);
               }}>
-                <i className="bi bi-file-earmark-pdf me-2" /> Exportar a PDF
+                <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
               </Dropdown.Item>
               <Dropdown.Item onClick={async () => {
                 setTipoExportacion('excel');
                 await exportarFacturasAExcel(facturasFiltradas);
               }}>
-                <i className="bi bi-file-earmark-excel me-2" /> Exportar a Excel
+                <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
           <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-            <i className="bi bi-arrow-left me-1" /> Volver
+            <span className="bi bi-arrow-left me-1" aria-hidden="true"></span> Volver
           </Button>
         </div>
       </div>
@@ -236,7 +232,7 @@ const AdminFacturasPage = () => {
       <Card className="shadow-sm border-0 mb-4 admin-card-table">
         <Card.Body className="p-3 p-md-4">
           <h6 className="fw-bold mb-3 d-flex align-items-center gap-2 text-navy">
-            <i className="bi bi-funnel text-gold" /> Filtros de Búsqueda
+            <span className="bi bi-funnel text-gold" aria-hidden="true"></span> Filtros de Búsqueda
           </h6>
           <Row className="g-3 align-items-end">
             <Col md={6}>
@@ -244,7 +240,7 @@ const AdminFacturasPage = () => {
                 <Form.Label className="small fw-semibold mb-1">Buscar Factura</Form.Label>
                 <InputGroup>
                   <InputGroup.Text className="bg-light">
-                    <i className="bi bi-search" />
+                    <span className="bi bi-search" aria-hidden="true"></span>
                   </InputGroup.Text>
                   <Form.Control
                     placeholder="Buscar por número, cliente o email..."
@@ -276,7 +272,7 @@ const AdminFacturasPage = () => {
                 className="w-100"
                 onClick={() => setFiltros({ busqueda: '', estado: 'todos' })}
               >
-                <i className="bi bi-arrow-clockwise me-1" /> Limpiar filtros
+                <span className="bi bi-arrow-clockwise me-1" aria-hidden="true"></span> Limpiar filtros
               </Button>
             </Col>
           </Row>
@@ -488,14 +484,14 @@ const AdminFacturasPage = () => {
                 variant="success" 
                 onClick={() => handleDescargarPDF(facturaSeleccionada.numeroFactura || facturaSeleccionada.numero_factura)}
               >
-                <i className="bi bi-download me-1" /> Descargar PDF
+                <span className="bi bi-download me-1" aria-hidden="true"></span> Descargar PDF
               </Button>
               {facturaSeleccionada.estado !== 'anulada' && (
                 <Button 
                   variant="danger" 
                   onClick={() => handleAnularFactura(facturaSeleccionada.id)}
                 >
-                  <i className="bi bi-x-circle me-1" /> Anular
+                  <span className="bi bi-x-circle me-1" aria-hidden="true"></span> Anular
                 </Button>
               )}
             </>

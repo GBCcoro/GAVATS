@@ -32,7 +32,7 @@ const AdminComentariosPage = () => {
   
   // Paginación
   const [paginaActual, setPaginaActual] = useState(1);
-  const registrosPorPagina = 20;
+  const registrosPorPagina = 25;
 
   const normalizarComentario = (comentario) => ({
     ...comentario,
@@ -143,7 +143,7 @@ const AdminComentariosPage = () => {
     const estrellas = [];
     for (let i = 1; i <= 5; i++) {
       estrellas.push(
-        <i key={i} className={`bi bi-star${i <= calificacion ? '-fill' : ''}`} style={{ color: '#FFD700' }} />
+        <span key={i} className={`bi bi-star${i <= calificacion ? '-fill' : ''}`} style={{ color: '#FFD700' }} aria-hidden="true"></span>
       );
     }
     return estrellas;
@@ -158,10 +158,7 @@ const AdminComentariosPage = () => {
       {/* Header Toolbar */}
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-          <h1 className="h2 mb-1 fw-bold text-navy">
-            <i className="bi bi-chat-dots-fill me-2 text-gold" />
-            Moderación de Comentarios
-          </h1>
+          <h1 className="h2 mb-1 fw-bold text-navy"><span className="bi bi-chat-dots-fill me-2 text-gold" aria-hidden="true"></span> Moderación de Comentarios</h1>
           <p className="text-muted mb-0">
             Total: {comentariosFiltrados.length} de {comentarios.length} comentario{comentarios.length !== 1 ? 's' : ''}
           </p>
@@ -175,8 +172,7 @@ const AdminComentariosPage = () => {
                 exportarComentariosAPDF(comentariosFiltrados);
               }}
             >
-              <i className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} />
-              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span> Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
             </Button>
             <Dropdown.Toggle split variant="primary" />
             <Dropdown.Menu>
@@ -184,18 +180,18 @@ const AdminComentariosPage = () => {
                 setTipoExportacion('pdf');
                 exportarComentariosAPDF(comentariosFiltrados);
               }}>
-                <i className="bi bi-file-earmark-pdf me-2" /> Exportar a PDF
+                <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
               </Dropdown.Item>
               <Dropdown.Item onClick={async () => {
                 setTipoExportacion('excel');
                 await exportarComentariosAExcel(comentariosFiltrados);
               }}>
-                <i className="bi bi-file-earmark-excel me-2" /> Exportar a Excel
+                <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
           <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-            <i className="bi bi-arrow-left me-1" /> Volver
+            <span className="bi bi-arrow-left me-1" aria-hidden="true"></span> Volver
           </Button>
         </div>
       </div>
@@ -226,7 +222,7 @@ const AdminComentariosPage = () => {
       <Card className="shadow-sm border-0 mb-4 admin-card-table">
         <Card.Body className="p-3 p-md-4">
           <h6 className="fw-bold mb-3 d-flex align-items-center gap-2 text-navy">
-            <i className="bi bi-funnel text-gold" /> Filtros de Búsqueda
+            <span className="bi bi-funnel text-gold" aria-hidden="true"></span> Filtros de Búsqueda
           </h6>
           <Row className="g-3 align-items-end">
             <Col md={6}>
@@ -234,7 +230,7 @@ const AdminComentariosPage = () => {
                 <Form.Label className="small fw-semibold mb-1">Buscar Comentarios</Form.Label>
                 <InputGroup>
                   <InputGroup.Text className="bg-light">
-                    <i className="bi bi-search" />
+                    <span className="bi bi-search" aria-hidden="true"></span>
                   </InputGroup.Text>
                   <Form.Control
                     placeholder="Buscar por usuario, producto o contenido..."
@@ -263,7 +259,7 @@ const AdminComentariosPage = () => {
                 className="w-100"
                 onClick={() => setFiltros({ busqueda: '', estado: 'todos' })}
               >
-                <i className="bi bi-arrow-clockwise me-1" /> Limpiar filtros
+                <span className="bi bi-arrow-clockwise me-1" aria-hidden="true"></span> Limpiar filtros
               </Button>
             </Col>
           </Row>
@@ -442,14 +438,13 @@ const AdminComentariosPage = () => {
                 variant={comentarioSeleccionado.estado ? 'warning' : 'success'} 
                 onClick={() => handleToggleVisibilidad(comentarioSeleccionado.id)}
               >
-                <i className={`bi bi-eye${comentarioSeleccionado.estado ? '-slash' : ''} me-1`} />
-                {comentarioSeleccionado.estado ? 'Ocultar' : 'Aprobar/Mostrar'}
+                <span className={`bi bi-eye${comentarioSeleccionado.estado ? '-slash' : ''} me-1`} aria-hidden="true"></span> {comentarioSeleccionado.estado ? 'Ocultar' : 'Aprobar/Mostrar'}
               </Button>
               <Button 
                 variant="danger" 
                 onClick={() => handleEliminar(comentarioSeleccionado.id)}
               >
-                <i className="bi bi-trash me-1" /> Eliminar
+                <span className="bi bi-trash me-1" aria-hidden="true"></span> Eliminar
               </Button>
             </>
           )}

@@ -14,6 +14,12 @@ import SvgIcon from './SvgIcon';
 
 const NavigationBar = memo(() => {
   const { user, isAuthenticated, isAdmin, isAuxiliar, isCliente, logout } = useAuth();
+  let userMobileTitle = 'Cliente';
+  if (user?.rol === 'administrador') {
+    userMobileTitle = 'Admin';
+  } else if (user?.rol === 'auxiliar') {
+    userMobileTitle = 'Auxiliar';
+  }
   const navigate = useNavigate();
   const location = useLocation();
   const [expanded, setExpanded] = useState(false);
@@ -82,7 +88,7 @@ const NavigationBar = memo(() => {
             className={`nav-link-custom-mobile me-2 ${isActive('/carrito') ? 'active' : ''}`} 
             aria-label="Carrito de compras"
           >
-            <i className="bi bi-cart3 fs-4" />
+            <span className="bi bi-cart3 fs-4" aria-hidden="true"></span>
           </Link>
 
           {/* Menú Usuario en Móvil */}
@@ -90,7 +96,7 @@ const NavigationBar = memo(() => {
             title={
               isAuthenticated ? (
                 <span className="user-name-text text-gold small fw-bold">
-                  {user?.rol === 'administrador' ? 'Admin' : user?.rol === 'auxiliar' ? 'Auxiliar' : 'Cliente'}
+                  {userMobileTitle}
                 </span>
               ) : (
                 <div className="user-icon-btn d-flex align-items-center justify-content-center">
@@ -111,32 +117,30 @@ const NavigationBar = memo(() => {
                   </span>
                 </div>
                 <NavDropdown.Item as={Link} to="/perfil" onClick={handleLinkClick}>
-                  <i className="bi bi-person me-2" /> Mi Perfil
+                  <span className="bi bi-person me-2" aria-hidden="true"></span> Mi Perfil
                 </NavDropdown.Item>
                 {isCliente && (
                   <NavDropdown.Item as={Link} to="/mis-pedidos" onClick={handleLinkClick}>
-                    <i className="bi bi-box-seam me-2" /> Mis Pedidos
+                    <span className="bi bi-box-seam me-2" aria-hidden="true"></span> Mis Pedidos
                   </NavDropdown.Item>
                 )}
                 {(isAdmin || isAuxiliar) && (
-                  <>
-                    <NavDropdown.Item as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick}>
-                      <i className="bi bi-box-seam me-2" /> Mis Pedidos (Admin)
-                    </NavDropdown.Item>
-                  </>
+                  <NavDropdown.Item as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick}>
+                    <span className="bi bi-box-seam me-2" aria-hidden="true"></span> Mis Pedidos (Admin)
+                  </NavDropdown.Item>
                 )}
                 <NavDropdown.Divider />
                 <NavDropdown.Item onClick={handleLogout} className="text-danger">
-                  <i className="bi bi-box-arrow-right me-2" /> Cerrar Sesión
+                  <span className="bi bi-box-arrow-right me-2" aria-hidden="true"></span> Cerrar Sesión
                 </NavDropdown.Item>
               </>
             ) : (
               <>
                 <NavDropdown.Item as={Link} to="/login" onClick={handleLinkClick}>
-                  <i className="bi bi-box-arrow-in-right me-2" /> Iniciar Sesión
+                  <span className="bi bi-box-arrow-in-right me-2" aria-hidden="true"></span> Iniciar Sesión
                 </NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/register" onClick={handleLinkClick}>
-                  <i className="bi bi-person-plus me-2" /> Registrarse
+                  <span className="bi bi-person-plus me-2" aria-hidden="true"></span> Registrarse
                 </NavDropdown.Item>
               </>
             )}
@@ -151,10 +155,10 @@ const NavigationBar = memo(() => {
           {/* Enlaces de la Izquierda */}
           <Nav className="me-auto align-items-lg-center navbar-left-group">
             <Nav.Link as={Link} to="/" onClick={handleLinkClick} className={`nav-link-custom ${isActive('/') ? 'active' : ''}`}>
-              <i className="bi bi-house-door me-2 d-lg-none" />Inicio
+              <span className="bi bi-house-door me-2 d-lg-none" aria-hidden="true"></span> Inicio
             </Nav.Link>
             <Nav.Link as={Link} to="/catalogo" onClick={handleLinkClick} className={`nav-link-custom ${isActive('/catalogo') ? 'active' : ''}`}>
-              <i className="bi bi-grid me-2 d-lg-none" />Catálogo
+              <span className="bi bi-grid me-2 d-lg-none" aria-hidden="true"></span> Catálogo
             </Nav.Link>
             <Nav.Link 
               as={Link} 
@@ -162,7 +166,7 @@ const NavigationBar = memo(() => {
               onClick={handleLinkClick}
               className={`nav-link-custom d-none d-lg-flex align-items-center ${isActive('/carrito') ? 'active' : ''}`}
             >
-              <i className="bi bi-cart3 me-2" />Carrito
+              <span className="bi bi-cart3 me-2" aria-hidden="true"></span> Carrito
             </Nav.Link>
           </Nav>
 
@@ -244,32 +248,30 @@ const NavigationBar = memo(() => {
                     </span>
                   </div>
                   <NavDropdown.Item as={Link} to="/perfil" onClick={handleLinkClick}>
-                    <i className="bi bi-person me-2" /> Mi Perfil
+                    <span className="bi bi-person me-2" aria-hidden="true"></span> Mi Perfil
                   </NavDropdown.Item>
                   {isCliente && (
                     <NavDropdown.Item as={Link} to="/mis-pedidos" onClick={handleLinkClick}>
-                      <i className="bi bi-box-seam me-2" /> Mis Pedidos
+                      <span className="bi bi-box-seam me-2" aria-hidden="true"></span> Mis Pedidos
                     </NavDropdown.Item>
                   )}
                   {(isAdmin || isAuxiliar) && (
-                    <>
-                      <NavDropdown.Item as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick}>
-                        <i className="bi bi-box-seam me-2" /> Mis Pedidos (Admin)
-                      </NavDropdown.Item>
-                    </>
+                    <NavDropdown.Item as={Link} to="/admin/mis-pedidos" onClick={handleLinkClick}>
+                      <span className="bi bi-box-seam me-2" aria-hidden="true"></span> Mis Pedidos (Admin)
+                    </NavDropdown.Item>
                   )}
                   <NavDropdown.Divider />
                   <NavDropdown.Item onClick={handleLogout} className="text-danger">
-                    <i className="bi bi-box-arrow-right me-2" /> Cerrar Sesión
+                    <span className="bi bi-box-arrow-right me-2" aria-hidden="true"></span> Cerrar Sesión
                   </NavDropdown.Item>
                 </>
               ) : (
                 <>
                   <NavDropdown.Item as={Link} to="/login" onClick={handleLinkClick}>
-                    <i className="bi bi-box-arrow-in-right me-2" /> Iniciar Sesión
+                    <span className="bi bi-box-arrow-in-right me-2" aria-hidden="true"></span> Iniciar Sesión
                   </NavDropdown.Item>
                   <NavDropdown.Item as={Link} to="/register" onClick={handleLinkClick}>
-                    <i className="bi bi-person-plus me-2" /> Registrarse
+                    <span className="bi bi-person-plus me-2" aria-hidden="true"></span> Registrarse
                   </NavDropdown.Item>
                 </>
               )}
