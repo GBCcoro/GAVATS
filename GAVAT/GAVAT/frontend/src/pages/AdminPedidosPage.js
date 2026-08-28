@@ -188,10 +188,26 @@ function AdminPedidosPage() {
         </div>
       </div>
 
+      {/* Notificación flotante inferior izquierda */}
       {mensaje.texto && (
-        <Alert variant={mensaje.tipo} dismissible onClose={() => setMensaje({ tipo: '', texto: '' })}>
-          {mensaje.texto}
-        </Alert>
+        <div className="toast-floating-container-bottom-left">
+          <Alert 
+            variant={mensaje.tipo} 
+            dismissible 
+            onClose={() => setMensaje({ tipo: '', texto: '' })}
+            className={`toast-floating-alert alert-${mensaje.tipo} mb-0`}
+          >
+            <i className={`bi bi-${
+              mensaje.tipo === 'success' ? 'check-circle-fill text-success' :
+              mensaje.tipo === 'danger' ? 'exclamation-octagon-fill text-danger' :
+              mensaje.tipo === 'warning' ? 'exclamation-triangle-fill text-warning' :
+              'info-circle-fill text-info'
+            } fs-5 flex-shrink-0`} />
+            <div className="flex-grow-1 fw-medium text-start">
+              {mensaje.texto}
+            </div>
+          </Alert>
+        </div>
       )}
 
       {/* Filtros */}
@@ -311,7 +327,7 @@ function AdminPedidosPage() {
                           onClick={() => handleVerDetalle(pedido)} 
                           title="Ver detalle del pedido"
                         >
-                          <SvgIcon name="eye" />
+                          <SvgIcon name="search" />
                           <span className="btn-text">Detalle</span>
                         </Button>
                         {pedido.estado === 'pendiente' && (

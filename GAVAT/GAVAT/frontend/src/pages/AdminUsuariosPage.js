@@ -18,6 +18,7 @@ function AdminUsuariosPage() {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [editando, setEditando] = useState(false);
   const [tipoExportacion, setTipoExportacion] = useState('pdf');
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
@@ -74,9 +75,11 @@ function AdminUsuariosPage() {
       activo: true
     });
     setEditando(false);
+    setShowPassword(false);
   };
 
   const handleShowModal = (usuario = null) => {
+    setShowPassword(false);
     if (usuario) {
       setUsuarioActual({ ...usuario, password: '' });
       setEditando(true);
@@ -88,6 +91,7 @@ function AdminUsuariosPage() {
 
   const handleCloseModal = () => {
     setShowModal(false);
+    setShowPassword(false);
     limpiarFormulario();
   };
 
@@ -219,10 +223,26 @@ function AdminUsuariosPage() {
         </div>
       </div>
 
+      {/* Notificación flotante inferior izquierda */}
       {mensaje.texto && (
-        <Alert variant={mensaje.tipo} dismissible onClose={() => setMensaje({ tipo: '', texto: '' })}>
-          {mensaje.texto}
-        </Alert>
+        <div className="toast-floating-container-bottom-left">
+          <Alert 
+            variant={mensaje.tipo} 
+            dismissible 
+            onClose={() => setMensaje({ tipo: '', texto: '' })}
+            className={`toast-floating-alert alert-${mensaje.tipo} mb-0`}
+          >
+            <i className={`bi bi-${
+              mensaje.tipo === 'success' ? 'check-circle-fill text-success' :
+              mensaje.tipo === 'danger' ? 'exclamation-octagon-fill text-danger' :
+              mensaje.tipo === 'warning' ? 'exclamation-triangle-fill text-warning' :
+              'info-circle-fill text-info'
+            } fs-5 flex-shrink-0`} />
+            <div className="flex-grow-1 fw-medium text-start">
+              {mensaje.texto}
+            </div>
+          </Alert>
+        </div>
       )}
 
       {/* Filtros */}
@@ -444,13 +464,23 @@ function AdminUsuariosPage() {
               <Form.Label className="fw-semibold">
                 Contraseña {editando ? '(opcional)' : <span className="text-danger">*</span>}
               </Form.Label>
-              <Form.Control
-                type="password"
-                placeholder={editando ? 'Dejar en blanco para mantener actual' : 'Ingrese contraseña'}
-                value={usuarioActual.password}
-                onChange={(e) => setUsuarioActual({ ...usuarioActual, password: e.target.value })}
-                required={!editando}
-              />
+              <InputGroup>
+                <Form.Control
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder={editando ? 'Dejar en blanco para mantener actual' : 'Ingrese contraseña'}
+                  value={usuarioActual.password}
+                  onChange={(e) => setUsuarioActual({ ...usuarioActual, password: e.target.value })}
+                  required={!editando}
+                />
+                <Button
+                  variant="outline-secondary"
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                >
+                  <i className={`bi bi-eye${showPassword ? '-slash' : ''}`}></i>
+                </Button>
+              </InputGroup>
             </Form.Group>
 
             <Row className="g-2 mb-3">

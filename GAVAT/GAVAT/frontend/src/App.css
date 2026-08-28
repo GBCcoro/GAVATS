@@ -869,7 +869,7 @@ img {
   pointer-events: auto;
 }
 
-.modal-dialog {
+.modal-overlay .modal-dialog {
   width: min(680px, 100%);
   max-height: calc(100vh - 2rem);
   background: var(--bg);
@@ -881,7 +881,7 @@ img {
   pointer-events: auto;
 }
 
-.modal-header {
+.modal-overlay .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -889,12 +889,12 @@ img {
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.modal-header h2 {
+.modal-overlay .modal-header h2 {
   margin: 0;
   font-size: 1.25rem;
 }
 
-.close-button {
+.modal-overlay .close-button {
   background: transparent;
   border: none;
   font-size: 1.5rem;
@@ -903,19 +903,115 @@ img {
   cursor: pointer;
 }
 
-.modal-body {
+.modal-overlay .modal-body {
   padding: 1.25rem;
   display: grid;
   gap: 1rem;
   overflow-y: auto;
 }
 
-.modal-footer {
+.modal-overlay .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
   padding: 1.25rem;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Modal de Confirmación Compacto (adecuado exactamente al contenido) */
+.modal-confirmacion-compacto {
+  width: auto !important;
+  max-width: min(90vw, 360px) !important;
+  margin: 1.5rem auto !important;
+}
+
+.modal-confirmacion-compacto .modal-content {
+  border: none !important;
+  border-radius: 1.25rem !important;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25) !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  width: auto !important;
+}
+
+.modal-confirmacion-compacto .modal-body {
+  padding: 1.5rem 1.5rem !important;
+}
+
+/* Modal de Formulario de Producto (ajustado y proporcionado) */
+.modal-producto-form {
+  max-width: min(92vw, 560px) !important;
+  margin: 1.5rem auto !important;
+}
+
+.modal-producto-form .modal-content {
+  border: none !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2) !important;
+  overflow: hidden !important;
+}
+
+/* Notificación Flotante Inferior Izquierda (se mueve con el usuario) */
+.toast-floating-container-bottom-left {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 1090;
+  max-width: 420px;
+  min-width: 290px;
+  pointer-events: auto;
+  animation: slideInToastBottomLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInToastBottomLeft {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-floating-alert {
+  border-radius: 0.95rem !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2), 0 3px 10px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-left: 5px solid currentColor !important;
+  margin-bottom: 0 !important;
+  padding: 0.9rem 1.15rem !important;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: #ffffff !important;
+  color: #1e293b !important;
+}
+
+.toast-floating-alert.alert-success {
+  border-left-color: #10b981 !important;
+}
+
+.toast-floating-alert.alert-danger {
+  border-left-color: #ef4444 !important;
+}
+
+.toast-floating-alert.alert-warning {
+  border-left-color: #f59e0b !important;
+}
+
+.toast-floating-alert.alert-info {
+  border-left-color: #3b82f6 !important;
+}
+
+@media (max-width: 576px) {
+  .toast-floating-container-bottom-left {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    max-width: calc(100vw - 32px);
+    min-width: unset;
+  }
 }
 
 @media (max-width: 768px) {

@@ -11,6 +11,7 @@ import ReactDOM from 'react-dom/client';
 
 // Importar estilos de Bootstrap
 import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 // Importar estilos personalizados de la aplicación
 import './index.css';

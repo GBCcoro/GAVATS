@@ -207,7 +207,7 @@ const MisPedidosPage = () => {
                         onClick={() => navigate(`/pedido-confirmado/${pedido.id}`)}
                         title="Ver detalles del pedido"
                       >
-                        <i className="bi bi-eye me-1"></i>{' '}
+                        <i className="bi bi-search me-1"></i>{' '}
                         Ver Detalle
                       </Button>
                       {pedido.estado === 'pagado' && (
