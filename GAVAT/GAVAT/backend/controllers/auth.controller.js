@@ -247,14 +247,32 @@ const updateMe = async (req, res) => {
   try {
     // Solo extrae los campos que el usuario tiene PERMITIDO cambiar.
     // No extrae 'rol' ni 'activo' por seguridad.
-    const { nombre, apellido, email, telefono, direccion } = req.body;
-    // Busca el usuario en la BD por su ID (viene del token via middleware)
-    const usuario = await Usuario.findByPk(req.usuario.id);
+    const { nombre, apellido, email, telefono, direccion, passwordActual } = req.body;
+    // Busca el usuario en la BD con scope 'withPassword' para verificar contraseña si es administrador
+    const usuario = await Usuario.scope("withPassword").findByPk(req.usuario.id);
     if (!usuario) {
       return res.status(404).json({
         success: false,
         message: "Usuario no encontrado",
       });
+    }
+
+    // Regla de seguridad: Para hacer cambios en la cuenta de Administrador, es OBLIGATORIO ingresar la contraseña
+    if (usuario.rol === "administrador") {
+      if (!passwordActual) {
+        return res.status(400).json({
+          success: false,
+          message: "Se requiere ingresar tu contraseña actual para autorizar los cambios en la cuenta de Administrador",
+        });
+      }
+      const bcrypt = require("bcryptjs");
+      const esPasswordValida = await bcrypt.compare(passwordActual, usuario.password);
+      if (!esPasswordValida) {
+        return res.status(400).json({
+          success: false,
+          message: "Contraseña incorrecta. No se pudieron aplicar los cambios",
+        });
+      }
     }
 
     let tokenActualizado = null;
@@ -278,6 +296,14 @@ const updateMe = async (req, res) => {
       }
 
       if (emailNormalizado !== usuario.email.toLowerCase()) {
+        // Regla: El auxiliar no tiene permitido modificar su correo electrónico
+        if (usuario.rol === "auxiliar") {
+          return res.status(403).json({
+            success: false,
+            message: "Las cuentas con rol Auxiliar no tienen permitido modificar su correo electrónico",
+          });
+        }
+
         const usuarioExistente = await Usuario.findOne({
           where: {
             email: emailNormalizado,

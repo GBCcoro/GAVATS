@@ -20,6 +20,7 @@ const PerfilPage = () => {
   const [loading, setLoading] = useState(false);
   const [desactivando, setDesactivando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
+  const [passwordAdmin, setPasswordAdmin] = useState('');
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
 
   // Modal de seguridad para eliminar cuenta con verificación de credenciales
@@ -81,8 +82,39 @@ const PerfilPage = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const hayCambios = () => {
+    const nombreOriginal = (user?.nombre || '').trim();
+    const nombreNuevo = (formData.nombre || '').trim();
+
+    const emailOriginal = (user?.email || '').trim().toLowerCase();
+    const emailNuevo = (formData.email || '').trim().toLowerCase();
+
+    const telefonoOriginal = (user?.telefono || '').trim();
+    const telefonoNuevo = (formData.telefono || '').trim();
+
+    const direccionOriginal = (user?.direccion || '').trim();
+    const direccionNuevo = (formData.direccion || '').trim();
+
+    if (nombreOriginal !== nombreNuevo) return true;
+    if (!isAuxiliar && emailOriginal !== emailNuevo) return true;
+    if (telefonoOriginal !== telefonoNuevo) return true;
+    if (isCliente && direccionOriginal !== direccionNuevo) return true;
+
+    return false;
+  };
+
   const solicitarGuardar = () => {
-    if (formData.email) {
+    // Si los datos actuales coinciden con los de la base de datos, no mostrar confirmación
+    if (!hayCambios()) {
+      setIsEditing(false);
+      setMensaje({
+        tipo: 'info',
+        texto: 'No se detectaron cambios en los datos del perfil'
+      });
+      return;
+    }
+
+    if (!isAuxiliar && formData.email) {
       const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.email.trim())) {
         setMensaje({
@@ -101,7 +133,27 @@ const PerfilPage = () => {
       return;
     }
 
-    const emailCambio = formData.email && user?.email && formData.email.trim().toLowerCase() !== user.email.toLowerCase();
+    const emailCambio = !isAuxiliar && formData.email && user?.email && formData.email.trim().toLowerCase() !== user.email.toLowerCase();
+
+    if (isAdmin) {
+      setPasswordAdmin('');
+      setModalConfirmacion({
+        show: true,
+        titulo: '¿Confirmar cambios de Administrador?',
+        mensaje: emailCambio
+          ? `Se actualizará tu correo a "${formData.email.trim().toLowerCase()}". Por seguridad, ingresa tu contraseña actual para autorizar los cambios:`
+          : 'Por seguridad, ingresa tu contraseña actual para autorizar los cambios en tu cuenta de Administrador:',
+        tipo: 'primary',
+        icono: 'shield-lock-fill',
+        textoConfirmar: 'Guardar cambios',
+        textoCancelar: 'Cancelar',
+        requierePassword: true,
+        onConfirm: async (passwordIngresada) => {
+          await ejecutarGuardado(passwordIngresada);
+        }
+      });
+      return;
+    }
 
     setModalConfirmacion({
       show: true,
@@ -113,21 +165,30 @@ const PerfilPage = () => {
       icono: 'pencil-square',
       textoConfirmar: 'Guardar',
       textoCancelar: 'Cancelar',
+      requierePassword: false,
       onConfirm: async () => {
         await ejecutarGuardado();
       }
     });
   };
 
-  const ejecutarGuardado = async () => {
+  const ejecutarGuardado = async (passwordAuth) => {
     setLoading(true);
     try {
-      await updateProfile(formData);
+      const datosAEnviar = { ...formData };
+      if (isAuxiliar) {
+        delete datosAEnviar.email;
+      }
+      if (isAdmin) {
+        datosAEnviar.passwordActual = passwordAuth || passwordAdmin;
+      }
+      await updateProfile(datosAEnviar);
       setMensaje({
         tipo: 'success',
         texto: `Usuario "${formData.nombre || user?.nombre}" actualizado exitosamente`
       });
       setIsEditing(false);
+      setPasswordAdmin('');
     } catch (err) {
       console.error('Error al actualizar perfil:', err);
       const textoError =
@@ -473,15 +534,21 @@ const PerfilPage = () => {
                     <Form.Group className="mb-3">
                       <Form.Label className="fw-semibold text-navy small">
                         Correo Electrónico
-                        {isEditing && (
-                          <Badge bg="info" text="dark" className="ms-2 small" style={{ fontSize: '0.65rem' }}>
-                            Modificable
+                        {!isAuxiliar ? (
+                          isEditing && (
+                            <Badge bg="info" text="dark" className="ms-2 small" style={{ fontSize: '0.65rem' }}>
+                              Modificable
+                            </Badge>
+                          )
+                        ) : (
+                          <Badge bg="secondary" className="ms-2 small" style={{ fontSize: '0.65rem' }}>
+                            No modificable
                           </Badge>
                         )}
                       </Form.Label>
                       <div className="input-group">
-                        <span className={`input-group-text ${isEditing ? 'bg-white' : 'bg-light'} border-end-0`}>
-                          <i className={`bi bi-envelope ${isEditing ? 'text-gold' : 'text-muted'}`} />
+                        <span className={`input-group-text ${isEditing && !isAuxiliar ? 'bg-white' : 'bg-light'} border-end-0`}>
+                          <i className={`bi bi-envelope ${isEditing && !isAuxiliar ? 'text-gold' : 'text-muted'}`} />
                         </span>
                         <Form.Control
                           type="email"
@@ -489,12 +556,22 @@ const PerfilPage = () => {
                           id="perfil-email"
                           value={formData.email}
                           onChange={handleInputChange}
-                          disabled={!isEditing}
+                          disabled={!isEditing || isAuxiliar}
                           placeholder="tu@correo.com"
-                          className={isEditing ? 'border-start-0 perfil-input-edit' : 'border-start-0 bg-light text-muted'}
+                          className={isEditing && !isAuxiliar ? 'border-start-0 perfil-input-edit' : 'border-start-0 bg-light text-muted'}
                           required
                         />
                       </div>
+                      {isAuxiliar && isEditing && (
+                        <Form.Text className="text-muted small">
+                          Las cuentas con rol Auxiliar no tienen permitido cambiar su correo electrónico.
+                        </Form.Text>
+                      )}
+                      {isAdmin && isEditing && (
+                        <Form.Text className="text-muted small">
+                          Como Administrador puedes cambiar tu correo electrónico. Se solicitará tu contraseña para autorizar los cambios.
+                        </Form.Text>
+                      )}
                     </Form.Group>
                   </Col>
 
@@ -815,9 +892,30 @@ const PerfilPage = () => {
             {modalConfirmacion.titulo}
           </h5>
 
-          <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
+          <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '340px', margin: '0 auto' }}>
             {modalConfirmacion.mensaje}
           </p>
+
+          {modalConfirmacion.requierePassword && (
+            <div className="mb-3 text-start px-2" style={{ maxWidth: '340px', margin: '0 auto' }}>
+              <label className="small fw-semibold text-navy mb-1">
+                Contraseña actual de Administrador
+              </label>
+              <div className="input-group">
+                <span className="input-group-text bg-light border-end-0">
+                  <i className="bi bi-lock text-muted" />
+                </span>
+                <input
+                  type="password"
+                  className="form-control border-start-0"
+                  placeholder="Ingresa tu contraseña"
+                  value={passwordAdmin}
+                  onChange={(e) => setPasswordAdmin(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
 
           <div className="d-flex gap-2 justify-content-center w-100 mt-2">
             <Button
@@ -825,6 +923,7 @@ const PerfilPage = () => {
               className="px-3 py-2 fw-semibold flex-fill"
               onClick={() => {
                 setModalConfirmacion(prev => ({ ...prev, show: false }));
+                setPasswordAdmin('');
                 if (modalConfirmacion.onCancel) modalConfirmacion.onCancel();
               }}
             >
@@ -833,10 +932,12 @@ const PerfilPage = () => {
             <Button
               variant={modalConfirmacion.tipo || 'danger'}
               className="px-3 py-2 fw-semibold flex-fill shadow-sm"
+              disabled={modalConfirmacion.requierePassword && !passwordAdmin}
               onClick={async () => {
                 const action = modalConfirmacion.onConfirm;
+                const pwd = passwordAdmin;
                 setModalConfirmacion(prev => ({ ...prev, show: false }));
-                if (action) await action();
+                if (action) await action(pwd);
               }}
             >
               {modalConfirmacion.textoConfirmar || 'Borrar'}
