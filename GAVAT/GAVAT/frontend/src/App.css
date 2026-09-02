@@ -1199,12 +1199,12 @@ img {
   transform: translateY(0) !important;
 }
 
-/* Notificación Flotante Inferior Izquierda (se mueve con el usuario) */
+/* Notificación Flotante Inferior Izquierda (siempre fija en la ventana) */
 .toast-floating-container-bottom-left {
-  position: fixed;
-  bottom: 24px;
-  left: 24px;
-  z-index: 1090;
+  position: fixed !important;
+  bottom: 24px !important;
+  left: 24px !important;
+  z-index: 99999 !important;
   max-width: 420px;
   min-width: 290px;
   pointer-events: auto;

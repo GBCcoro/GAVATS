@@ -189,7 +189,7 @@ const agregarAlCarrito = async (req, res) => {
       // Responde con el item actualizado
       return res.json({
         success: true,
-        message: 'Cantidad actualizada en el carrito',
+        message: 'Cantidad actualizada en el carrito exitosamente',
         data: {
           item: itemExistente
         }
@@ -225,7 +225,7 @@ const agregarAlCarrito = async (req, res) => {
     // Responde con status 201 (Created) y el nuevo item
     res.status(201).json({
       success: true,
-      message: 'Producto agregado al carrito',
+      message: 'Producto agregado al carrito exitosamente',
       data: {
         item: nuevoItem
       }

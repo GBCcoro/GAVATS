@@ -6,12 +6,13 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Container, Row, Col, Card, Button, Table, Alert, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Table, Alert, Badge, Modal } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import carritoService from '../services/carritoService';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import SvgIcon from '../components/SvgIcon';
+import FloatingToast from '../components/FloatingToast';
 import { getImageUrl } from '../utils/helpers';
 
 const CarritoPage = () => {
@@ -20,6 +21,19 @@ const CarritoPage = () => {
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // Estado para modal de confirmación en pantalla (igual al gestor de productos)
+  const [modalConfirmacion, setModalConfirmacion] = useState({
+    show: false,
+    titulo: '',
+    mensaje: '',
+    tipo: 'danger',
+    icono: 'trash3-fill',
+    textoConfirmar: 'Borrar',
+    textoCancelar: 'Cancelar',
+    onConfirm: null,
+    onCancel: null
+  });
 
   useEffect(() => {
     loadCarrito();
@@ -39,43 +53,77 @@ const CarritoPage = () => {
     }
   };
 
+  // Limpiar mensaje automáticamente (estilo gestores admin)
+  useEffect(() => {
+    if (mensaje.texto) {
+      const timer = setTimeout(() => {
+        setMensaje({ tipo: '', texto: '' });
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [mensaje]);
+
   const handleCantidadChange = async (itemId, nuevaCantidad) => {
     if (nuevaCantidad < 1) return;
 
     try {
       await carritoService.actualizarItem(itemId, nuevaCantidad);
       await loadCarrito();
-      setMensaje({ tipo: 'success', texto: 'Cantidad actualizada' });
-      setTimeout(() => setMensaje({ tipo: '', texto: '' }), 2000);
+      setMensaje({ tipo: 'success', texto: 'Cantidad actualizada exitosamente' });
     } catch (error) {
       setMensaje({ tipo: 'danger', texto: error.message || 'Error al actualizar cantidad' });
     }
   };
 
-  const handleEliminar = async (itemId) => {
-    if (!window.confirm('¿Estás seguro de eliminar este producto?')) return;
-
-    try {
-      await carritoService.eliminarItem(itemId);
-      await loadCarrito();
-      setMensaje({ tipo: 'success', texto: 'Producto eliminado del carrito' });
-      setTimeout(() => setMensaje({ tipo: '', texto: '' }), 2000);
-    } catch (error) {
-      setMensaje({ tipo: 'danger', texto: error.message || 'Error al eliminar producto' });
-    }
+  const handleEliminar = (item) => {
+    const nombreItem = item.producto?.nombre || item.nombre || 'este item';
+    setModalConfirmacion({
+      show: true,
+      titulo: '¿Eliminar item?',
+      mensaje: `¿Estás seguro de que deseas eliminar permanentemente el item "${nombreItem}"? Esta acción no se puede deshacer.`,
+      tipo: 'danger',
+      icono: 'trash3-fill',
+      textoConfirmar: 'Borrar',
+      textoCancelar: 'Cancelar',
+      onConfirm: async () => {
+        try {
+          await carritoService.eliminarItem(item.id);
+          await loadCarrito();
+          setMensaje({ 
+            tipo: 'success', 
+            texto: `Item "${nombreItem}" eliminado del carrito exitosamente` 
+          });
+        } catch (error) {
+          console.error('Error al eliminar item:', error);
+          setMensaje({ 
+            tipo: 'danger', 
+            texto: error.message || 'Error al eliminar el item del carrito' 
+          });
+        }
+      }
+    });
   };
 
-  const handleVaciarCarrito = async () => {
-    if (!window.confirm('¿Estás seguro de vaciar todo el carrito?')) return;
-
-    try {
-      await carritoService.vaciarCarrito();
-      await loadCarrito();
-      setMensaje({ tipo: 'success', texto: 'Carrito vaciado' });
-      setTimeout(() => setMensaje({ tipo: '', texto: '' }), 2000);
-    } catch (error) {
-      setMensaje({ tipo: 'danger', texto: error.message || 'Error al vaciar carrito' });
-    }
+  const handleVaciarCarrito = () => {
+    setModalConfirmacion({
+      show: true,
+      titulo: '¿Vaciar carrito?',
+      mensaje: '¿Estás seguro de que deseas eliminar permanentemente todos los items del carrito? Esta acción no se puede deshacer.',
+      tipo: 'danger',
+      icono: 'trash3-fill',
+      textoConfirmar: 'Borrar',
+      textoCancelar: 'Cancelar',
+      onConfirm: async () => {
+        try {
+          await carritoService.vaciarCarrito();
+          await loadCarrito();
+          setMensaje({ tipo: 'success', texto: 'Carrito vaciado exitosamente' });
+        } catch (error) {
+          console.error('Error al vaciar carrito:', error);
+          setMensaje({ tipo: 'danger', texto: error.message || 'Error al vaciar carrito' });
+        }
+      }
+    });
   };
 
   const handleProcederPago = () => {
@@ -120,11 +168,11 @@ const CarritoPage = () => {
         </Alert>
       )}
 
-      {mensaje.texto && (
-        <Alert variant={mensaje.tipo} dismissible onClose={() => setMensaje({ tipo: '', texto: '' })}>
-          {mensaje.texto}
-        </Alert>
-      )}
+      {/* Notificación flotante inferior izquierda siempre fija en la ventana */}
+      <FloatingToast 
+        mensaje={mensaje} 
+        onClose={() => setMensaje({ tipo: '', texto: '' })} 
+      />
 
       {items.length === 0 ? (
         <Card className="carrito-empty-card text-center py-5">
@@ -226,8 +274,8 @@ const CarritoPage = () => {
                           <Button
                             className="btn-eliminar d-inline-flex align-items-center justify-content-center"
                             size="sm"
-                            onClick={() => handleEliminar(item.id)}
-                            title="Eliminar producto"
+                            onClick={() => handleEliminar(item)}
+                            title="Eliminar item"
                           >
                             <SvgIcon name="trash" />
                           </Button>
@@ -416,6 +464,59 @@ const CarritoPage = () => {
           transform: translateY(-2px);
         }
       `}</style>
+      {/* Modal de Confirmación Compacto Estilo Gestor de Productos */}
+      <Modal 
+        show={modalConfirmacion.show} 
+        onHide={() => setModalConfirmacion(prev => ({ ...prev, show: false }))} 
+        centered
+        backdrop="static"
+        dialogClassName="modal-confirmacion-compacto"
+      >
+        <Modal.Body className="text-center p-3 p-sm-4">
+          <div 
+            className={`confirm-icon-wrapper mb-3 mx-auto bg-${
+              modalConfirmacion.tipo === 'danger' ? 'danger-subtle' :
+              modalConfirmacion.tipo === 'warning' ? 'warning-subtle' :
+              modalConfirmacion.tipo === 'primary' || modalConfirmacion.tipo === 'info' ? 'primary-subtle' :
+              'success-subtle'
+            } text-${modalConfirmacion.tipo || 'primary'}`}
+          >
+            <i className={`bi bi-${modalConfirmacion.icono || 'trash3-fill'} confirm-icon`} />
+          </div>
+          
+          <h5 className="fw-bold text-navy mb-2 fs-5">
+            {modalConfirmacion.titulo}
+          </h5>
+          
+          <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
+            {modalConfirmacion.mensaje}
+          </p>
+
+          <div className="d-flex gap-2 justify-content-center w-100 mt-2">
+            <Button 
+              variant="outline-secondary" 
+              className="px-3 py-2 fw-semibold flex-fill"
+              onClick={() => {
+                setModalConfirmacion(prev => ({ ...prev, show: false }));
+                if (modalConfirmacion.onCancel) modalConfirmacion.onCancel();
+              }}
+            >
+              {modalConfirmacion.textoCancelar || 'Cancelar'}
+            </Button>
+            <Button 
+              variant={modalConfirmacion.tipo || 'danger'} 
+              className="px-3 py-2 fw-semibold flex-fill shadow-sm"
+              onClick={async () => {
+                const action = modalConfirmacion.onConfirm;
+                setModalConfirmacion(prev => ({ ...prev, show: false }));
+                if (action) await action();
+              }}
+            >
+              {modalConfirmacion.textoConfirmar || 'Borrar'}
+            </Button>
+          </div>
+        </Modal.Body>
+      </Modal>
     </Container>
   );
 };

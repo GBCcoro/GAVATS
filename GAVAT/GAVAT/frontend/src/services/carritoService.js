@@ -84,7 +84,7 @@ const carritoService = {
       
       return {
         success: true,
-        message: 'Producto agregado al carrito'
+        message: 'Producto agregado al carrito exitosamente'
       };
     }
   },

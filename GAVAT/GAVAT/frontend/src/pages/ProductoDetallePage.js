@@ -7,7 +7,7 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Container, Row, Col, Button, Badge, Alert, Breadcrumb, Card, Modal } from 'react-bootstrap';
+import { Container, Row, Col, Button, Badge, Breadcrumb, Card, Modal } from 'react-bootstrap';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import catalogoService from '../services/catalogoService';
 import carritoService from '../services/carritoService';
@@ -16,6 +16,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { formatCurrency, getImageUrl } from '../utils/helpers';
 import { useAuth } from '../context/AuthContext';
 import SvgIcon from '../components/SvgIcon';
+import FloatingToast from '../components/FloatingToast';
 
 const ProductoDetallePage = () => {
   const { id } = useParams();
@@ -117,7 +118,9 @@ const ProductoDetallePage = () => {
       await carritoService.agregarAlCarrito(producto.id, cantidadFinal, producto);
       setMensaje({ 
         tipo: 'success', 
-        texto: `¡"${producto.nombre}" (${cantidadFinal} ${cantidadFinal === 1 ? 'unidad' : 'unidades'}) agregado al carrito exitosamente!`,
+        texto: cantidadFinal > 1
+          ? `Producto "${producto.nombre}" (${cantidadFinal} unidades) agregado al carrito exitosamente`
+          : `Producto "${producto.nombre}" agregado al carrito exitosamente`,
         accion: { texto: 'Ver Carrito', url: '/carrito' }
       });
     } catch (error) {
@@ -197,39 +200,11 @@ const ProductoDetallePage = () => {
         <Breadcrumb.Item active>{producto.nombre}</Breadcrumb.Item>
       </Breadcrumb>
 
-      {/* Notificación flotante inferior izquierda (estilo Gestores Admin) */}
-      {mensaje.texto && (
-        <div className="toast-floating-container-bottom-left">
-          <Alert 
-            variant={mensaje.tipo} 
-            dismissible 
-            onClose={() => setMensaje({ tipo: '', texto: '', accion: null })}
-            className={`toast-floating-alert alert-${mensaje.tipo} mb-0`}
-          >
-            <i className={`bi bi-${
-              mensaje.tipo === 'success' ? 'check-circle-fill text-success' :
-              mensaje.tipo === 'danger' ? 'exclamation-octagon-fill text-danger' :
-              mensaje.tipo === 'warning' ? 'exclamation-triangle-fill text-warning' :
-              'info-circle-fill text-info'
-            } fs-5 flex-shrink-0`} />
-            <div className="flex-grow-1 fw-medium text-start">
-              {mensaje.texto}
-            </div>
-            {mensaje.tipo === 'success' && mensaje.accion && (
-              <Button 
-                as={Link} 
-                to={mensaje.accion.url} 
-                variant="outline-success" 
-                size="sm" 
-                className="ms-2 fw-bold text-nowrap py-1 px-2"
-                style={{ fontSize: '0.82rem', borderRadius: '6px' }}
-              >
-                {mensaje.accion.texto} <i className="bi bi-arrow-right ms-1" />
-              </Button>
-            )}
-          </Alert>
-        </div>
-      )}
+      {/* Notificación flotante inferior izquierda siempre fija en la ventana */}
+      <FloatingToast 
+        mensaje={mensaje} 
+        onClose={() => setMensaje({ tipo: '', texto: '', accion: null })} 
+      />
 
       {/* Tarjeta principal del producto */}
       <Card className="shadow-sm border-0 rounded-4 overflow-hidden mb-5 product-detail-card">

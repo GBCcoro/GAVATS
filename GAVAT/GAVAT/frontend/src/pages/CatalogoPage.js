@@ -6,21 +6,21 @@
  */
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { Container, Row, Col, Form, Button, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button } from 'react-bootstrap';
 import catalogoService from '../services/catalogoService';
 import carritoService from '../services/carritoService';
 import ProductCard from '../components/ProductCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SvgIcon from '../components/SvgIcon';
+import FloatingToast from '../components/FloatingToast';
 
 const CatalogoPage = () => {
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [subcategorias, setSubcategorias] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
+  const [mensaje, setMensaje] = useState({ tipo: '', texto: '', accion: null });
   const [paginacion, setPaginacion] = useState({ total: 0, pagina: 1, totalPaginas: 1 });
-  const timeoutRef = useRef(null);
   const debounceRef = useRef(null);
   const isInitialMount = useRef(true);
   
@@ -122,29 +122,31 @@ const CatalogoPage = () => {
     }));
   }, []);
 
+  // Limpiar mensaje automáticamente (igual que en los gestores admin)
+  useEffect(() => {
+    if (mensaje.texto) {
+      const timer = setTimeout(() => {
+        setMensaje({ tipo: '', texto: '', accion: null });
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [mensaje]);
+
   const handleAddToCart = useCallback(async (producto) => {
     try {
       await carritoService.agregarAlCarrito(producto.id, 1, producto);
-      setMensaje({ tipo: 'success', texto: `${producto.nombre} agregado al carrito` });
-      
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      
-      timeoutRef.current = setTimeout(() => {
-        setMensaje({ tipo: '', texto: '' });
-      }, 3000);
+      setMensaje({ 
+        tipo: 'success', 
+        texto: `Producto "${producto.nombre}" agregado al carrito exitosamente`,
+        accion: { texto: 'Ver Carrito', url: '/carrito' }
+      });
     } catch (error) {
-      setMensaje({ tipo: 'danger', texto: error.message || 'Error al agregar al carrito' });
+      setMensaje({ 
+        tipo: 'danger', 
+        texto: error.message || 'Error al agregar el producto al carrito',
+        accion: null
+      });
     }
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
   }, []);
 
   const renderProductosContent = () => {
@@ -240,11 +242,11 @@ const CatalogoPage = () => {
         Catálogo de Productos
       </h1>
 
-      {mensaje.texto && (
-        <Alert variant={mensaje.tipo} dismissible onClose={() => setMensaje({ tipo: '', texto: '' })}>
-          {mensaje.texto}
-        </Alert>
-      )}
+      {/* Notificación flotante inferior izquierda siempre fija en la ventana */}
+      <FloatingToast 
+        mensaje={mensaje} 
+        onClose={() => setMensaje({ tipo: '', texto: '', accion: null })} 
+      />
 
       <Row>
         {/* Filtros laterales */}
