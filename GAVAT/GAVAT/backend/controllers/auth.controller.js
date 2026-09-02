@@ -401,12 +401,12 @@ const changePassword = async (req, res) => {
 };
 
 /**
- * Desactivar cuenta propia (solo para clientes)
+ * Desactivar cuenta propia (confirmación sencilla, solo para clientes)
  *
- * Ruta: DELETE /api/auth/me
+ * Ruta: PUT /api/auth/deactivate
  * Headers: { Authorization: 'Bearer TOKEN' }
  */
-const deleteMe = async (req, res) => {
+const deactivateMe = async (req, res) => {
   try {
     const usuario = await Usuario.findByPk(req.usuario.id);
     if (!usuario) {
@@ -416,7 +416,7 @@ const deleteMe = async (req, res) => {
       });
     }
 
-    // Regla de seguridad: Solo clientes pueden auto-desactivarse desde su perfil
+    // Regla de seguridad: Solo clientes pueden desactivarse desde su perfil
     if (usuario.rol !== "cliente") {
       return res.status(403).json({
         success: false,
@@ -437,6 +437,80 @@ const deleteMe = async (req, res) => {
   }
 };
 
+/**
+ * Eliminar cuenta propia definitivamente (requiere correo y contraseña, solo para clientes)
+ *
+ * Ruta: DELETE /api/auth/me  o  POST /api/auth/delete-account
+ * Headers: { Authorization: 'Bearer TOKEN' }
+ * Body: { email, password }
+ */
+const deleteMe = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Se requiere ingresar tu correo y contraseña para confirmar la eliminación",
+      });
+    }
+
+    const usuario = await Usuario.scope("withPassword").findByPk(req.usuario.id);
+    if (!usuario) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado",
+      });
+    }
+
+    // Regla de seguridad: Solo clientes pueden auto-eliminarse desde su perfil
+    if (usuario.rol !== "cliente") {
+      return res.status(403).json({
+        success: false,
+        message: "Solo los clientes pueden eliminar su cuenta desde el perfil",
+      });
+    }
+
+    // Verificar que el correo ingresado coincida con la cuenta del usuario autenticado
+    if (String(email).trim().toLowerCase() !== usuario.email.toLowerCase()) {
+      return res.status(400).json({
+        success: false,
+        message: "El correo electrónico no coincide con tu cuenta actual",
+      });
+    }
+
+    // Verificar la contraseña con bcrypt
+    const bcrypt = require("bcryptjs");
+    const esPasswordValida = await bcrypt.compare(password, usuario.password);
+    if (!esPasswordValida) {
+      return res.status(400).json({
+        success: false,
+        message: "Contraseña incorrecta. No se pudo eliminar la cuenta",
+      });
+    }
+
+    // Si tiene pedidos asociados, desactivar la cuenta para preservar la integridad referencial fiscal (RESTRICT)
+    const tienePedidos = await Pedido.count({ where: { usuarioId: usuario.id } });
+    if (tienePedidos > 0) {
+      usuario.activo = false;
+      await usuario.save();
+      return res.json({
+        success: true,
+        message: "Cuenta eliminada exitosamente",
+      });
+    }
+
+    // Si no tiene pedidos, se elimina definitivamente
+    await usuario.destroy();
+    return res.json({
+      success: true,
+      message: "Cuenta eliminada exitosamente",
+    });
+  } catch (error) {
+    return handleServerError(res, error, "Error al eliminar la cuenta");
+  }
+};
+
 // Exporta todas las funciones del controlador como un objeto.
 // Estas funciones se importan en routes/auth.routes.js para asociarlas a las rutas.
 // Ejemplo en rutas: router.post('/register', authController.register);
@@ -447,5 +521,6 @@ module.exports = {
   getMe, // GET /api/auth/me - Obtener perfil propio
   updateMe, // PUT /api/auth/me - Actualizar perfil propio
   changePassword, // PUT /api/auth/change-password - Cambiar contraseña
-  deleteMe, // DELETE /api/auth/me - Eliminar cuenta propia (cliente)
+  deactivateMe, // PUT /api/auth/deactivate - Desactivar cuenta propia (cliente)
+  deleteMe, // DELETE /api/auth/me - Eliminar cuenta propia definitiva con contraseña (cliente)
 };

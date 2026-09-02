@@ -13,13 +13,22 @@ import { useAuth } from '../context/AuthContext';
 import FloatingToast from '../components/FloatingToast';
 
 const PerfilPage = () => {
-  const { user, isAdmin, isAuxiliar, isCliente, updateProfile, deleteAccount, desactivarCuenta } = useAuth();
+  const { user, isAdmin, isAuxiliar, isCliente, updateProfile, deleteAccount, desactivarCuenta, eliminarCuenta } = useAuth();
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [desactivando, setDesactivando] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
+
+  // Modal de seguridad para eliminar cuenta con verificación de credenciales
+  const [modalEliminar, setModalEliminar] = useState({
+    show: false,
+    email: '',
+    password: '',
+    error: '',
+  });
 
   const [formData, setFormData] = useState({
     nombre: user?.nombre || '',
@@ -137,7 +146,7 @@ const PerfilPage = () => {
     }
   };
 
-  // Solicitar auto-desactivación de cuenta (solo clientes)
+  // Solicitar auto-desactivación de cuenta (solo clientes - confirmación sencilla)
   const solicitarDesactivarCuenta = () => {
     const nombreUsuario = user?.nombre || 'tu cuenta';
     setModalConfirmacion({
@@ -170,6 +179,48 @@ const PerfilPage = () => {
         }
       }
     });
+  };
+
+  // Solicitar eliminación permanente de cuenta (solo clientes - pide correo y contraseña)
+  const solicitarEliminarCuenta = () => {
+    setModalEliminar({
+      show: true,
+      email: '',
+      password: '',
+      error: '',
+    });
+  };
+
+  const ejecutarEliminacionCuenta = async (e) => {
+    if (e) e.preventDefault();
+    if (!modalEliminar.email.trim() || !modalEliminar.password) {
+      setModalEliminar(prev => ({ ...prev, error: 'Debes ingresar tu correo y contraseña para continuar' }));
+      return;
+    }
+
+    if (modalEliminar.email.trim().toLowerCase() !== user?.email?.toLowerCase()) {
+      setModalEliminar(prev => ({ ...prev, error: 'El correo electrónico no coincide con tu cuenta actual' }));
+      return;
+    }
+
+    setEliminando(true);
+    try {
+      const accion = eliminarCuenta || deleteAccount;
+      await accion(modalEliminar.email.trim(), modalEliminar.password);
+      setModalEliminar(prev => ({ ...prev, show: false }));
+      setMensaje({
+        tipo: 'success',
+        texto: 'Tu cuenta ha sido eliminada permanentemente'
+      });
+      setTimeout(() => {
+        navigate('/login');
+      }, 1200);
+    } catch (error) {
+      console.error('Error al eliminar cuenta:', error);
+      const errorMsg = error.message || error.response?.data?.message || 'Error al verificar credenciales para eliminar la cuenta';
+      setModalEliminar(prev => ({ ...prev, error: errorMsg }));
+      setEliminando(false);
+    }
   };
 
   const getRolLabel = () => {
@@ -589,29 +640,56 @@ const PerfilPage = () => {
           </Card>
 
           {/* ========================================================================= */}
-          {/* ZONA DE SEGURIDAD: Auto-desactivación de cuenta (SOLO EN VISTA DE CLIENTE)*/}
+          {/* GESTIÓN DE CUENTA: Desactivar (sencillo) o Eliminar (correo y contraseña) */}
           {/* ========================================================================= */}
           {isCliente && (
-            <Card className="perfil-danger-card shadow-sm">
-              <Card.Body className="p-4">
-                <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+            <Card className="perfil-status-card shadow-sm">
+              <Card.Header className="perfil-card-header d-flex align-items-center gap-2">
+                <i className="bi bi-shield-slash text-gold fs-5" />
+                <span className="fw-bold">Gestión de la Cuenta</span>
+              </Card.Header>
+              <Card.Body className="p-4 d-flex flex-column gap-4">
+                {/* Opción 1: Desactivar Cuenta (Confirmación sencilla) */}
+                <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 pb-3 border-bottom">
                   <div>
-                    <h5 className="text-warning-emphasis fw-bold d-flex align-items-center gap-2 mb-1">
-                      <i className="bi bi-x-circle-fill text-warning" />
+                    <h6 className="text-navy fw-bold d-flex align-items-center gap-2 mb-1">
+                      <i className="bi bi-pause-circle-fill text-warning" />
                       Desactivar Cuenta
-                    </h5>
-                    <p className="text-muted small mb-0" style={{ maxWidth: '540px' }}>
-                      Si decides desactivar tu cuenta, tu estado pasará a "Inactivo" y se cerrará tu sesión de inmediato.
+                    </h6>
+                    <p className="text-muted small mb-0" style={{ maxWidth: '520px' }}>
+                      Tu cuenta pasará a estado Inactivo temporalmente y se cerrará tu sesión. Podrás reactivarla contactando al soporte.
                     </p>
                   </div>
                   <Button
                     variant="outline-warning"
                     className="btn-desactivar-cuenta text-dark flex-shrink-0 d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold"
                     onClick={solicitarDesactivarCuenta}
-                    disabled={desactivando}
+                    disabled={desactivando || eliminando}
                   >
-                    <i className="bi bi-x-circle-fill text-warning" />
-                    <span>{desactivando ? 'Desactivando...' : 'Desactivar mi cuenta'}</span>
+                    <i className="bi bi-pause-circle text-warning" />
+                    <span>{desactivando ? 'Desactivando...' : 'Desactivar cuenta'}</span>
+                  </Button>
+                </div>
+
+                {/* Opción 2: Eliminar Cuenta (Requiere correo y contraseña) */}
+                <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+                  <div>
+                    <h6 className="text-danger fw-bold d-flex align-items-center gap-2 mb-1">
+                      <i className="bi bi-trash3-fill" />
+                      Eliminar Cuenta Permanentemente
+                    </h6>
+                    <p className="text-muted small mb-0" style={{ maxWidth: '520px' }}>
+                      Se darán de baja definitivamente tus datos en la plataforma. Por seguridad, te solicitaremos tu correo y contraseña para confirmar.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline-danger"
+                    className="btn-eliminar-cuenta flex-shrink-0 d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold"
+                    onClick={solicitarEliminarCuenta}
+                    disabled={desactivando || eliminando}
+                  >
+                    <i className="bi bi-trash3-fill" />
+                    <span>{eliminando ? 'Eliminando...' : 'Eliminar cuenta'}</span>
                   </Button>
                 </div>
               </Card.Body>
@@ -619,6 +697,99 @@ const PerfilPage = () => {
           )}
         </Col>
       </Row>
+
+      {/* ========================================================================= */}
+      {/* MODAL DE SEGURIDAD PARA ELIMINAR CUENTA (PIDE CORREO Y CONTRASEÑA)        */}
+      {/* ========================================================================= */}
+      <Modal
+        show={modalEliminar.show}
+        onHide={() => !eliminando && setModalEliminar(prev => ({ ...prev, show: false }))}
+        centered
+        backdrop="static"
+        dialogClassName="modal-confirmacion-compacto"
+      >
+        <Modal.Body className="p-3 p-sm-4">
+          <div className="text-center mb-3">
+            <div className="confirm-icon-wrapper mb-2 mx-auto bg-danger-subtle text-danger">
+              <i className="bi bi-shield-lock-fill confirm-icon" />
+            </div>
+            <h5 className="fw-bold text-navy mb-1 fs-5">
+              ¿Eliminar cuenta permanentemente?
+            </h5>
+            <p className="text-muted small mb-0 px-2" style={{ maxWidth: '340px', margin: '0 auto' }}>
+              Esta acción es irreversible. Para verificar tu identidad, por favor ingresa tu correo electrónico y tu contraseña actual.
+            </p>
+          </div>
+
+          {modalEliminar.error && (
+            <div className="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-3">
+              <i className="bi bi-exclamation-triangle-fill flex-shrink-0" />
+              <span>{modalEliminar.error}</span>
+            </div>
+          )}
+
+          <Form onSubmit={ejecutarEliminacionCuenta}>
+            <Form.Group className="mb-3 text-start">
+              <Form.Label className="small fw-semibold text-navy">
+                Correo Electrónico Actual
+              </Form.Label>
+              <div className="input-group">
+                <span className="input-group-text bg-light border-end-0">
+                  <i className="bi bi-envelope text-muted" />
+                </span>
+                <Form.Control
+                  type="email"
+                  placeholder="ejemplo@correo.com"
+                  value={modalEliminar.email}
+                  onChange={(e) => setModalEliminar(prev => ({ ...prev, email: e.target.value, error: '' }))}
+                  disabled={eliminando}
+                  className="border-start-0"
+                  required
+                />
+              </div>
+            </Form.Group>
+
+            <Form.Group className="mb-4 text-start">
+              <Form.Label className="small fw-semibold text-navy">
+                Contraseña Actual
+              </Form.Label>
+              <div className="input-group">
+                <span className="input-group-text bg-light border-end-0">
+                  <i className="bi bi-lock text-muted" />
+                </span>
+                <Form.Control
+                  type="password"
+                  placeholder="Tu contraseña actual"
+                  value={modalEliminar.password}
+                  onChange={(e) => setModalEliminar(prev => ({ ...prev, password: e.target.value, error: '' }))}
+                  disabled={eliminando}
+                  className="border-start-0"
+                  required
+                />
+              </div>
+            </Form.Group>
+
+            <div className="d-flex gap-2 justify-content-center w-100">
+              <Button
+                variant="outline-secondary"
+                className="px-3 py-2 fw-semibold flex-fill"
+                onClick={() => setModalEliminar(prev => ({ ...prev, show: false }))}
+                disabled={eliminando}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                type="submit"
+                className="px-3 py-2 fw-semibold flex-fill shadow-sm"
+                disabled={eliminando || !modalEliminar.email.trim() || !modalEliminar.password}
+              >
+                {eliminando ? 'Eliminando...' : 'Eliminar cuenta'}
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
 
       {/* ========================================================================= */}
       {/* MODAL DE CONFIRMACIÓN COMPACTO ESTILO GESTOR DE PRODUCTOS/USUARIOS        */}
@@ -789,10 +960,11 @@ const PerfilPage = () => {
           font-size: 0.92rem;
           color: #475569;
         }
-        .perfil-danger-card {
+        .perfil-status-card {
           border-radius: 1.25rem;
-          border: 1.5px dashed #fed7aa;
-          background: #fffbf5;
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          background: #ffffff;
+          overflow: hidden;
         }
         .btn-desactivar-cuenta {
           border-radius: 0.6rem;
@@ -802,6 +974,15 @@ const PerfilPage = () => {
           background: #f59e0b;
           color: #ffffff !important;
           box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+        }
+        .btn-eliminar-cuenta {
+          border-radius: 0.6rem;
+          transition: all 0.2s ease;
+        }
+        .btn-eliminar-cuenta:hover {
+          background: #dc3545;
+          color: #ffffff !important;
+          box-shadow: 0 4px 12px rgba(220, 53, 69, 0.25);
         }
       `}</style>
     </Container>

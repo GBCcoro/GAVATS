@@ -41,7 +41,8 @@ const {
   getMe,             // Función que retorna los datos del usuario autenticado
   updateMe,          // Función que actualiza el perfil del usuario autenticado
   changePassword,    // Función que permite cambiar la contraseña
-  deleteMe           // Función que permite al cliente eliminar su propia cuenta
+  deactivateMe,      // Función que desactiva la cuenta del cliente (confirmación sencilla)
+  deleteMe           // Función que elimina la cuenta del cliente (requiere correo y contraseña)
 } = require('../controllers/auth.controller');
 
 // ==========================================
@@ -136,9 +137,13 @@ router.put('/me', verificarAuth, updateMe);
 //   { success: true, message: "Contraseña actualizada exitosamente" }
 router.put('/change-password', verificarAuth, changePassword);
 
-// DELETE /api/auth/me → Elimina la cuenta propia del usuario autenticado (solo clientes)
+// PUT /api/auth/deactivate → Desactiva la cuenta del cliente (confirmación sencilla)
+router.put('/deactivate', verificarAuth, deactivateMe);
+
+// DELETE /api/auth/me o POST /api/auth/delete-account → Elimina la cuenta propia definitivamente (requiere correo y contraseña)
 // Headers requeridos: { "Authorization": "Bearer <token>" }
 router.delete('/me', verificarAuth, deleteMe);
+router.post('/delete-account', verificarAuth, deleteMe);
 
 // ==========================================
 // EXPORTAR ROUTER

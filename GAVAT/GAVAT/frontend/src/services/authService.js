@@ -106,11 +106,11 @@ const authService = {
   },
 
   /**
-   * Desactivar cuenta propia (solo clientes)
+   * Desactivar cuenta propia (confirmación sencilla, solo clientes)
    */
   desactivarCuenta: async () => {
     try {
-      const response = await api.delete('/auth/me');
+      const response = await api.put('/auth/deactivate');
       authService.logout();
       return response.data;
     } catch (error) {
@@ -118,7 +118,23 @@ const authService = {
     }
   },
 
-  deleteAccount: async () => {
+  /**
+   * Eliminar cuenta propia definitivamente (requiere correo y contraseña, solo clientes)
+   */
+  eliminarCuenta: async (email, password) => {
+    try {
+      const response = await api.post('/auth/delete-account', { email, password });
+      authService.logout();
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { success: false, message: 'Error de conexión' };
+    }
+  },
+
+  deleteAccount: async (email, password) => {
+    if (email && password) {
+      return authService.eliminarCuenta(email, password);
+    }
     return authService.desactivarCuenta();
   },
 
