@@ -401,7 +401,7 @@ const changePassword = async (req, res) => {
 };
 
 /**
- * Eliminar cuenta propia (solo para clientes)
+ * Desactivar cuenta propia (solo para clientes)
  *
  * Ruta: DELETE /api/auth/me
  * Headers: { Authorization: 'Bearer TOKEN' }
@@ -416,33 +416,24 @@ const deleteMe = async (req, res) => {
       });
     }
 
-    // Regla de seguridad: Solo clientes pueden auto-eliminarse desde su perfil
+    // Regla de seguridad: Solo clientes pueden auto-desactivarse desde su perfil
     if (usuario.rol !== "cliente") {
       return res.status(403).json({
         success: false,
-        message: "Solo los clientes pueden eliminar su propia cuenta desde el perfil",
+        message: "Solo los clientes pueden desactivar su propia cuenta desde el perfil",
       });
     }
 
-    // Si tiene pedidos asociados, desactivar la cuenta para preservar la integridad referencial fiscal
-    const tienePedidos = await Pedido.count({ where: { usuarioId: usuario.id } });
-    if (tienePedidos > 0) {
-      usuario.activo = false;
-      await usuario.save();
-      return res.json({
-        success: true,
-        message: "Cuenta eliminada exitosamente",
-      });
-    }
+    // Desactivar la cuenta (pasa a estado Inactivo)
+    usuario.activo = false;
+    await usuario.save();
 
-    // Si no tiene pedidos, se elimina definitivamente
-    await usuario.destroy();
     return res.json({
       success: true,
-      message: "Cuenta eliminada exitosamente",
+      message: "Cuenta desactivada exitosamente",
     });
   } catch (error) {
-    return handleServerError(res, error, "Error al eliminar la cuenta");
+    return handleServerError(res, error, "Error al desactivar la cuenta");
   }
 };
 

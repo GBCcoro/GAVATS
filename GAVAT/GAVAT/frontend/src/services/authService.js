@@ -106,9 +106,9 @@ const authService = {
   },
 
   /**
-   * Eliminar cuenta propia (solo clientes)
+   * Desactivar cuenta propia (solo clientes)
    */
-  deleteAccount: async () => {
+  desactivarCuenta: async () => {
     try {
       const response = await api.delete('/auth/me');
       authService.logout();
@@ -116,6 +116,10 @@ const authService = {
     } catch (error) {
       throw error.response?.data || { success: false, message: 'Error de conexión' };
     }
+  },
+
+  deleteAccount: async () => {
+    return authService.desactivarCuenta();
   },
 
   /**

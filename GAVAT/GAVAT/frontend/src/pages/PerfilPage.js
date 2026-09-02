@@ -13,12 +13,12 @@ import { useAuth } from '../context/AuthContext';
 import FloatingToast from '../components/FloatingToast';
 
 const PerfilPage = () => {
-  const { user, isAdmin, isAuxiliar, isCliente, updateProfile, deleteAccount } = useAuth();
+  const { user, isAdmin, isAuxiliar, isCliente, updateProfile, deleteAccount, desactivarCuenta } = useAuth();
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [eliminando, setEliminando] = useState(false);
+  const [desactivando, setDesactivando] = useState(false);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
 
   const [formData, setFormData] = useState({
@@ -137,35 +137,36 @@ const PerfilPage = () => {
     }
   };
 
-  // Solicitar auto-eliminación de cuenta (solo clientes)
-  const solicitarEliminarCuenta = () => {
+  // Solicitar auto-desactivación de cuenta (solo clientes)
+  const solicitarDesactivarCuenta = () => {
     const nombreUsuario = user?.nombre || 'tu cuenta';
     setModalConfirmacion({
       show: true,
-      titulo: '¿Eliminar cuenta?',
-      mensaje: `¿Estás seguro de que deseas eliminar permanentemente la cuenta de "${nombreUsuario}"? Esta acción no se puede deshacer y tu sesión se cerrará de inmediato.`,
-      tipo: 'danger',
-      icono: 'trash3-fill',
-      textoConfirmar: 'Borrar',
+      titulo: '¿Desactivar cuenta?',
+      mensaje: `¿Deseas cambiar el estado de tu cuenta "${nombreUsuario}" a "Inactivo"? Tu sesión se cerrará de inmediato.`,
+      tipo: 'warning',
+      icono: 'x-circle-fill',
+      textoConfirmar: 'Desactivar',
       textoCancelar: 'Cancelar',
       onConfirm: async () => {
-        setEliminando(true);
+        setDesactivando(true);
         try {
-          await deleteAccount();
+          const accion = desactivarCuenta || deleteAccount;
+          await accion();
           setMensaje({
             tipo: 'success',
-            texto: 'Tu cuenta ha sido eliminada exitosamente'
+            texto: 'Tu cuenta ha sido desactivada exitosamente'
           });
           setTimeout(() => {
             navigate('/login');
           }, 1200);
         } catch (error) {
-          console.error('Error al eliminar cuenta:', error);
+          console.error('Error al desactivar cuenta:', error);
           setMensaje({
             tipo: 'danger',
-            texto: error.message || error.response?.data?.message || 'Error al eliminar la cuenta'
+            texto: error.message || error.response?.data?.message || 'Error al desactivar la cuenta'
           });
-          setEliminando(false);
+          setDesactivando(false);
         }
       }
     });
@@ -588,29 +589,29 @@ const PerfilPage = () => {
           </Card>
 
           {/* ========================================================================= */}
-          {/* ZONA DE PELIGRO: Auto-eliminación de cuenta (SOLO EN VISTA DE CLIENTE)  */}
+          {/* ZONA DE SEGURIDAD: Auto-desactivación de cuenta (SOLO EN VISTA DE CLIENTE)*/}
           {/* ========================================================================= */}
           {isCliente && (
             <Card className="perfil-danger-card shadow-sm">
               <Card.Body className="p-4">
                 <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
                   <div>
-                    <h5 className="text-danger fw-bold d-flex align-items-center gap-2 mb-1">
-                      <i className="bi bi-shield-slash-fill" />
+                    <h5 className="text-warning-emphasis fw-bold d-flex align-items-center gap-2 mb-1">
+                      <i className="bi bi-x-circle-fill text-warning" />
                       Desactivar Cuenta
                     </h5>
                     <p className="text-muted small mb-0" style={{ maxWidth: '540px' }}>
-                      Si decides eliminar tu cuenta, se dará de baja tu registro de cliente y se cerrará tu sesión de inmediato. Esta acción no se puede deshacer.
+                      Si decides desactivar tu cuenta, tu estado pasará a "Inactivo" y se cerrará tu sesión de inmediato.
                     </p>
                   </div>
                   <Button
-                    variant="outline-danger"
-                    className="btn-eliminar-cuenta flex-shrink-0 d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold"
-                    onClick={solicitarEliminarCuenta}
-                    disabled={eliminando}
+                    variant="outline-warning"
+                    className="btn-desactivar-cuenta text-dark flex-shrink-0 d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold"
+                    onClick={solicitarDesactivarCuenta}
+                    disabled={desactivando}
                   >
-                    <i className="bi bi-trash3-fill" />
-                    <span>{eliminando ? 'Eliminando...' : 'Eliminar mi cuenta'}</span>
+                    <i className="bi bi-x-circle-fill text-warning" />
+                    <span>{desactivando ? 'Desactivando...' : 'Desactivar mi cuenta'}</span>
                   </Button>
                 </div>
               </Card.Body>
@@ -790,17 +791,17 @@ const PerfilPage = () => {
         }
         .perfil-danger-card {
           border-radius: 1.25rem;
-          border: 1.5px dashed #fca5a5;
-          background: #fff8f8;
+          border: 1.5px dashed #fed7aa;
+          background: #fffbf5;
         }
-        .btn-eliminar-cuenta {
+        .btn-desactivar-cuenta {
           border-radius: 0.6rem;
           transition: all 0.2s ease;
         }
-        .btn-eliminar-cuenta:hover {
-          background: #dc3545;
-          color: #ffffff;
-          box-shadow: 0 4px 12px rgba(220, 53, 69, 0.25);
+        .btn-desactivar-cuenta:hover {
+          background: #f59e0b;
+          color: #ffffff !important;
+          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
         }
       `}</style>
     </Container>
