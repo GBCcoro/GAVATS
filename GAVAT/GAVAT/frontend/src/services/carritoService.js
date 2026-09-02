@@ -67,8 +67,16 @@ const carritoService = {
       const existente = carritoLocal.find(item => item.productoId === productoId);
       
       if (existente) {
+        const maxStock = Number(existente.producto?.stock ?? existente.stock ?? productoInfo?.stock);
+        if (maxStock && (existente.cantidad + cantidad) > maxStock) {
+          throw new Error(`Stock insuficiente. Disponible: ${maxStock}, En carrito: ${existente.cantidad}`);
+        }
         existente.cantidad += cantidad;
       } else {
+        const maxStock = Number(productoInfo?.stock);
+        if (maxStock && cantidad > maxStock) {
+          throw new Error(`Stock insuficiente. Disponible: ${maxStock}`);
+        }
         carritoLocal.push({
           id: Date.now(), // ID temporal para el carrito local
           productoId,
@@ -76,6 +84,7 @@ const carritoService = {
           precio: productoInfo.precio,
           nombre: productoInfo.nombre,
           imagen: productoInfo.imagen,
+          stock: productoInfo.stock,
           producto: productoInfo
         });
       }
@@ -111,9 +120,13 @@ const carritoService = {
       const item = carritoLocal.find(i => i.id === itemId);
       
       if (item) {
+        const maxStock = Number(item.producto?.stock ?? item.stock);
+        if (maxStock && cantidad > maxStock) {
+          throw new Error(`Stock insuficiente. Disponible: ${maxStock}`);
+        }
         item.cantidad = cantidad;
         localStorage.setItem(CARRITO_LOCAL_KEY, JSON.stringify(carritoLocal));
-        return { success: true, message: 'Cantidad actualizada' };
+        return { success: true, message: 'Cantidad actualizada exitosamente' };
       }
 
       throw new Error('Producto no encontrado');

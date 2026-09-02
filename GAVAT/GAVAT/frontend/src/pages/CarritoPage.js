@@ -39,8 +39,8 @@ const CarritoPage = () => {
     loadCarrito();
   }, []);
 
-  const loadCarrito = async () => {
-    setLoading(true);
+  const loadCarrito = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const response = await carritoService.getCarrito();
       console.log('📥 Respuesta del carrito:', response);
@@ -49,7 +49,7 @@ const CarritoPage = () => {
       console.error('Error al cargar carrito:', error);
       setMensaje({ tipo: 'danger', texto: 'Error al cargar el carrito' });
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -63,16 +63,141 @@ const CarritoPage = () => {
     }
   }, [mensaje]);
 
-  const handleCantidadChange = async (itemId, nuevaCantidad) => {
-    if (nuevaCantidad < 1) return;
+  const handleCantidadChange = async (itemId, nuevaCantidad, mensajePersonalizado = null) => {
+    const cantNum = Number.parseInt(nuevaCantidad, 10);
+    if (Number.isNaN(cantNum) || cantNum < 1) return;
+
+    // Actualización optimista inmediata para respuesta instantánea al hacer clic en los botones
+    setCarrito(prev => {
+      if (!prev) return prev;
+      const items = (prev.items || []).map(i => {
+        if (i.id === itemId) {
+          return { ...i, cantidad: cantNum };
+        }
+        return i;
+      });
+      const nuevoTotal = items.reduce((acc, i) => acc + ((Number(i.precioUnitario) || Number(i.precio) || 0) * (Number(i.cantidad) || 0)), 0);
+      return {
+        ...prev,
+        items,
+        total: nuevoTotal,
+        resumen: {
+          ...(prev.resumen || {}),
+          total: nuevoTotal.toFixed(2),
+          cantidadTotal: items.reduce((acc, i) => acc + (Number(i.cantidad) || 0), 0)
+        }
+      };
+    });
 
     try {
-      await carritoService.actualizarItem(itemId, nuevaCantidad);
-      await loadCarrito();
-      setMensaje({ tipo: 'success', texto: 'Cantidad actualizada exitosamente' });
+      await carritoService.actualizarItem(itemId, cantNum);
+      await loadCarrito(true);
+      if (mensajePersonalizado) {
+        setMensaje(mensajePersonalizado);
+      }
     } catch (error) {
+      console.error('Error al actualizar cantidad:', error);
       setMensaje({ tipo: 'danger', texto: error.message || 'Error al actualizar cantidad' });
+      await loadCarrito(true);
     }
+  };
+
+  const handleInputChange = (item, nuevoValor) => {
+    if (nuevoValor === '') {
+      setCarrito(prev => {
+        if (!prev) return prev;
+        const items = (prev.items || []).map(i => {
+          if (i.id === item.id) {
+            return { ...i, cantidad: '' };
+          }
+          return i;
+        });
+        return { ...prev, items };
+      });
+      return;
+    }
+
+    const num = Number.parseInt(nuevoValor, 10);
+    if (Number.isNaN(num)) return;
+
+    const maxStock = Number(item.producto?.stock ?? item.stock) || 99;
+    const nombreItem = item.producto?.nombre || item.nombre || 'este producto';
+
+    if (num > maxStock) {
+      setCarrito(prev => {
+        if (!prev) return prev;
+        const items = (prev.items || []).map(i => {
+          if (i.id === item.id) {
+            return { ...i, cantidad: maxStock };
+          }
+          return i;
+        });
+        return { ...prev, items };
+      });
+      setMensaje({
+        tipo: 'warning',
+        texto: `El stock máximo disponible para "${nombreItem}" es de ${maxStock} ${maxStock === 1 ? 'unidad' : 'unidades'}, por lo que no es posible agregar la cantidad solicitada (${num}).`
+      });
+      return;
+    }
+
+    setCarrito(prev => {
+      if (!prev) return prev;
+      const items = (prev.items || []).map(i => {
+        if (i.id === item.id) {
+          return { ...i, cantidad: num };
+        }
+        return i;
+      });
+      return { ...prev, items };
+    });
+  };
+
+  const handleInputBlur = async (item) => {
+    const cantOriginal = Number.parseInt(item.cantidad, 10);
+    const maxStock = Number(item.producto?.stock ?? item.stock) || 99;
+    const nombreItem = item.producto?.nombre || item.nombre || 'este producto';
+
+    if (Number.isNaN(cantOriginal) || cantOriginal < 1) {
+      await handleCantidadChange(item.id, 1);
+      return;
+    }
+
+    if (cantOriginal > maxStock) {
+      await handleCantidadChange(
+        item.id,
+        maxStock,
+        {
+          tipo: 'warning',
+          texto: `El stock máximo disponible para "${nombreItem}" es de ${maxStock} ${maxStock === 1 ? 'unidad' : 'unidades'}, por lo que no es posible agregar la cantidad solicitada (${cantOriginal}).`
+        }
+      );
+      return;
+    }
+
+    await handleCantidadChange(item.id, cantOriginal);
+  };
+
+  const handleAumentarCantidad = (item) => {
+    const cantActual = Number.parseInt(item.cantidad, 10) || 1;
+    const maxStock = Number(item.producto?.stock ?? item.stock) || 99;
+    const nombreItem = item.producto?.nombre || item.nombre || 'este producto';
+
+    if (cantActual >= maxStock) {
+      setMensaje({
+        tipo: 'warning',
+        texto: `El stock máximo disponible para "${nombreItem}" es de ${maxStock} ${maxStock === 1 ? 'unidad' : 'unidades'}, por lo que no es posible agregar más unidades.`
+      });
+      return;
+    }
+
+    handleCantidadChange(item.id, cantActual + 1);
+  };
+
+  const handleDisminuirCantidad = (item) => {
+    const cantActual = Number.parseInt(item.cantidad, 10) || 1;
+    if (cantActual <= 1) return;
+    handleCantidadChange(item.id, cantActual - 1);
   };
 
   const handleEliminar = (item) => {
@@ -89,15 +214,15 @@ const CarritoPage = () => {
         try {
           await carritoService.eliminarItem(item.id);
           await loadCarrito();
-          setMensaje({ 
-            tipo: 'success', 
-            texto: `Item "${nombreItem}" eliminado del carrito exitosamente` 
+          setMensaje({
+            tipo: 'success',
+            texto: `Item "${nombreItem}" eliminado del carrito exitosamente`
           });
         } catch (error) {
           console.error('Error al eliminar item:', error);
-          setMensaje({ 
-            tipo: 'danger', 
-            texto: error.message || 'Error al eliminar el item del carrito' 
+          setMensaje({
+            tipo: 'danger',
+            texto: error.message || 'Error al eliminar el item del carrito'
           });
         }
       }
@@ -128,9 +253,9 @@ const CarritoPage = () => {
 
   const handleProcederPago = () => {
     if (!isAuthenticated) {
-      setMensaje({ 
-        tipo: 'warning', 
-        texto: 'Debes iniciar sesión para proceder al pago' 
+      setMensaje({
+        tipo: 'warning',
+        texto: 'Debes iniciar sesión para proceder al pago'
       });
       setTimeout(() => navigate('/login'), 2000);
       return;
@@ -169,9 +294,9 @@ const CarritoPage = () => {
       )}
 
       {/* Notificación flotante inferior izquierda siempre fija en la ventana */}
-      <FloatingToast 
-        mensaje={mensaje} 
-        onClose={() => setMensaje({ tipo: '', texto: '' })} 
+      <FloatingToast
+        mensaje={mensaje}
+        onClose={() => setMensaje({ tipo: '', texto: '' })}
       />
 
       {items.length === 0 ? (
@@ -196,9 +321,9 @@ const CarritoPage = () => {
                     Productos en tu carrito
                     <Badge className="carrito-badge ms-2">{items.length}</Badge>
                   </h5>
-                  <Button 
-                    variant="outline-danger" 
-                    className="btn-vaciar-carrito d-inline-flex align-items-center gap-1" 
+                  <Button
+                    variant="outline-danger"
+                    className="btn-vaciar-carrito d-inline-flex align-items-center gap-1"
                     size="sm"
                     onClick={handleVaciarCarrito}
                   >
@@ -253,22 +378,41 @@ const CarritoPage = () => {
                             <Button
                               className="btn-cantidad"
                               size="sm"
-                              onClick={() => handleCantidadChange(item.id, item.cantidad - 1)}
+                              onClick={() => handleDisminuirCantidad(item)}
+                              disabled={Number(item.cantidad) <= 1}
+                              title="Disminuir cantidad"
+                              aria-label="Disminuir cantidad"
                             >
                               <i className="bi bi-dash"></i>
                             </Button>
-                            <span className="mx-3 fw-bold">{item.cantidad}</span>
+                            <input
+                              type="number"
+                              className="cantidad-input mx-2"
+                              value={item.cantidad}
+                              min="1"
+                              max={item.producto?.stock ?? item.stock ?? 99}
+                              onChange={(e) => handleInputChange(item, e.target.value)}
+                              onBlur={() => handleInputBlur(item)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                              aria-label={`Cantidad para ${item.producto?.nombre || item.nombre}`}
+                            />
                             <Button
                               className="btn-cantidad"
                               size="sm"
-                              onClick={() => handleCantidadChange(item.id, item.cantidad + 1)}
+                              onClick={() => handleAumentarCantidad(item)}
+                              title="Aumentar cantidad"
+                              aria-label="Aumentar cantidad"
                             >
                               <i className="bi bi-plus"></i>
                             </Button>
                           </div>
                         </td>
                         <td className="text-center align-middle fw-bold">
-                          {formatearPrecio((item.precioUnitario || item.precio) * item.cantidad)}
+                          {formatearPrecio((item.precioUnitario || item.precio) * (Number.parseInt(item.cantidad, 10) || 0))}
                         </td>
                         <td className="text-center align-middle">
                           <Button
@@ -395,9 +539,38 @@ const CarritoPage = () => {
           padding: 0.25rem 0.5rem;
           transition: all 0.2s ease;
         }
-        .btn-cantidad:hover {
+        .btn-cantidad:hover:not(:disabled) {
           background: var(--bs-gold, #f5c271);
           color: var(--fnt-black, #000000);
+        }
+        .btn-cantidad:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        .cantidad-input {
+          width: 54px;
+          height: 34px;
+          border: 1.5px solid #d1d5db;
+          border-radius: 0.5rem;
+          background: #ffffff;
+          color: #192847;
+          font-size: 0.95rem;
+          font-weight: 700;
+          text-align: center;
+          outline: none;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .cantidad-input:focus {
+          border-color: #c7984e;
+          box-shadow: 0 0 0 3px rgba(199, 152, 78, 0.2);
+        }
+        .cantidad-input::-webkit-outer-spin-button,
+        .cantidad-input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        .cantidad-input[type=number] {
+          -moz-appearance: textfield;
         }
         .btn-eliminar {
           background: transparent;
@@ -465,36 +638,35 @@ const CarritoPage = () => {
         }
       `}</style>
       {/* Modal de Confirmación Compacto Estilo Gestor de Productos */}
-      <Modal 
-        show={modalConfirmacion.show} 
-        onHide={() => setModalConfirmacion(prev => ({ ...prev, show: false }))} 
+      <Modal
+        show={modalConfirmacion.show}
+        onHide={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
         centered
         backdrop="static"
         dialogClassName="modal-confirmacion-compacto"
       >
         <Modal.Body className="text-center p-3 p-sm-4">
-          <div 
-            className={`confirm-icon-wrapper mb-3 mx-auto bg-${
-              modalConfirmacion.tipo === 'danger' ? 'danger-subtle' :
-              modalConfirmacion.tipo === 'warning' ? 'warning-subtle' :
-              modalConfirmacion.tipo === 'primary' || modalConfirmacion.tipo === 'info' ? 'primary-subtle' :
-              'success-subtle'
-            } text-${modalConfirmacion.tipo || 'primary'}`}
+          <div
+            className={`confirm-icon-wrapper mb-3 mx-auto bg-${modalConfirmacion.tipo === 'danger' ? 'danger-subtle' :
+                modalConfirmacion.tipo === 'warning' ? 'warning-subtle' :
+                  modalConfirmacion.tipo === 'primary' || modalConfirmacion.tipo === 'info' ? 'primary-subtle' :
+                    'success-subtle'
+              } text-${modalConfirmacion.tipo || 'primary'}`}
           >
             <i className={`bi bi-${modalConfirmacion.icono || 'trash3-fill'} confirm-icon`} />
           </div>
-          
+
           <h5 className="fw-bold text-navy mb-2 fs-5">
             {modalConfirmacion.titulo}
           </h5>
-          
+
           <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
             {modalConfirmacion.mensaje}
           </p>
 
           <div className="d-flex gap-2 justify-content-center w-100 mt-2">
-            <Button 
-              variant="outline-secondary" 
+            <Button
+              variant="outline-secondary"
               className="px-3 py-2 fw-semibold flex-fill"
               onClick={() => {
                 setModalConfirmacion(prev => ({ ...prev, show: false }));
@@ -503,8 +675,8 @@ const CarritoPage = () => {
             >
               {modalConfirmacion.textoCancelar || 'Cancelar'}
             </Button>
-            <Button 
-              variant={modalConfirmacion.tipo || 'danger'} 
+            <Button
+              variant={modalConfirmacion.tipo || 'danger'}
               className="px-3 py-2 fw-semibold flex-fill shadow-sm"
               onClick={async () => {
                 const action = modalConfirmacion.onConfirm;

@@ -61,12 +61,18 @@ const ProductoDetallePage = () => {
   }, [id, navigate]);
 
   const handleIncreaseQuantity = useCallback(() => {
-    setCantidad((prev) => {
-      const maxStock = Number(producto?.stock) || 1;
-      const current = Number.parseInt(prev, 10) || 0;
-      return current < maxStock ? current + 1 : maxStock;
-    });
-  }, [producto?.stock]);
+    const maxStock = Number(producto?.stock) || 1;
+    const current = Number.parseInt(cantidad, 10) || 0;
+    if (current >= maxStock) {
+      setMensaje({
+        tipo: 'warning',
+        texto: `El stock máximo disponible para "${producto?.nombre}" es de ${maxStock} ${maxStock === 1 ? 'unidad' : 'unidades'}, por lo que no es posible agregar más unidades.`,
+        accion: null
+      });
+      return;
+    }
+    setCantidad(current + 1);
+  }, [producto, cantidad]);
 
   const handleDecreaseQuantity = useCallback(() => {
     setCantidad((prev) => {
@@ -88,11 +94,16 @@ const ProductoDetallePage = () => {
         setCantidad(1);
       } else if (num > maxStock) {
         setCantidad(maxStock);
+        setMensaje({
+          tipo: 'warning',
+          texto: `El stock máximo disponible para "${producto?.nombre}" es de ${maxStock} ${maxStock === 1 ? 'unidad' : 'unidades'}, por lo que no es posible agregar la cantidad solicitada (${num}).`,
+          accion: null
+        });
       } else {
         setCantidad(num);
       }
     }
-  }, [producto?.stock]);
+  }, [producto?.stock, producto?.nombre]);
 
   const handleCantidadBlur = useCallback(() => {
     if (!cantidad || Number(cantidad) < 1) {
@@ -338,7 +349,6 @@ const ProductoDetallePage = () => {
                           type="button"
                           className="quantity-btn"
                           onClick={handleIncreaseQuantity}
-                          disabled={Number(cantidad || 1) >= Number(stockDisponible)}
                           title="Aumentar cantidad"
                           aria-label="Aumentar cantidad"
                         >
