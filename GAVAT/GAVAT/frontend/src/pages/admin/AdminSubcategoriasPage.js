@@ -12,7 +12,6 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { exportarSubcategoriasAPDF, exportarSubcategoriasAExcel } from '../../utils/exportUtils';
-import SvgIcon from '../../components/SvgIcon';
 
 const AdminSubcategoriasPage = () => {
   useAuth();
@@ -24,6 +23,20 @@ const AdminSubcategoriasPage = () => {
   const [editando, setEditando] = useState(null);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [tipoExportacion, setTipoExportacion] = useState('pdf');
+  const [seleccionados, setSeleccionados] = useState(new Set());
+  
+  // Modal de confirmación en pantalla
+  const [modalConfirmacion, setModalConfirmacion] = useState({
+    show: false,
+    titulo: '',
+    mensaje: '',
+    tipo: 'danger',
+    icono: 'trash3-fill',
+    textoConfirmar: 'Borrar',
+    textoCancelar: 'Cancelar',
+    onConfirm: null,
+    onCancel: null
+  });
   
   // Paginación
   const [paginaActual, setPaginaActual] = useState(1);
@@ -105,11 +118,9 @@ const AdminSubcategoriasPage = () => {
     }
   }, []);
 
-  // Cargar datos al montar el componente
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadData]);
 
   const handleShowModal = (subcategoria = null) => {
     if (subcategoria) {
@@ -125,7 +136,7 @@ const AdminSubcategoriasPage = () => {
       setFormData({
         nombre: '',
         descripcion: '',
-        categoriaId: '',
+        categoriaId: categorias.length > 0 ? categorias[0].id : '',
         activo: true
       });
     }
@@ -140,26 +151,34 @@ const AdminSubcategoriasPage = () => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: type === 'checkbox' ? checked : value
-    });
+    }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+  // Guardado real
+  const ejecutarGuardado = async () => {
+    if (!formData.nombre.trim()) {
+      setMensaje({ tipo: 'danger', texto: 'El nombre es obligatorio' });
+      return;
+    }
+    if (!formData.categoriaId) {
+      setMensaje({ tipo: 'danger', texto: 'Debes seleccionar una categoría' });
+      return;
+    }
+
     try {
       if (editando) {
         await api.put(`/admin/subcategorias/${editando.id}`, formData);
-        setMensaje({ tipo: 'success', texto: 'Subcategoría actualizada exitosamente' });
+        setMensaje({ tipo: 'success', texto: `Subcategoría "${formData.nombre}" actualizada exitosamente` });
       } else {
         await api.post('/admin/subcategorias', formData);
-        setMensaje({ tipo: 'success', texto: 'Subcategoría creada exitosamente' });
+        setMensaje({ tipo: 'success', texto: `Subcategoría "${formData.nombre}" creada exitosamente` });
       }
       
       handleCloseModal();
-      loadData();
+      await loadData();
     } catch (error) {
       console.error('Error al guardar subcategoría:', error);
       setMensaje({ 
@@ -169,37 +188,199 @@ const AdminSubcategoriasPage = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta subcategoría?')) return;
-    
-    try {
-      await api.delete(`/admin/subcategorias/${id}`);
-      setMensaje({ tipo: 'success', texto: 'Subcategoría eliminada exitosamente' });
-      loadData();
-    } catch (error) {
-      console.error('Error al eliminar subcategoría:', error);
-      setMensaje({ 
-        tipo: 'danger', 
-        texto: error.response?.data?.message || 'Error al eliminar la subcategoría' 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (editando) {
+      setModalConfirmacion({
+        show: true,
+        titulo: '¿Actualizar subcategoría?',
+        mensaje: `¿Deseas guardar los cambios realizados en la subcategoría "${formData.nombre || editando.nombre}"?`,
+        tipo: 'primary',
+        icono: 'pencil-square',
+        textoConfirmar: 'Actualizar',
+        textoCancelar: 'Cancelar',
+        onConfirm: async () => {
+          await ejecutarGuardado();
+        }
       });
+    } else {
+      ejecutarGuardado();
     }
   };
 
-  const handleToggleActivo = async (subcategoria) => {
-    try {
-      const res = await api.patch(`/admin/subcategorias/${subcategoria.id}/toggle`);
-      setMensaje({ 
-        tipo: 'success', 
-        texto: res.data?.message || `Subcategoría ${!subcategoria.activo ? 'activada' : 'desactivada'} exitosamente` 
-      });
-      await loadData();
-    } catch (error) {
-      console.error('Error al cambiar estado:', error);
-      setMensaje({ 
-        tipo: 'danger', 
-        texto: error.response?.data?.message || 'Error al cambiar el estado' 
-      });
-    }
+  // Selección de filas
+  const todosPaginaSeleccionados = useMemo(() => {
+    return subcategoriasPaginadas.length > 0 && subcategoriasPaginadas.every(s => seleccionados.has(s.id));
+  }, [subcategoriasPaginadas, seleccionados]);
+
+  const handleToggleSeleccionarTodos = () => {
+    setSeleccionados(prev => {
+      const nuevo = new Set(prev);
+      if (todosPaginaSeleccionados) {
+        subcategoriasPaginadas.forEach(s => nuevo.delete(s.id));
+      } else {
+        subcategoriasPaginadas.forEach(s => nuevo.add(s.id));
+      }
+      return nuevo;
+    });
+  };
+
+  const toggleSeleccionarSubcategoria = (id) => {
+    setSeleccionados(prev => {
+      const nuevo = new Set(prev);
+      if (nuevo.has(id)) {
+        nuevo.delete(id);
+      } else {
+        nuevo.add(id);
+      }
+      return nuevo;
+    });
+  };
+
+  // Eliminar individual con modal
+  const solicitarEliminar = (subcategoria) => {
+    setModalConfirmacion({
+      show: true,
+      titulo: '¿Eliminar subcategoría?',
+      mensaje: `¿Estás seguro de que deseas eliminar permanentemente la subcategoría "${subcategoria.nombre}"? Esta acción no se puede deshacer.`,
+      tipo: 'danger',
+      icono: 'trash3-fill',
+      textoConfirmar: 'Borrar',
+      textoCancelar: 'Cancelar',
+      onConfirm: async () => {
+        try {
+          setSubcategorias(prev => prev.filter(s => s.id !== subcategoria.id));
+          setSeleccionados(prev => {
+            const next = new Set(prev);
+            next.delete(subcategoria.id);
+            return next;
+          });
+
+          await api.delete(`/admin/subcategorias/${subcategoria.id}`);
+          setMensaje({ tipo: 'success', texto: `Subcategoría "${subcategoria.nombre}" eliminada exitosamente` });
+          await loadData();
+        } catch (error) {
+          console.error('Error al eliminar subcategoría:', error);
+          setMensaje({ 
+            tipo: 'danger', 
+            texto: error.response?.data?.message || 'Error al eliminar la subcategoría' 
+          });
+          await loadData();
+        }
+      }
+    });
+  };
+
+  // Toggle estado individual con modal
+  const solicitarCambioEstado = (subcategoria) => {
+    const nuevoEstado = !subcategoria.activo;
+    setModalConfirmacion({
+      show: true,
+      titulo: nuevoEstado ? '¿Activar subcategoría?' : '¿Desactivar subcategoría?',
+      mensaje: `¿Deseas cambiar el estado de "${subcategoria.nombre}" a "${nuevoEstado ? 'Activo' : 'Inactivo'}"?`,
+      tipo: nuevoEstado ? 'success' : 'warning',
+      icono: nuevoEstado ? 'check-circle-fill' : 'x-circle-fill',
+      textoConfirmar: nuevoEstado ? 'Activar' : 'Desactivar',
+      textoCancelar: 'Cancelar',
+      onConfirm: async () => {
+        try {
+          const res = await api.patch(`/admin/subcategorias/${subcategoria.id}/toggle`);
+          const nuevoEstadoRes = res.data?.data?.subcategoria?.activo ?? nuevoEstado;
+          
+          setSubcategorias(prev => 
+            prev.map(s => 
+              s.id === subcategoria.id ? { ...s, activo: nuevoEstadoRes } : s
+            )
+          );
+          
+          setMensaje({ 
+            tipo: 'success', 
+            texto: res.data?.message || `Subcategoría "${subcategoria.nombre}" ${nuevoEstadoRes ? 'activada' : 'desactivada'} exitosamente` 
+          });
+        } catch (error) {
+          console.error('Error al cambiar estado:', error);
+          setMensaje({ 
+            tipo: 'danger', 
+            texto: error.response?.data?.message || 'Error al cambiar el estado de la subcategoría' 
+          });
+        }
+      }
+    });
+  };
+
+  // Eliminación masiva con modal
+  const solicitarEliminacionMasiva = () => {
+    const count = seleccionados.size;
+    if (count === 0) return;
+    
+    setModalConfirmacion({
+      show: true,
+      titulo: `¿Eliminar ${count} subcategoría${count !== 1 ? 's' : ''}?`,
+      mensaje: `Se eliminarán permanentemente las ${count} subcategorías seleccionadas. ¿Deseas continuar?`,
+      tipo: 'danger',
+      icono: 'trash3-fill',
+      textoConfirmar: 'Borrar',
+      textoCancelar: 'Cancelar',
+      onConfirm: async () => {
+        try {
+          const ids = Array.from(seleccionados);
+          const idsSet = new Set(ids);
+          
+          setSubcategorias(prev => prev.filter(s => !idsSet.has(s.id)));
+          setSeleccionados(new Set());
+          
+          const resultados = await Promise.allSettled(ids.map(id => api.delete(`/admin/subcategorias/${id}`)));
+          const exitosos = resultados.filter(r => r.status === 'fulfilled').length;
+          
+          setMensaje({ 
+            tipo: exitosos > 0 ? 'success' : 'danger', 
+            texto: `${exitosos} de ${ids.length} subcategorías eliminadas exitosamente` 
+          });
+          
+          await loadData();
+        } catch (error) {
+          console.error('Error en eliminación masiva:', error);
+          setMensaje({ tipo: 'danger', texto: 'Error al procesar la eliminación masiva' });
+          await loadData();
+        }
+      }
+    });
+  };
+
+  // Toggle masivo con modal
+  const solicitarCambioEstadoMasivo = () => {
+    const count = seleccionados.size;
+    if (count === 0) return;
+    
+    setModalConfirmacion({
+      show: true,
+      titulo: `¿Cambiar estado a ${count} subcategoría${count !== 1 ? 's' : ''}?`,
+      mensaje: `Se alternará el estado (activado/desactivado) de las ${count} subcategorías seleccionadas.`,
+      tipo: 'warning',
+      icono: 'arrow-repeat',
+      textoConfirmar: 'Actualizar',
+      textoCancelar: 'Cancelar',
+      onConfirm: async () => {
+        try {
+          const ids = Array.from(seleccionados);
+          setSeleccionados(new Set());
+          
+          const resultados = await Promise.allSettled(ids.map(id => api.patch(`/admin/subcategorias/${id}/toggle`)));
+          const exitosos = resultados.filter(r => r.status === 'fulfilled').length;
+          
+          setMensaje({ 
+            tipo: exitosos > 0 ? 'success' : 'danger', 
+            texto: `Estado actualizado en ${exitosos} de ${ids.length} subcategorías` 
+          });
+          
+          await loadData();
+        } catch (error) {
+          console.error('Error al cambiar estado masivo:', error);
+          setMensaje({ tipo: 'danger', texto: 'Error al procesar el cambio de estado masivo' });
+          await loadData();
+        }
+      }
+    });
   };
 
   const obtenerNombreCategoria = (categoriaId) => {
@@ -214,15 +395,20 @@ const AdminSubcategoriasPage = () => {
 
   return (
     <Container className="py-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      {/* Header Toolbar Responsivo */}
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
         <div>
-          <h1><span className="bi bi-folder2 me-2" aria-hidden="true"></span> Gestión de Subcategorías</h1>
-          <p className="text-muted mb-0">Administra las subcategorías de productos</p>
+          <h1 className="h2 mb-1 fw-bold text-navy">
+            <span className="bi bi-folder2 me-2 text-gold" aria-hidden="true"></span> Gestión de Subcategorías
+          </h1>
+          <p className="text-muted mb-0">
+            Total: {subcategoriasFiltradas.length} de {subcategorias.length} subcategoría{subcategorias.length !== 1 ? 's' : ''}
+          </p>
         </div>
-        <div>
-          <Dropdown as={ButtonGroup} className="me-2">
+        <div className="d-flex flex-wrap align-items-center gap-2">
+          <Dropdown as={ButtonGroup}>
             <Button 
-              variant="success" 
+              variant="primary" 
               onClick={async () => {
                 if (tipoExportacion === 'pdf') {
                   exportarSubcategoriasAPDF(subcategoriasFiltradas, categorias);
@@ -231,7 +417,8 @@ const AdminSubcategoriasPage = () => {
                 }
               }}
             >
-              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span> Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
+              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
             </Button>
             <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" />
             <Dropdown.Menu>
@@ -253,14 +440,12 @@ const AdminSubcategoriasPage = () => {
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
-          <button type="button" className="btn btn-dark me-2" onClick={() => navigate('/admin/dashboard')}>
-            <SvgIcon name="arrow_left" size={16} className="me-1" />{' '}
-            Volver
-          </button>
-          <button type="button" className="btn btn-dark" onClick={() => handleShowModal()}>
-            <SvgIcon name="plus-circle" size={16} className="me-1" />{' '}
-            Nueva Subcategoría
-          </button>
+          <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
+            <i className="bi bi-arrow-left me-1"></i> Volver
+          </Button>
+          <Button variant="primary" onClick={() => handleShowModal()}>
+            <i className="bi bi-plus-circle me-1"></i> Nueva Subcategoría
+          </Button>
         </div>
       </div>
 
@@ -286,80 +471,141 @@ const AdminSubcategoriasPage = () => {
         </div>
       )}
 
-      {/* Sección de filtros */}
-      <Card className="mb-3">
-        <Card.Header className="bg-light">
-          <h5 className="mb-0"><span className="bi bi-funnel me-2" aria-hidden="true"></span> Filtros</h5>
-        </Card.Header>
-        <Card.Body>
-          <Row className="g-3 mb-3">
-            <Col md={3}>
-              <InputGroup>
-                <InputGroup.Text>
-                  <span className="bi bi-search" aria-hidden="true"></span>
-                </InputGroup.Text>
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar..."
-                  value={filtros.busqueda}
-                  onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
-                />
-              </InputGroup>
+      {/* Filtros */}
+      <Card className="shadow-sm border-0 mb-4 admin-card-table">
+        <Card.Body className="p-3 p-md-4">
+          <h6 className="fw-bold mb-3 d-flex align-items-center gap-2 text-navy">
+            <span className="bi bi-funnel text-gold" aria-hidden="true"></span> Filtros de Búsqueda
+          </h6>
+          <Row className="g-3 align-items-end">
+            <Col md={5}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold mb-1">Buscar Subcategoría</Form.Label>
+                <InputGroup>
+                  <InputGroup.Text className="bg-light">
+                    <span className="bi bi-search" aria-hidden="true"></span>
+                  </InputGroup.Text>
+                  <Form.Control
+                    placeholder="Buscar por nombre, descripción..."
+                    value={filtros.busqueda}
+                    onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
+                  />
+                </InputGroup>
+              </Form.Group>
+            </Col>
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold mb-1">Categoría</Form.Label>
+                <Form.Select
+                  value={filtros.categoriaId}
+                  onChange={(e) => setFiltros({ ...filtros, categoriaId: e.target.value })}
+                >
+                  <option value="todas">Todas las categorías</option>
+                  {categorias.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
             </Col>
             <Col md={3}>
-              <Form.Select
-                value={filtros.categoriaId}
-                onChange={(e) => setFiltros({ ...filtros, categoriaId: e.target.value })}
-              >
-                <option value="todas">Todas las categorías</option>
-                {categorias.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.nombre}
-                  </option>
-                ))}
-              </Form.Select>
-            </Col>
-            <Col md={2}>
-              <Form.Select
-                value={filtros.estado}
-                onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
-              >
-                <option value="todos">Todos</option>
-                <option value="activos">Activos</option>
-                <option value="inactivos">Inactivos</option>
-              </Form.Select>
-            </Col>
-            <Col md={2}>
-              <button
-                type="button"
-                className="btn btn-dark btn-sm w-100"
-                onClick={() => setFiltros({ busqueda: '', categoriaId: 'todas', estado: 'todos' })}
-              >
-                <span className="bi bi-x-circle me-1" aria-hidden="true"></span> Limpiar
-              </button>
-            </Col>
-          </Row>
-          <Row>
-            <Col>
-              <div className="text-muted small">
-                <span className="bi bi-info-circle me-1" aria-hidden="true"></span> Mostrando {subcategoriasFiltradas.length} de {subcategorias.length} subcategorías
-              </div>
+              <Form.Group>
+                <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
+                <Form.Select
+                  value={filtros.estado}
+                  onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
+                >
+                  <option value="todos">Todos los estados</option>
+                  <option value="activos">Activos</option>
+                  <option value="inactivos">Inactivos</option>
+                </Form.Select>
+              </Form.Group>
             </Col>
           </Row>
         </Card.Body>
       </Card>
 
+      {/* Barra de Acciones de Selección Múltiple */}
+      <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 px-1">
+        <div className="d-flex align-items-center gap-2">
+          <Button
+            variant={todosPaginaSeleccionados ? "secondary" : "outline-secondary"}
+            size="sm"
+            className="d-inline-flex align-items-center gap-1"
+            onClick={handleToggleSeleccionarTodos}
+            title={todosPaginaSeleccionados ? "Deseleccionar todos en esta página" : "Seleccionar todos en esta página"}
+          >
+            <i className={`bi bi-${todosPaginaSeleccionados ? 'check-square-fill text-primary' : 'square'}`} />
+            <span>{todosPaginaSeleccionados ? 'Deseleccionar página' : `Seleccionar todo (${subcategoriasPaginadas.length})`}</span>
+          </Button>
+          {seleccionados.size > 0 && (
+            <Badge bg="danger" className="p-2 d-flex align-items-center gap-1 fs-7">
+              <i className="bi bi-check-circle-fill"></i> {seleccionados.size} seleccionada{seleccionados.size !== 1 ? 's' : ''}
+            </Badge>
+          )}
+        </div>
+
+        {seleccionados.size > 0 && (
+          <div className="d-flex flex-wrap align-items-center gap-2">
+            {seleccionados.size === 1 && (
+              <Button
+                variant="outline-primary"
+                size="sm"
+                className="d-inline-flex align-items-center gap-1 fw-semibold"
+                onClick={() => {
+                  const idSel = Array.from(seleccionados)[0];
+                  const subSel = subcategorias.find(s => s.id === idSel);
+                  if (subSel) handleShowModal(subSel);
+                }}
+                title="Editar la subcategoría seleccionada"
+              >
+                <i className="bi bi-pencil-fill"></i>
+                <span>Editar</span>
+              </Button>
+            )}
+            <Button
+              variant="outline-warning"
+              size="sm"
+              className="d-inline-flex align-items-center gap-1 fw-semibold"
+              onClick={solicitarCambioEstadoMasivo}
+              title="Activar o desactivar las subcategorías seleccionadas"
+            >
+              <i className="bi bi-arrow-repeat"></i>
+              <span>Activar / Desactivar ({seleccionados.size})</span>
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              className="d-inline-flex align-items-center gap-1 fw-semibold"
+              onClick={solicitarEliminacionMasiva}
+              title="Eliminar las subcategorías seleccionadas"
+            >
+              <i className="bi bi-trash-fill"></i>
+              <span>Eliminar ({seleccionados.size})</span>
+            </Button>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => setSeleccionados(new Set())}
+              title="Limpiar selección"
+            >
+              <i className="bi bi-x-lg me-1"></i> Deseleccionar
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Tabla de Subcategorías Responsiva */}
       <Card className="shadow-sm border-0 admin-card-table">
         <Card.Body className="p-0">
           <Table responsive hover className="admin-table align-middle mb-0">
             <thead>
               <tr>
-                <th className="d-none d-md-table-cell" style={{ width: '50px' }}>ID</th>
+                <th style={{ width: '50px' }}>ID</th>
                 <th>Nombre</th>
-                <th className="d-none d-lg-table-cell" style={{ width: '180px' }}>Categoría</th>
-                <th className="d-none d-sm-table-cell">Descripción</th>
-                <th style={{ width: '110px' }}>Estado</th>
-                <th className="text-center" style={{ minWidth: '110px' }}>Acciones</th>
+                <th className="d-none d-sm-table-cell">Categoría</th>
+                <th className="d-none d-md-table-cell">Descripción</th>
+                <th className="d-none d-md-table-cell" style={{ width: '110px' }}>Estado</th>
+                <th className="text-center" style={{ width: '130px', minWidth: '100px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -370,219 +616,279 @@ const AdminSubcategoriasPage = () => {
                   </td>
                 </tr>
               ) : (
-                subcategoriasPaginadas.map((sub) => (
-                  <tr key={sub.id}>
-                    <td className="align-middle d-none d-md-table-cell">{sub.id}</td>
-                    <td className="align-middle fw-bold">
-                      <div>{sub.nombre}</div>
-                      <small className="d-lg-none text-muted d-block">
-                        {obtenerNombreCategoria(sub.categoriaId)}
-                      </small>
-                    </td>
-                    <td className="align-middle d-none d-lg-table-cell">{obtenerNombreCategoria(sub.categoriaId)}</td>
-                    <td className="align-middle d-none d-sm-table-cell">{sub.descripcion || '-'}</td>
-                    <td className="align-middle">
-                      <Badge bg={sub.activo ? 'success' : 'secondary'}>
-                        {sub.activo ? 'Activo' : 'Inactivo'}
-                      </Badge>
-                    </td>
-                    <td className="align-middle text-center">
-                      <div className="action-btn-group">
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          className="btn-action-table"
-                          onClick={() => handleShowModal(sub)}
-                          title="Editar subcategoría"
-                        >
-                          <SvgIcon name="pencil" />
-                          <span className="btn-text">Editar</span>
-                        </Button>
-                        <Button
-                          variant={sub.activo ? 'outline-warning' : 'outline-success'}
-                          size="sm"
-                          className="btn-action-table"
-                          onClick={() => handleToggleActivo(sub)}
-                          title={sub.activo ? 'Desactivar subcategoría' : 'Activar subcategoría'}
-                        >
-                          <SvgIcon name={sub.activo ? 'x-circle' : 'check-circle'} />
-                          <span className="btn-text">{sub.activo ? 'Desactivar' : 'Activar'}</span>
-                        </Button>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          className="btn-action-table"
-                          onClick={() => handleDelete(sub.id)}
-                          title="Eliminar subcategoría"
-                        >
-                          <SvgIcon name="trash" />
-                          <span className="btn-text">Eliminar</span>
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                subcategoriasPaginadas.map((sub) => {
+                  const estaSeleccionado = seleccionados.has(sub.id);
+                  return (
+                    <tr 
+                      key={sub.id}
+                      onClick={() => toggleSeleccionarSubcategoria(sub.id)}
+                      className={`fila-admin ${estaSeleccionado ? 'fila-admin-seleccionada' : ''}`}
+                      title="Haz clic para seleccionar/deseleccionar esta subcategoría"
+                    >
+                      <td className="align-middle fw-bold">
+                        <div className="d-flex align-items-center gap-2">
+                          <i 
+                            className={`bi bi-${estaSeleccionado ? 'check-circle-fill text-danger' : 'circle text-muted'} fs-6 d-inline-block`}
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <span>{sub.id}</span>
+                        </div>
+                      </td>
+                      <td className="align-middle fw-bold">
+                        <div>{sub.nombre}</div>
+                        <small className="d-sm-none text-muted d-block">
+                          {obtenerNombreCategoria(sub.categoriaId)}
+                        </small>
+                      </td>
+                      <td className="align-middle d-none d-sm-table-cell">
+                        <Badge bg="info">
+                          {obtenerNombreCategoria(sub.categoriaId)}
+                        </Badge>
+                      </td>
+                      <td className="align-middle d-none d-md-table-cell">{sub.descripcion || '-'}</td>
+                      <td className="align-middle d-none d-md-table-cell">
+                        <Badge bg={sub.activo ? 'success' : 'secondary'}>
+                          {sub.activo ? 'Activo' : 'Inactivo'}
+                        </Badge>
+                      </td>
+                      <td className="align-middle text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="action-btn-group">
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            className="btn-action-table"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShowModal(sub);
+                            }}
+                            title="Editar subcategoría"
+                          >
+                            <i className="bi bi-pencil" />
+                            <span className="btn-text">Editar</span>
+                          </Button>
+                          <Button
+                            variant={sub.activo ? 'outline-warning' : 'outline-success'}
+                            size="sm"
+                            className="btn-action-table"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              solicitarCambioEstado(sub);
+                            }}
+                            title={sub.activo ? 'Desactivar subcategoría' : 'Activar subcategoría'}
+                          >
+                            <i className={`bi bi-${sub.activo ? 'x-circle' : 'check-circle'}`} />
+                            <span className="btn-text">{sub.activo ? 'Desactivar' : 'Activar'}</span>
+                          </Button>
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            className="btn-action-table"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              solicitarEliminar(sub);
+                            }}
+                            title="Eliminar subcategoría"
+                          >
+                            <i className="bi bi-trash" />
+                            <span className="btn-text">Eliminar</span>
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </Table>
         </Card.Body>
       </Card>
-      
+
       {/* Paginación */}
       {totalPaginas > 1 && (
-        <Card className="mt-3">
-          <Card.Body>
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <small className="text-muted">
-                  <span className="bi bi-file-text me-1" aria-hidden="true"></span> Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> - Mostrando <strong>{subcategoriasPaginadas.length}</strong> de <strong>{subcategoriasFiltradas.length}</strong> registros
-                </small>
-              </div>
-              <div className="btn-group">
-                <Button
-                  variant="outline-primary"
-                  size="sm"
-                  onClick={() => setPaginaActual(1)}
-                  disabled={paginaActual === 1}
-                  title="Primera página"
-                >
-                  <span className="bi bi-chevron-bar-left" aria-hidden="true"></span>
-                </Button>
-                <Button
-                  variant="outline-primary"
-                  size="sm"
-                  onClick={() => setPaginaActual(prev => prev - 1)}
-                  disabled={paginaActual === 1}
-                  title="Página anterior"
-                >
-                  <SvgIcon name="arrow_left" size={16} className="me-1" /> Anterior
-                </Button>
-                <Button variant="primary" size="sm" disabled>
-                  {paginaActual} / {totalPaginas}
-                </Button>
-                <Button
-                  variant="outline-primary"
-                  size="sm"
-                  onClick={() => setPaginaActual(prev => prev + 1)}
-                  disabled={paginaActual === totalPaginas}
-                  title="Página siguiente"
-                >
-                  Siguiente <SvgIcon name="arrow_right" size={16} className="ms-1" />
-                </Button>
-                <Button
-                  variant="outline-primary"
-                  size="sm"
-                  onClick={() => setPaginaActual(totalPaginas)}
-                  disabled={paginaActual === totalPaginas}
-                  title="Última página"
-                >
-                  <span className="bi bi-chevron-bar-right" aria-hidden="true"></span>
-                </Button>
-              </div>
-            </div>
-          </Card.Body>
-        </Card>
+        <div className="d-flex justify-content-between align-items-center mt-3">
+          <small className="text-muted">
+            Página {paginaActual} de {totalPaginas} - Mostrando {subcategoriasPaginadas.length} de {subcategoriasFiltradas.length} registros
+          </small>
+          <ButtonGroup size="sm">
+            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
+              ««
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1}>
+              Anterior
+            </Button>
+            <Button variant="primary" disabled>
+              {paginaActual} / {totalPaginas}
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas}>
+              Siguiente
+            </Button>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
+              »»
+            </Button>
+          </ButtonGroup>
+        </div>
       )}
 
-      {/* Modal para crear/editar */}
-      <Modal
-        show={showModal}
-        onHide={handleCloseModal}
-        size="lg"
+      {/* Modal Crear / Editar Minimalista */}
+      <Modal 
+        show={showModal} 
+        onHide={handleCloseModal} 
         centered
-        scrollable
-        dialogClassName="subcategorias-modal-dialog"
-        contentClassName="subcategorias-modal-content"
+        dialogClassName="modal-producto-form"
+        backdrop="static"
       >
-        <Modal.Header closeButton>
-          <Modal.Title>
-            {editando ? 'Editar Subcategoría' : 'Nueva Subcategoría'}
-          </Modal.Title>
-        </Modal.Header>
+        <div className="product-minimal-header">
+          <div>
+            <h6 className="fw-bold mb-0 text-navy fs-6">
+              {editando ? 'Editar Subcategoría' : 'Nueva Subcategoría'}
+            </h6>
+            <small className="text-muted" style={{ fontSize: '0.8rem' }}>
+              {editando ? `ID #${editando.id} — ${editando.nombre}` : 'Ingresa los datos para registrar la subcategoría'}
+            </small>
+          </div>
+          <button 
+            type="button" 
+            className="btn-close" 
+            onClick={handleCloseModal}
+            aria-label="Cerrar"
+          />
+        </div>
+
         <Form onSubmit={handleSubmit}>
-          <Modal.Body>
+          <Modal.Body className="p-3 p-sm-4">
             <Form.Group className="mb-3">
-              <Form.Label>Categoría <span className="text-danger">*</span></Form.Label>
+              <Form.Label className="small fw-semibold text-secondary mb-1">
+                Categoría Principal <span className="text-danger">*</span>
+              </Form.Label>
               <Form.Select
                 name="categoriaId"
                 value={formData.categoriaId}
                 onChange={handleChange}
                 required
+                className="product-minimal-input"
               >
-                <option value="">Seleccionar categoría...</option>
-                {categorias.filter(c => c.activo).map((cat) => (
+                <option value="">Selecciona una categoría...</option>
+                {categorias.map((cat) => (
                   <option key={cat.id} value={cat.id}>{cat.nombre}</option>
                 ))}
               </Form.Select>
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Nombre <span className="text-danger">*</span></Form.Label>
+              <Form.Label className="small fw-semibold text-secondary mb-1">
+                Nombre de la Subcategoría <span className="text-danger">*</span>
+              </Form.Label>
               <Form.Control
                 type="text"
                 name="nombre"
                 value={formData.nombre}
                 onChange={handleChange}
                 required
-                placeholder="Ej: Televisores"
+                placeholder="Ej: Anillos de Oro, Pulseras..."
+                className="product-minimal-input"
               />
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Descripción</Form.Label>
+              <Form.Label className="small fw-semibold text-secondary mb-1">
+                Descripción (Opcional)
+              </Form.Label>
               <Form.Control
                 as="textarea"
                 rows={3}
                 name="descripcion"
                 value={formData.descripcion}
                 onChange={handleChange}
-                placeholder="Descripción de la subcategoría (opcional)"
+                placeholder="Descripción detallada de la subcategoría..."
+                className="product-minimal-input"
               />
             </Form.Group>
 
-            <Form.Group className="mb-3">
+            <div className="pt-1">
               <Form.Check
-                type="checkbox"
+                type="switch"
+                id="subcategoria-switch-activo"
+                label="Subcategoría activa (visible en catálogo)"
                 name="activo"
-                label="Subcategoría activa"
                 checked={formData.activo}
                 onChange={handleChange}
+                className="small text-secondary fw-medium"
               />
-            </Form.Group>
+            </div>
           </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={handleCloseModal}>
+
+          <div className="product-minimal-footer">
+            <button 
+              type="button"
+              onClick={handleCloseModal}
+              className="btn-minimal-cancel"
+            >
               Cancelar
-            </Button>
-            <Button variant="primary" type="submit">
-              {editando ? 'Actualizar' : 'Crear'}
-            </Button>
-          </Modal.Footer>
+            </button>
+            <button 
+              type="submit"
+              className="btn-minimal-submit"
+            >
+              <i className={`bi bi-${editando ? 'check2' : 'plus-lg'}`} />
+              {editando ? 'Actualizar Subcategoría' : 'Guardar Subcategoría'}
+            </button>
+          </div>
         </Form>
       </Modal>
 
-      <style>{`
-        :global(.subcategorias-modal-dialog) {
-          max-height: calc(100vh - 2rem);
-        }
+      {/* Modal de Confirmación Compacto Estilo Dashboard */}
+      <Modal 
+        show={modalConfirmacion.show} 
+        onHide={() => setModalConfirmacion(prev => ({ ...prev, show: false }))} 
+        centered
+        backdrop="static"
+        dialogClassName="modal-confirmacion-compacto"
+      >
+        <Modal.Body className="text-center p-3 p-sm-4">
+          <div 
+            className={`confirm-icon-wrapper mb-3 mx-auto bg-${
+              modalConfirmacion.tipo === 'danger' ? 'danger-subtle' :
+              modalConfirmacion.tipo === 'warning' ? 'warning-subtle' :
+              modalConfirmacion.tipo === 'primary' || modalConfirmacion.tipo === 'info' ? 'primary-subtle' :
+              'success-subtle'
+            } text-${modalConfirmacion.tipo || 'primary'}`}
+          >
+            <i className={`bi bi-${modalConfirmacion.icono || 'exclamation-circle-fill'} confirm-icon`} />
+          </div>
+          
+          <h5 className="fw-bold text-navy mb-2 fs-5">
+            {modalConfirmacion.titulo}
+          </h5>
+          
+          <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
+            {modalConfirmacion.mensaje}
+          </p>
 
-        :global(.subcategorias-modal-content) {
-          display: flex;
-          flex-direction: column;
-          max-height: calc(100vh - 2rem);
-        }
-
-        :global(.subcategorias-modal-content .modal-body) {
-          overflow-y: auto;
-        }
-
-        :global(.subcategorias-modal-content .modal-footer) {
-          position: sticky;
-          bottom: 0;
-          background: var(--bs-body-bg, #fff);
-          z-index: 1;
-        }
-      `}</style>
+          <div className="d-flex gap-2 justify-content-center w-100 mt-2">
+            <Button 
+              variant="outline-secondary" 
+              className="px-3 py-2 fw-semibold flex-fill"
+              onClick={() => {
+                setModalConfirmacion(prev => ({ ...prev, show: false }));
+                if (modalConfirmacion.onCancel) modalConfirmacion.onCancel();
+              }}
+            >
+              {modalConfirmacion.textoCancelar || 'Cancelar'}
+            </Button>
+            <Button 
+              variant={modalConfirmacion.tipo || 'primary'} 
+              className="px-3 py-2 fw-semibold flex-fill shadow-sm"
+              onClick={async () => {
+                const action = modalConfirmacion.onConfirm;
+                setModalConfirmacion(prev => ({ ...prev, show: false }));
+                if (action) await action();
+              }}
+            >
+              {modalConfirmacion.textoConfirmar || 'Confirmar'}
+            </Button>
+          </div>
+        </Modal.Body>
+      </Modal>
     </Container>
   );
 };

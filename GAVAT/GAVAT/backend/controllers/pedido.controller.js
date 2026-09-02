@@ -69,12 +69,13 @@ const crearPedido = async (req, res) => {
       });
     }
     
-    // VALIDACIÓN 1b: El teléfono es obligatorio
-    if (!telefono || telefono.trim() === '') {
+    // VALIDACIÓN 1b: El teléfono es obligatorio y debe tener 10 dígitos numéricos
+    const telLimpio = telefono ? String(telefono).replace(/\D/g, '').slice(0, 10) : '';
+    if (!telLimpio || telLimpio.length !== 10) {
       await t.rollback();
       return res.status(400).json({
         success: false,
-        message: 'El teléfono es requerido'
+        message: 'El teléfono debe tener exactamente 10 dígitos numéricos'
       });
     }
     
@@ -154,7 +155,7 @@ const crearPedido = async (req, res) => {
       total: totalPedido,            // Total calculado arriba
       estado: 'pendiente',           // Estado inicial del pedido
       direccionEnvio,                // Dirección enviada por el usuario
-      telefono,                      // Teléfono de contacto
+      telefono: telLimpio,           // Teléfono de contacto sanitizado
       metodoPago,                    // 'efectivo', 'tarjeta' o 'transferencia'
       notas: solicitudPedido || notasAdicionales || null  // Solicitud del pedido / notas opcionales
     }, { transaction: t });          // Parte de la transacción

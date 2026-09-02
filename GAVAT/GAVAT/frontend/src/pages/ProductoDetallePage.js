@@ -7,7 +7,7 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Container, Row, Col, Button, Badge, Alert, Breadcrumb, Card } from 'react-bootstrap';
+import { Container, Row, Col, Button, Badge, Alert, Breadcrumb, Card, Modal } from 'react-bootstrap';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import catalogoService from '../services/catalogoService';
 import carritoService from '../services/carritoService';
@@ -27,6 +27,20 @@ const ProductoDetallePage = () => {
   const [agregando, setAgregando] = useState(false);
   const { isAuthenticated } = useAuth();
 
+  // Estados y controles para el Modal de Visualización con Lupa y Zoom
+  const [modalPreviewFoto, setModalPreviewFoto] = useState(false);
+  const [zoomNivel, setZoomNivel] = useState(1);
+
+  const handleZoomIn = () => setZoomNivel(prev => Math.min(Number((prev + 0.25).toFixed(2)), 3.5));
+  const handleZoomOut = () => setZoomNivel(prev => Math.max(Number((prev - 0.25).toFixed(2)), 0.5));
+  const handleResetZoom = () => setZoomNivel(1);
+  const handleToggleZoom = () => setZoomNivel(prev => (prev === 1 ? 2 : 1));
+
+  const handleOpenPreview = () => {
+    setZoomNivel(1);
+    setModalPreviewFoto(true);
+  };
+
   useEffect(() => {
     const cargarProducto = async () => {
       setLoading(true);
@@ -45,59 +59,81 @@ const ProductoDetallePage = () => {
     cargarProducto();
   }, [id, navigate]);
 
+  const handleIncreaseQuantity = useCallback(() => {
+    setCantidad((prev) => {
+      const maxStock = Number(producto?.stock) || 1;
+      const current = Number.parseInt(prev, 10) || 0;
+      return current < maxStock ? current + 1 : maxStock;
+    });
+  }, [producto?.stock]);
+
+  const handleDecreaseQuantity = useCallback(() => {
+    setCantidad((prev) => {
+      const current = Number.parseInt(prev, 10) || 1;
+      return current > 1 ? current - 1 : 1;
+    });
+  }, []);
+
+  const handleCantidadChange = useCallback((e) => {
+    const valor = e.target.value;
+    if (valor === '') {
+      setCantidad('');
+      return;
+    }
+    const num = Number.parseInt(valor, 10);
+    const maxStock = Number(producto?.stock) || 1;
+    if (!Number.isNaN(num)) {
+      if (num < 1) {
+        setCantidad(1);
+      } else if (num > maxStock) {
+        setCantidad(maxStock);
+      } else {
+        setCantidad(num);
+      }
+    }
+  }, [producto?.stock]);
+
+  const handleCantidadBlur = useCallback(() => {
+    if (!cantidad || Number(cantidad) < 1) {
+      setCantidad(1);
+    }
+  }, [cantidad]);
+
+  // Limpiar mensaje automáticamente (igual que en los gestores admin)
+  useEffect(() => {
+    if (mensaje.texto) {
+      const timer = setTimeout(() => {
+        setMensaje({ tipo: '', texto: '', accion: null });
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [mensaje]);
+
   const handleAddToCart = useCallback(async () => {
     if (!producto) return;
     setAgregando(true);
     try {
-      const cantidadFinal = Number.parseInt(cantidad, 10) || 1;
+      const cantidadFinal = Math.max(1, Number.parseInt(cantidad, 10) || 1);
       await carritoService.agregarAlCarrito(producto.id, cantidadFinal, producto);
-      setMensaje({ tipo: 'success', texto: `¡"${producto.nombre}" (${cantidadFinal} ud.) agregado al carrito!` });
-      setTimeout(() => setMensaje({ tipo: '', texto: '' }), 4000);
+      setMensaje({ 
+        tipo: 'success', 
+        texto: `¡"${producto.nombre}" (${cantidadFinal} ${cantidadFinal === 1 ? 'unidad' : 'unidades'}) agregado al carrito exitosamente!`,
+        accion: { texto: 'Ver Carrito', url: '/carrito' }
+      });
     } catch (error) {
-      setMensaje({ tipo: 'danger', texto: error.message || 'Error al agregar al carrito' });
+      console.error('Error al agregar al carrito:', error);
+      setMensaje({ 
+        tipo: 'danger', 
+        texto: error.message || 'Error al agregar el producto al carrito',
+        accion: null
+      });
     } finally {
       setAgregando(false);
     }
   }, [producto, cantidad]);
 
-  const handleCantidadChange = useCallback((e) => {
-    const valor = e.target.value;
-    const maxStock = producto?.stock || 1;
-    
-    if (valor === '') {
-      setCantidad('');
-    } else {
-      const num = Number.parseInt(valor, 10);
-      if (!Number.isNaN(num)) {
-        if (num < 1) {
-          setCantidad(1);
-        } else if (num > maxStock) {
-          setCantidad(maxStock);
-        } else {
-          setCantidad(num);
-        }
-      }
-    }
-  }, [producto?.stock]);
-
-  const handleIncreaseQuantity = useCallback(() => {
-    const maxStock = producto?.stock || 1;
-    const current = Number.parseInt(cantidad, 10) || 0;
-    if (current < maxStock) {
-      setCantidad(current + 1);
-    }
-  }, [cantidad, producto?.stock]);
-
-  const handleDecreaseQuantity = useCallback(() => {
-    const current = Number.parseInt(cantidad, 10) || 1;
-    if (current > 1) {
-      setCantidad(current - 1);
-    }
-  }, [cantidad]);
-
   const handleComentarioCreado = useCallback(() => {
-    setMensaje({ tipo: 'success', texto: 'Comentario publicado exitosamente' });
-    setTimeout(() => setMensaje({ tipo: '', texto: '' }), 3000);
+    setMensaje({ tipo: 'success', texto: 'Comentario publicado exitosamente', accion: null });
   }, []);
 
   if (loading) {
@@ -161,32 +197,52 @@ const ProductoDetallePage = () => {
         <Breadcrumb.Item active>{producto.nombre}</Breadcrumb.Item>
       </Breadcrumb>
 
-      {/* Alerta de notificación */}
+      {/* Notificación flotante inferior izquierda (estilo Gestores Admin) */}
       {mensaje.texto && (
-        <Alert 
-          variant={mensaje.tipo} 
-          dismissible 
-          onClose={() => setMensaje({ tipo: '', texto: '' })}
-          className="shadow-sm rounded-3 mb-4 d-flex justify-content-between align-items-center"
-        >
-          <div>
-            <span className={`bi bi-${mensaje.tipo === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill'} me-2`} aria-hidden="true"></span> {mensaje.texto}
-          </div>
-          {mensaje.tipo === 'success' && (
-            <Button as={Link} to="/carrito" variant="outline-success" size="sm" className="ms-3 fw-bold">
-              Ver Carrito <span className="bi bi-arrow-right ms-1" aria-hidden="true"></span>
-            </Button>
-          )}
-        </Alert>
+        <div className="toast-floating-container-bottom-left">
+          <Alert 
+            variant={mensaje.tipo} 
+            dismissible 
+            onClose={() => setMensaje({ tipo: '', texto: '', accion: null })}
+            className={`toast-floating-alert alert-${mensaje.tipo} mb-0`}
+          >
+            <i className={`bi bi-${
+              mensaje.tipo === 'success' ? 'check-circle-fill text-success' :
+              mensaje.tipo === 'danger' ? 'exclamation-octagon-fill text-danger' :
+              mensaje.tipo === 'warning' ? 'exclamation-triangle-fill text-warning' :
+              'info-circle-fill text-info'
+            } fs-5 flex-shrink-0`} />
+            <div className="flex-grow-1 fw-medium text-start">
+              {mensaje.texto}
+            </div>
+            {mensaje.tipo === 'success' && mensaje.accion && (
+              <Button 
+                as={Link} 
+                to={mensaje.accion.url} 
+                variant="outline-success" 
+                size="sm" 
+                className="ms-2 fw-bold text-nowrap py-1 px-2"
+                style={{ fontSize: '0.82rem', borderRadius: '6px' }}
+              >
+                {mensaje.accion.texto} <i className="bi bi-arrow-right ms-1" />
+              </Button>
+            )}
+          </Alert>
+        </div>
       )}
 
       {/* Tarjeta principal del producto */}
       <Card className="shadow-sm border-0 rounded-4 overflow-hidden mb-5 product-detail-card">
         <Card.Body className="p-4 p-lg-5">
           <Row className="g-4 g-lg-5 align-items-center">
-            {/* Columna de Imagen: Contenedor transparente y adaptativo */}
+            {/* Columna de Imagen: Contenedor transparente y adaptativo con Lupa y Zoom */}
             <Col lg={6}>
-              <div className="product-image-stage">
+              <div 
+                className="product-image-stage"
+                onClick={handleOpenPreview}
+                style={{ cursor: 'pointer' }}
+                title="Haz clic para ver la imagen en detalle"
+              >
                 <div className="product-image-backdrop">
                   <img
                     src={getImageUrl(producto.imagen)}
@@ -211,6 +267,20 @@ const ProductoDetallePage = () => {
                     </Badge>
                   )}
                 </div>
+
+                {/* Botón de apertura de lupa/zoom */}
+                <button
+                  type="button"
+                  className="btn-zoom-trigger"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenPreview();
+                  }}
+                  title="Ampliar fotografía con lupa"
+                >
+                  <i className="bi bi-zoom-in me-1" />
+                  <span>Ver detalle</span>
+                </button>
               </div>
             </Col>
 
@@ -269,32 +339,36 @@ const ProductoDetallePage = () => {
                   <div className="purchase-controls-box mb-4">
                     <div className="d-flex flex-wrap align-items-center gap-3">
                       <div className="quantity-selector-card">
-                        <Button
-                          variant="link"
+                        <button
+                          type="button"
                           className="quantity-btn"
                           onClick={handleDecreaseQuantity}
-                          disabled={cantidad <= 1}
-                          title="Disminuir"
+                          disabled={Number(cantidad || 1) <= 1}
+                          title="Disminuir cantidad"
+                          aria-label="Disminuir cantidad"
                         >
-                          <span className="bi bi-dash" aria-hidden="true"></span>
-                        </Button>
+                          <i className="bi bi-dash-lg" aria-hidden="true" />
+                        </button>
                         <input
                           type="number"
                           className="quantity-input-field"
                           value={cantidad}
                           onChange={handleCantidadChange}
+                          onBlur={handleCantidadBlur}
                           min="1"
                           max={stockDisponible}
+                          aria-label="Cantidad"
                         />
-                        <Button
-                          variant="link"
+                        <button
+                          type="button"
                           className="quantity-btn"
                           onClick={handleIncreaseQuantity}
-                          disabled={cantidad >= stockDisponible}
-                          title="Aumentar"
+                          disabled={Number(cantidad || 1) >= Number(stockDisponible)}
+                          title="Aumentar cantidad"
+                          aria-label="Aumentar cantidad"
                         >
-                          <span className="bi bi-plus" aria-hidden="true"></span>
-                        </Button>
+                          <i className="bi bi-plus-lg" aria-hidden="true" />
+                        </button>
                       </div>
 
                       {isAuthenticated ? (
@@ -380,8 +454,128 @@ const ProductoDetallePage = () => {
         </Button>
       </div>
 
+      {/* Modal para Visualizar Foto con Lupa y Zoom Dinámico */}
+      <Modal
+        show={modalPreviewFoto}
+        onHide={() => setModalPreviewFoto(false)}
+        centered
+        dialogClassName="modal-preview-foto-dialog"
+      >
+        <div className="modal-preview-foto-header">
+          <div className="fw-semibold text-navy small d-flex align-items-center gap-2">
+            <i className="bi bi-image text-primary" /> {producto.nombre}
+          </div>
+
+          {/* Barra de controles de Lupa / Zoom */}
+          <div className="zoom-toolbar">
+            <button
+              type="button"
+              onClick={handleZoomOut}
+              disabled={zoomNivel <= 0.5}
+              title="Reducir zoom (-)"
+            >
+              <i className="bi bi-dash-lg" />
+            </button>
+            <span className="zoom-badge">
+              {Math.round(zoomNivel * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={handleZoomIn}
+              disabled={zoomNivel >= 3.5}
+              title="Aumentar zoom (+)"
+            >
+              <i className="bi bi-plus-lg" />
+            </button>
+            <div className="vr mx-1 my-auto" style={{ height: '16px' }} />
+            <button
+              type="button"
+              onClick={handleResetZoom}
+              title="Restablecer tamaño original (100%)"
+            >
+              <i className="bi bi-aspect-ratio" />
+            </button>
+          </div>
+
+          <button 
+            type="button" 
+            className="btn-close" 
+            onClick={() => setModalPreviewFoto(false)}
+            aria-label="Cerrar"
+          />
+        </div>
+
+        <Modal.Body className="p-3 p-md-4 text-center bg-light">
+          <div className="modal-preview-foto-wrapper mb-3">
+            <img
+              src={getImageUrl(producto.imagen)}
+              alt={producto.nombre}
+              className="modal-preview-foto-img"
+              style={{ 
+                transform: `scale(${zoomNivel})`, 
+                transformOrigin: 'center center',
+                cursor: zoomNivel > 1 ? 'zoom-out' : 'zoom-in'
+              }}
+              onClick={handleToggleZoom}
+              title={zoomNivel > 1 ? "Haz clic para alejar" : "Haz clic para agrandar con la lupa (200%)"}
+              onError={(e) => { 
+                e.target.onerror = null;
+                e.target.src = '/producto-default.jpg'; 
+              }}
+            />
+          </div>
+
+          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-1">
+            <small className="text-muted text-start" style={{ fontSize: '0.78rem' }}>
+              <i className="bi bi-info-circle me-1" />
+              Haz clic en la imagen o usa los botones para acercar o alejar
+            </small>
+
+            <div className="d-flex gap-2 ms-auto">
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                className="d-flex align-items-center gap-1 px-3 py-1"
+                style={{ borderRadius: '8px', fontSize: '0.85rem' }}
+                onClick={() => setModalPreviewFoto(false)}
+              >
+                <i className="bi bi-x-lg" /> Cerrar
+              </Button>
+            </div>
+          </div>
+        </Modal.Body>
+      </Modal>
+
       {/* Estilos dedicados para la vista de producto */}
       <style>{`
+        .btn-zoom-trigger {
+          position: absolute;
+          bottom: 1rem;
+          right: 1rem;
+          background: rgba(25, 40, 71, 0.85);
+          backdrop-filter: blur(8px);
+          color: #f5c271;
+          border: 1px solid rgba(245, 194, 113, 0.4);
+          border-radius: 2rem;
+          padding: 0.4rem 0.85rem;
+          font-size: 0.82rem;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          z-index: 3;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-zoom-trigger:hover {
+          background: linear-gradient(135deg, #f5c271, #c7984e);
+          color: #0b1329;
+          border-color: #f5c271;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 18px rgba(245, 194, 113, 0.35);
+        }
         .product-breadcrumb .breadcrumb-item a {
           color: var(--bs-gold-dark, #c7984e);
           text-decoration: none;
@@ -505,31 +699,58 @@ const ProductoDetallePage = () => {
         .quantity-selector-card {
           display: inline-flex;
           align-items: center;
-          background: #f8fafc;
+          background: #ffffff;
           border: 1.5px solid #e2e8f0;
           border-radius: 0.85rem;
           padding: 0.25rem 0.4rem;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .quantity-selector-card:focus-within {
+          border-color: #c7984e;
+          box-shadow: 0 0 0 3px rgba(199, 152, 78, 0.15);
         }
 
         .quantity-btn {
-          color: #192847 !important;
-          font-size: 1.2rem;
-          padding: 0.3rem 0.7rem;
-          text-decoration: none !important;
-          line-height: 1;
+          background: transparent;
+          border: none;
+          color: #192847;
+          font-size: 1.15rem;
+          width: 38px;
+          height: 38px;
+          border-radius: 0.6rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          user-select: none;
+          padding: 0;
         }
 
         .quantity-btn:hover:not(:disabled) {
-          color: #c7984e !important;
+          background: #f1f5f9;
+          color: #c7984e;
+        }
+
+        .quantity-btn:active:not(:disabled) {
+          transform: scale(0.92);
+          background: #e2e8f0;
+        }
+
+        .quantity-btn:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
         }
 
         .quantity-input-field {
-          width: 50px;
+          width: 55px;
           border: none;
           background: transparent;
           text-align: center;
           font-weight: 700;
-          font-size: 1.1rem;
+          font-size: 1.15rem;
           color: #192847;
           outline: none;
         }

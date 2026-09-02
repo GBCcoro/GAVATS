@@ -276,9 +276,7 @@ const AdminProductosPage = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  const ejecutarGuardado = async () => {
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('nombre', formData.nombre);
@@ -296,15 +294,21 @@ const AdminProductosPage = () => {
       }
 
       if (editando) {
-        await api.put(`/admin/productos/${editando.id}`, formDataToSend, {
+        const res = await api.put(`/admin/productos/${editando.id}`, formDataToSend, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        setMensaje({ tipo: 'success', texto: 'Producto actualizado exitosamente' });
+        setMensaje({ 
+          tipo: 'success', 
+          texto: res.data?.message || `Producto "${formData.nombre}" actualizado exitosamente` 
+        });
       } else {
-        await api.post('/admin/productos', formDataToSend, {
+        const res = await api.post('/admin/productos', formDataToSend, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        setMensaje({ tipo: 'success', texto: 'Producto creado exitosamente' });
+        setMensaje({ 
+          tipo: 'success', 
+          texto: res.data?.message || `Producto "${formData.nombre}" creado exitosamente` 
+        });
       }
 
       handleCloseModal();
@@ -315,6 +319,28 @@ const AdminProductosPage = () => {
         tipo: 'danger', 
         texto: error.response?.data?.message || 'Error al guardar el producto' 
       });
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (editando) {
+      // Confirmación modal con el mismo estilo del dashboard para la actualización
+      setModalConfirmacion({
+        show: true,
+        titulo: '¿Actualizar producto?',
+        mensaje: `¿Deseas guardar los cambios realizados en el producto "${formData.nombre || editando.nombre}"?`,
+        tipo: 'primary',
+        icono: 'pencil-square',
+        textoConfirmar: 'Actualizar',
+        textoCancelar: 'Cancelar',
+        onConfirm: async () => {
+          await ejecutarGuardado();
+        }
+      });
+    } else {
+      ejecutarGuardado();
     }
   };
 
@@ -722,6 +748,22 @@ const AdminProductosPage = () => {
 
         {seleccionados.size > 0 && (
           <div className="d-flex flex-wrap align-items-center gap-2">
+            {seleccionados.size === 1 && (
+              <Button
+                variant="outline-primary"
+                size="sm"
+                className="d-inline-flex align-items-center gap-1 fw-semibold"
+                onClick={() => {
+                  const idSel = Array.from(seleccionados)[0];
+                  const prodSel = productos.find(p => p.id === idSel);
+                  if (prodSel) handleShowModal(prodSel);
+                }}
+                title="Editar el producto seleccionado"
+              >
+                <i className="bi bi-pencil-fill"></i>
+                <span>Editar</span>
+              </Button>
+            )}
             <Button
               variant="outline-warning"
               size="sm"
@@ -969,6 +1011,7 @@ const AdminProductosPage = () => {
                         src={previewImagen}
                         alt="Vista previa"
                         onError={(e) => {
+                          e.target.onerror = null;
                           e.target.src = '/producto-default.jpg';
                         }}
                       />
@@ -1234,7 +1277,10 @@ const AdminProductosPage = () => {
               }}
               onClick={handleToggleZoom}
               title={zoomNivel > 1 ? "Haz clic para alejar" : "Haz clic para agrandar con la lupa (200%)"}
-              onError={(e) => { e.target.src = '/producto-default.jpg'; }}
+              onError={(e) => { 
+                e.target.onerror = null;
+                e.target.src = '/producto-default.jpg'; 
+              }}
             />
           </div>
 
@@ -1284,7 +1330,12 @@ const AdminProductosPage = () => {
       >
         <Modal.Body className="text-center p-3 p-sm-4">
           <div 
-            className={`confirm-icon-wrapper mb-3 mx-auto bg-${modalConfirmacion.tipo === 'danger' ? 'danger-subtle' : modalConfirmacion.tipo === 'warning' ? 'warning-subtle' : 'success-subtle'} text-${modalConfirmacion.tipo}`}
+            className={`confirm-icon-wrapper mb-3 mx-auto bg-${
+              modalConfirmacion.tipo === 'danger' ? 'danger-subtle' :
+              modalConfirmacion.tipo === 'warning' ? 'warning-subtle' :
+              modalConfirmacion.tipo === 'primary' || modalConfirmacion.tipo === 'info' ? 'primary-subtle' :
+              'success-subtle'
+            } text-${modalConfirmacion.tipo || 'primary'}`}
           >
             <i className={`bi bi-${modalConfirmacion.icono || 'exclamation-circle-fill'} confirm-icon`} />
           </div>
@@ -1375,6 +1426,9 @@ const AdminProductosPage = () => {
         .bg-success-subtle {
           background-color: rgba(25, 135, 84, 0.12) !important;
         }
+        .bg-primary-subtle {
+          background-color: rgba(13, 110, 253, 0.12) !important;
+        }
         .fila-producto {
           cursor: pointer;
           transition: background-color 0.15s ease, box-shadow 0.15s ease;
@@ -1409,11 +1463,23 @@ const AdminProductosPage = () => {
         }
         @media (max-width: 768px) {
           .action-btn-group {
-            gap: 0.25rem;
+            gap: 0.2rem;
+            flex-wrap: nowrap;
           }
           .action-btn-group .btn-action-table {
-            padding: 0.35rem 0.5rem !important;
-            font-size: 0.85rem !important;
+            padding: 0.35rem 0.45rem !important;
+            font-size: 0.82rem !important;
+          }
+        }
+        @media (max-width: 576px) {
+          .action-btn-group {
+            gap: 0.15rem;
+            flex-wrap: nowrap;
+          }
+          .action-btn-group .btn-action-table {
+            padding: 0.28rem 0.4rem !important;
+            font-size: 0.8rem !important;
+            min-width: 28px;
           }
         }
       `}</style>

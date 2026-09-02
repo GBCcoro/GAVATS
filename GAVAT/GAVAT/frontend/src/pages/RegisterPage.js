@@ -9,7 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, InputGroup } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { isValidEmail, isValidPhone } from '../utils/helpers';
+import { isValidEmail } from '../utils/helpers';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -36,10 +36,19 @@ const RegisterPage = () => {
   }, []);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    if (name === 'telefono') {
+      const numericValue = value.replace(/\D/g, '').slice(0, 10);
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue,
+      }));
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -61,8 +70,8 @@ const RegisterPage = () => {
       return;
     }
 
-    if (formData.telefono && !isValidPhone(formData.telefono)) {
-      setError('Teléfono inválido (debe ser 10 dígitos iniciando con 3)');
+    if (formData.telefono && formData.telefono.length !== 10) {
+      setError('El teléfono debe tener exactamente 10 dígitos numéricos (ej: 3001234567)');
       return;
     }
 
@@ -204,16 +213,17 @@ const RegisterPage = () => {
                 <Form.Group className="mb-3">
                   <Form.Label className="register-label">Teléfono</Form.Label>
                   <Form.Control
-                    type="text"
+                    type="tel"
+                    inputMode="numeric"
                     name="telefono"
-                    placeholder="3001234567"
+                    placeholder="Ej: 3001234567"
                     value={formData.telefono}
                     onChange={handleChange}
                     maxLength="10"
                     className="register-input"
                   />
                   <Form.Text className="register-hint">
-                    10 dígitos, iniciando con 3
+                    10 dígitos numéricos (ej: 3001234567)
                   </Form.Text>
                 </Form.Group>
 

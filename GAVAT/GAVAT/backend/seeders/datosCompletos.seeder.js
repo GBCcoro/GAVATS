@@ -15,6 +15,7 @@ const Categoria = require("../models/Categoria");
 const Subcategoria = require("../models/Subcategoria");
 
 const Producto = require("../models/Producto");
+const { getSvgForSubcategory } = require("../scripts/productImageSvgs");
 
 const seedDatosCompletos = async () => {
   try {
@@ -369,6 +370,8 @@ const seedDatosCompletos = async () => {
 
       for (let i = 0; i < servicios.length; i++) {
         const nombreServicio = servicios[i];
+        const svgContent = getSvgForSubcategory(subcategoria.nombre, categoria.nombre);
+        const svgBuffer = Buffer.from(svgContent, 'utf8');
 
         await Producto.findOrCreate({
           where: {
@@ -388,7 +391,9 @@ const seedDatosCompletos = async () => {
 
             subcategoriaId: subcategoria.id,
 
-            imagen: "default.jpg",
+            imagen: svgBuffer,
+
+            mimeType: "image/svg+xml",
 
             activo: true,
           },

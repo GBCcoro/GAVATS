@@ -27,6 +27,10 @@ const ProductCard = memo(({ producto, onAddToCart, showActions = true }) => {
             src={getImageUrl(producto.imagen)}
             alt={producto.nombre}
             style={{ height: '200px', objectFit: 'cover', width: '100%' }}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = '/producto-default.jpg';
+            }}
           />
         </div>
         {producto.stock > 0 && producto.stock < 10 && (

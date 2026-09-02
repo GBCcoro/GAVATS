@@ -88,7 +88,7 @@ const Producto = sequelize.define('Producto', {
   },
 
   // Columna 'imagen' → Imagen en formato BLOB almacenada directamente en MySQL
-  // Se guarda como binario y se devuelve como data URL para el frontend.
+  // Se guarda como binario y se devuelve como data URL para el frontend o ruta si es string.
   imagen: {
     type: DataTypes.BLOB('long'),      // LONGBLOB → puede guardar imágenes grandes
     allowNull: true,                   // Opcional: un producto puede no tener imagen
@@ -96,8 +96,34 @@ const Producto = sequelize.define('Producto', {
       const value = this.getDataValue('imagen');
       if (!value) return null;
       if (Buffer.isBuffer(value)) {
+        // Verificar si el buffer contiene un nombre de archivo de texto plano o URL
+        if (value.length < 300) {
+          const text = value.toString('utf8').trim();
+          if (
+            text.startsWith('http://') ||
+            text.startsWith('https://') ||
+            text.startsWith('/uploads/') ||
+            text.startsWith('uploads/') ||
+            /\.(jpg|jpeg|png|webp|svg|gif)$/i.test(text)
+          ) {
+            return text;
+          }
+        }
+        
+        let mimeType = this.getDataValue('mimeType') || 'image/jpeg';
+        
+        // Detección automática por magic bytes si no se especificó o es SVG
+        if (value.length >= 4) {
+          if (value[0] === 0xff && value[1] === 0xd8) {
+            mimeType = 'image/jpeg';
+          } else if (value[0] === 0x89 && value[1] === 0x50 && value[2] === 0x4e && value[3] === 0x47) {
+            mimeType = 'image/png';
+          } else if (value.toString('utf8', 0, Math.min(value.length, 50)).includes('<svg')) {
+            mimeType = 'image/svg+xml';
+          }
+        }
+
         const base64 = value.toString('base64');
-        const mimeType = this.getDataValue('mimeType') || 'image/jpeg';
         return `data:${mimeType};base64,${base64}`;
       }
       return value;

@@ -9,6 +9,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, ListGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import authService from '../services/authService';
 import carritoService from '../services/carritoService';
 import pedidoService from '../services/pedidoService';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -65,11 +66,54 @@ const CheckoutPage = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    direccionEnvio: '',
-    telefono: '',
+    direccionEnvio: user?.direccion || '',
+    telefono: user?.telefono || '',
     metodoPago: 'efectivo',
     solicitudPedido: ''
   });
+
+  // Limpiar mensaje automáticamente (estilo gestores admin)
+  useEffect(() => {
+    if (mensaje.texto) {
+      const timer = setTimeout(() => {
+        setMensaje({ tipo: '', texto: '' });
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [mensaje]);
+
+  // Pre-cargar datos del usuario desde el contexto o API de perfil
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        direccionEnvio: prev.direccionEnvio || user.direccion || '',
+        telefono: prev.telefono || user.telefono || ''
+      }));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await authService.getProfile();
+        const perfilUsuario = response?.data?.usuario || response?.usuario;
+        if (perfilUsuario) {
+          setFormData(prev => ({
+            ...prev,
+            direccionEnvio: prev.direccionEnvio || perfilUsuario.direccion || '',
+            telefono: prev.telefono || perfilUsuario.telefono || ''
+          }));
+        }
+      } catch (err) {
+        console.error('Error al obtener perfil en checkout:', err);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchUserProfile();
+    }
+  }, [isAuthenticated]);
 
   const loadCarrito = useCallback(async () => {
     setLoading(true);
@@ -108,10 +152,19 @@ const CheckoutPage = () => {
   }, [isAuthenticated, navigate, loadCarrito]);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    if (name === 'telefono') {
+      const numericValue = value.replace(/\D/g, '').slice(0, 10);
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue
+      }));
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -122,8 +175,9 @@ const CheckoutPage = () => {
       return;
     }
     
-    if (!formData.telefono.trim()) {
-      setMensaje({ tipo: 'danger', texto: 'El teléfono es requerido' });
+    const telLimpio = formData.telefono.replace(/\D/g, '');
+    if (!telLimpio || telLimpio.length !== 10) {
+      setMensaje({ tipo: 'danger', texto: 'El teléfono de contacto debe tener exactamente 10 dígitos numéricos' });
       return;
     }
 
@@ -187,10 +241,26 @@ const CheckoutPage = () => {
         Finalizar Compra
       </h1>
 
+      {/* Notificación flotante inferior izquierda (estilo Gestores Admin) */}
       {mensaje.texto && (
-        <Alert variant={mensaje.tipo} dismissible onClose={() => setMensaje({ tipo: '', texto: '' })}>
-          {mensaje.texto}
-        </Alert>
+        <div className="toast-floating-container-bottom-left">
+          <Alert 
+            variant={mensaje.tipo} 
+            dismissible 
+            onClose={() => setMensaje({ tipo: '', texto: '' })}
+            className={`toast-floating-alert alert-${mensaje.tipo} mb-0`}
+          >
+            <i className={`bi bi-${
+              mensaje.tipo === 'success' ? 'check-circle-fill text-success' :
+              mensaje.tipo === 'danger' ? 'exclamation-octagon-fill text-danger' :
+              mensaje.tipo === 'warning' ? 'exclamation-triangle-fill text-warning' :
+              'info-circle-fill text-info'
+            } fs-5 flex-shrink-0`} />
+            <div className="flex-grow-1 fw-medium text-start">
+              {mensaje.texto}
+            </div>
+          </Alert>
+        </div>
       )}
 
       <Row>
@@ -209,51 +279,70 @@ const CheckoutPage = () => {
                     type="text"
                     value={user?.nombre || ''}
                     disabled
-                    className="checkout-input"
+                    className="checkout-input bg-light"
                   />
                 </Form.Group>
 
                 <Form.Group className="mb-3">
                   <Form.Label className="checkout-label">
-                    Correo Electrónico <span className="text-danger">*</span>
+                    Correo Electrónico (Gmail / Email) <span className="text-danger">*</span>
                   </Form.Label>
                   <Form.Control
                     type="email"
                     value={user?.email || ''}
                     disabled
-                    className="checkout-input"
+                    className="checkout-input bg-light"
                   />
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label className="checkout-label">
-                    Dirección de Envío <span className="text-danger">*</span>
-                  </Form.Label>
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <Form.Label className="checkout-label mb-0">
+                      Dirección de Envío <span className="text-danger">*</span>
+                    </Form.Label>
+                    {user?.direccion && formData.direccionEnvio === user.direccion && (
+                      <span className="badge bg-light text-dark border small fw-normal">
+                        <i className="bi bi-geo-alt-fill text-gold me-1" /> Obtenida de tu perfil
+                      </span>
+                    )}
+                  </div>
                   <Form.Control
                     as="textarea"
-                    rows={3}
+                    rows={2}
                     name="direccionEnvio"
                     value={formData.direccionEnvio}
                     onChange={handleChange}
-                    placeholder="Ingresa tu dirección completa"
+                    placeholder="Ingresa tu dirección completa de entrega"
                     required
                     className="checkout-input"
                   />
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label className="checkout-label">
-                    Teléfono de Contacto <span className="text-danger">*</span>
-                  </Form.Label>
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <Form.Label className="checkout-label mb-0">
+                      Teléfono de Contacto <span className="text-danger">*</span>
+                    </Form.Label>
+                    {user?.telefono && formData.telefono === user.telefono && (
+                      <span className="badge bg-light text-dark border small fw-normal">
+                        <i className="bi bi-telephone-fill text-gold me-1" /> Obtenido de tu perfil
+                      </span>
+                    )}
+                  </div>
                   <Form.Control
                     type="tel"
+                    inputMode="numeric"
                     name="telefono"
                     value={formData.telefono}
                     onChange={handleChange}
+                    maxLength="10"
                     placeholder="Ej: 3001234567"
                     required
                     className="checkout-input"
                   />
+                  <Form.Text className="text-muted" style={{ fontSize: '0.75rem' }}>
+                    10 dígitos numéricos para contacto y confirmación
+                  </Form.Text>
                 </Form.Group>
 
                 <Form.Group className="mb-3">

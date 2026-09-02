@@ -11,7 +11,6 @@ import { useNavigate } from 'react-router-dom';
 import usuarioService from '../services/usuarioService';
 import { exportarUsuariosAPDF, exportarUsuariosAExcel } from '../utils/exportUtils';
 import LoadingSpinner from '../components/LoadingSpinner';
-import SvgIcon from '../components/SvgIcon';
 
 function AdminUsuariosPage() {
   const navigate = useNavigate();
@@ -22,6 +21,20 @@ function AdminUsuariosPage() {
   const [editando, setEditando] = useState(false);
   const [tipoExportacion, setTipoExportacion] = useState('pdf');
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
+  const [seleccionados, setSeleccionados] = useState(new Set());
+  
+  // Modal de confirmación en pantalla
+  const [modalConfirmacion, setModalConfirmacion] = useState({
+    show: false,
+    titulo: '',
+    mensaje: '',
+    tipo: 'danger',
+    icono: 'trash3-fill',
+    textoConfirmar: 'Borrar',
+    textoCancelar: 'Cancelar',
+    onConfirm: null,
+    onCancel: null
+  });
   
   const [usuarioActual, setUsuarioActual] = useState({
     id: null,
@@ -101,21 +114,26 @@ function AdminUsuariosPage() {
     limpiarFormulario();
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Guardado real
+  const ejecutarGuardado = async () => {
     try {
+      if (usuarioActual.telefono && usuarioActual.telefono.length !== 10) {
+        setMensaje({ tipo: 'danger', texto: 'El teléfono debe tener exactamente 10 dígitos numéricos' });
+        return;
+      }
+
       if (editando) {
         const dataActualizar = { ...usuarioActual };
         if (!dataActualizar.password) delete dataActualizar.password;
         await usuarioService.actualizarUsuario(usuarioActual.id, dataActualizar);
-        setMensaje({ tipo: 'success', texto: 'Usuario actualizado exitosamente' });
+        setMensaje({ tipo: 'success', texto: `Usuario "${usuarioActual.nombre}" actualizado exitosamente` });
       } else {
         if (!usuarioActual.password) {
           setMensaje({ tipo: 'danger', texto: 'La contraseña es requerida para nuevos usuarios' });
           return;
         }
         await usuarioService.crearUsuario(usuarioActual);
-        setMensaje({ tipo: 'success', texto: 'Usuario creado exitosamente' });
+        setMensaje({ tipo: 'success', texto: `Usuario "${usuarioActual.nombre}" creado exitosamente` });
       }
       handleCloseModal();
       await cargarUsuarios();
@@ -125,32 +143,27 @@ function AdminUsuariosPage() {
     }
   };
 
-  const handleEliminar = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar este usuario?')) return;
-    try {
-      await usuarioService.eliminarUsuario(id);
-      setMensaje({ tipo: 'success', texto: 'Usuario eliminado exitosamente' });
-      await cargarUsuarios();
-    } catch (error) {
-      console.error('Error al eliminar usuario:', error);
-      setMensaje({ tipo: 'danger', texto: 'Error al eliminar usuario' });
-    }
-  };
-
-  const handleToggleActivo = async (usuario) => {
-    try {
-      await usuarioService.cambiarEstado(usuario.id);
-      setMensaje({ 
-        tipo: 'success', 
-        texto: `Usuario ${usuario.activo ? 'desactivado' : 'activado'} exitosamente` 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (editando) {
+      setModalConfirmacion({
+        show: true,
+        titulo: '¿Actualizar usuario?',
+        mensaje: `¿Deseas guardar los cambios realizados en el usuario "${usuarioActual.nombre} ${usuarioActual.apellido || ''}"?`,
+        tipo: 'primary',
+        icono: 'pencil-square',
+        textoConfirmar: 'Actualizar',
+        textoCancelar: 'Cancelar',
+        onConfirm: async () => {
+          await ejecutarGuardado();
+        }
       });
-      await cargarUsuarios();
-    } catch (error) {
-      console.error('Error al cambiar estado del usuario:', error);
-      setMensaje({ tipo: 'danger', texto: 'Error al cambiar estado del usuario' });
+    } else {
+      ejecutarGuardado();
     }
   };
 
+  // Selección de filas
   const usuariosFiltrados = useMemo(() => {
     return usuarios.filter(usuario => {
       const busquedaLower = filtros.busqueda.toLowerCase().trim();
@@ -175,32 +188,205 @@ function AdminUsuariosPage() {
     setPaginaActual(1);
   }, [filtros.busqueda, filtros.rol, filtros.estado]);
 
+  const todosPaginaSeleccionados = useMemo(() => {
+    return usuariosPaginados.length > 0 && usuariosPaginados.every(u => seleccionados.has(u.id));
+  }, [usuariosPaginados, seleccionados]);
+
+  const handleToggleSeleccionarTodos = () => {
+    setSeleccionados(prev => {
+      const nuevo = new Set(prev);
+      if (todosPaginaSeleccionados) {
+        usuariosPaginados.forEach(u => nuevo.delete(u.id));
+      } else {
+        usuariosPaginados.forEach(u => nuevo.add(u.id));
+      }
+      return nuevo;
+    });
+  };
+
+  const toggleSeleccionarUsuario = (id) => {
+    setSeleccionados(prev => {
+      const nuevo = new Set(prev);
+      if (nuevo.has(id)) {
+        nuevo.delete(id);
+      } else {
+        nuevo.add(id);
+      }
+      return nuevo;
+    });
+  };
+
+  // Eliminar individual con modal
+  const solicitarEliminar = (usuario) => {
+    setModalConfirmacion({
+      show: true,
+      titulo: '¿Eliminar usuario?',
+      mensaje: `¿Estás seguro de que deseas eliminar permanentemente al usuario "${usuario.nombre} ${usuario.apellido || ''}"? Esta acción no se puede deshacer.`,
+      tipo: 'danger',
+      icono: 'trash3-fill',
+      textoConfirmar: 'Borrar',
+      textoCancelar: 'Cancelar',
+      onConfirm: async () => {
+        try {
+          setUsuarios(prev => prev.filter(u => u.id !== usuario.id));
+          setSeleccionados(prev => {
+            const next = new Set(prev);
+            next.delete(usuario.id);
+            return next;
+          });
+
+          await usuarioService.eliminarUsuario(usuario.id);
+          setMensaje({ tipo: 'success', texto: `Usuario "${usuario.nombre}" eliminado exitosamente` });
+          await cargarUsuarios();
+        } catch (error) {
+          console.error('Error al eliminar usuario:', error);
+          setMensaje({ tipo: 'danger', texto: error.response?.data?.message || 'Error al eliminar usuario' });
+          await cargarUsuarios();
+        }
+      }
+    });
+  };
+
+  // Toggle estado individual con modal
+  const solicitarCambioEstado = (usuario) => {
+    const nuevoEstado = !usuario.activo;
+    setModalConfirmacion({
+      show: true,
+      titulo: nuevoEstado ? '¿Activar usuario?' : '¿Desactivar usuario?',
+      mensaje: `¿Deseas cambiar el estado de "${usuario.nombre}" a "${nuevoEstado ? 'Activo' : 'Inactivo'}"?`,
+      tipo: nuevoEstado ? 'success' : 'warning',
+      icono: nuevoEstado ? 'check-circle-fill' : 'x-circle-fill',
+      textoConfirmar: nuevoEstado ? 'Activar' : 'Desactivar',
+      textoCancelar: 'Cancelar',
+      onConfirm: async () => {
+        try {
+          await usuarioService.cambiarEstado(usuario.id);
+          
+          setUsuarios(prev => 
+            prev.map(u => 
+              u.id === usuario.id ? { ...u, activo: nuevoEstado } : u
+            )
+          );
+          
+          setMensaje({ 
+            tipo: 'success', 
+            texto: `Usuario "${usuario.nombre}" ${nuevoEstado ? 'activado' : 'desactivado'} exitosamente` 
+          });
+        } catch (error) {
+          console.error('Error al cambiar estado del usuario:', error);
+          setMensaje({ tipo: 'danger', texto: error.response?.data?.message || 'Error al cambiar estado del usuario' });
+        }
+      }
+    });
+  };
+
+  // Eliminación masiva con modal
+  const solicitarEliminacionMasiva = () => {
+    const count = seleccionados.size;
+    if (count === 0) return;
+    
+    setModalConfirmacion({
+      show: true,
+      titulo: `¿Eliminar ${count} usuario${count !== 1 ? 's' : ''}?`,
+      mensaje: `Se eliminarán permanentemente los ${count} usuarios seleccionados. ¿Deseas continuar?`,
+      tipo: 'danger',
+      icono: 'trash3-fill',
+      textoConfirmar: 'Borrar',
+      textoCancelar: 'Cancelar',
+      onConfirm: async () => {
+        try {
+          const ids = Array.from(seleccionados);
+          const idsSet = new Set(ids);
+          
+          setUsuarios(prev => prev.filter(u => !idsSet.has(u.id)));
+          setSeleccionados(new Set());
+          
+          const resultados = await Promise.allSettled(ids.map(id => usuarioService.eliminarUsuario(id)));
+          const exitosos = resultados.filter(r => r.status === 'fulfilled').length;
+          
+          setMensaje({ 
+            tipo: exitosos > 0 ? 'success' : 'danger', 
+            texto: `${exitosos} de ${ids.length} usuarios eliminados exitosamente` 
+          });
+          
+          await cargarUsuarios();
+        } catch (error) {
+          console.error('Error en eliminación masiva:', error);
+          setMensaje({ tipo: 'danger', texto: 'Error al procesar la eliminación masiva' });
+          await cargarUsuarios();
+        }
+      }
+    });
+  };
+
+  // Toggle masivo con modal
+  const solicitarCambioEstadoMasivo = () => {
+    const count = seleccionados.size;
+    if (count === 0) return;
+    
+    setModalConfirmacion({
+      show: true,
+      titulo: `¿Cambiar estado a ${count} usuario${count !== 1 ? 's' : ''}?`,
+      mensaje: `Se alternará el estado (activado/desactivado) de los ${count} usuarios seleccionados.`,
+      tipo: 'warning',
+      icono: 'arrow-repeat',
+      textoConfirmar: 'Actualizar',
+      textoCancelar: 'Cancelar',
+      onConfirm: async () => {
+        try {
+          const ids = Array.from(seleccionados);
+          setSeleccionados(new Set());
+          
+          const resultados = await Promise.allSettled(ids.map(id => usuarioService.cambiarEstado(id)));
+          const exitosos = resultados.filter(r => r.status === 'fulfilled').length;
+          
+          setMensaje({ 
+            tipo: exitosos > 0 ? 'success' : 'danger', 
+            texto: `Estado actualizado en ${exitosos} de ${ids.length} usuarios` 
+          });
+          
+          await cargarUsuarios();
+        } catch (error) {
+          console.error('Error al cambiar estado masivo:', error);
+          setMensaje({ tipo: 'danger', texto: 'Error al procesar el cambio de estado masivo' });
+          await cargarUsuarios();
+        }
+      }
+    });
+  };
+
   if (loading) {
     return <LoadingSpinner message="Cargando usuarios..." />;
   }
 
   return (
     <Container className="py-4">
-      {/* Header Toolbar */}
-      <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+      {/* Header Toolbar Responsivo */}
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
         <div>
-          <h1 className="h2 mb-1 fw-bold text-navy"><span className="bi bi-people-fill me-2 text-gold" aria-hidden="true"></span> Gestión de Usuarios</h1>
+          <h1 className="h2 mb-1 fw-bold text-navy">
+            <span className="bi bi-people-fill me-2 text-gold" aria-hidden="true"></span> Gestión de Usuarios
+          </h1>
           <p className="text-muted mb-0">
             Total: {usuariosFiltrados.length} de {usuarios.length} usuario{usuarios.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="d-flex flex-wrap gap-2">
+        <div className="d-flex flex-wrap align-items-center gap-2">
           <Dropdown as={ButtonGroup}>
             <Button
               variant="primary"
-              onClick={() => {
-                setTipoExportacion('pdf');
-                exportarUsuariosAPDF(usuariosFiltrados);
+              onClick={async () => {
+                if (tipoExportacion === 'pdf') {
+                  exportarUsuariosAPDF(usuariosFiltrados);
+                } else {
+                  await exportarUsuariosAExcel(usuariosFiltrados);
+                }
               }}
             >
-              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span> Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
+              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
             </Button>
-            <Dropdown.Toggle split variant="primary" />
+            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" />
             <Dropdown.Menu>
               <Dropdown.Item onClick={() => {
                 setTipoExportacion('pdf');
@@ -217,10 +403,10 @@ function AdminUsuariosPage() {
             </Dropdown.Menu>
           </Dropdown>
           <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-            <span className="bi bi-arrow-left me-1" aria-hidden="true"></span> Volver
+            <i className="bi bi-arrow-left me-1"></i> Volver
           </Button>
           <Button variant="primary" onClick={() => handleShowModal()}>
-            <span className="bi bi-plus-circle me-1" aria-hidden="true"></span> Nuevo Usuario
+            <i className="bi bi-plus-circle me-1"></i> Nuevo Usuario
           </Button>
         </div>
       </div>
@@ -309,19 +495,89 @@ function AdminUsuariosPage() {
         </Card.Body>
       </Card>
 
-      {/* Tabla de Usuarios */}
+      {/* Barra de Acciones de Selección Múltiple */}
+      <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 px-1">
+        <div className="d-flex align-items-center gap-2">
+          <Button
+            variant={todosPaginaSeleccionados ? "secondary" : "outline-secondary"}
+            size="sm"
+            className="d-inline-flex align-items-center gap-1"
+            onClick={handleToggleSeleccionarTodos}
+            title={todosPaginaSeleccionados ? "Deseleccionar todos en esta página" : "Seleccionar todos en esta página"}
+          >
+            <i className={`bi bi-${todosPaginaSeleccionados ? 'check-square-fill text-primary' : 'square'}`} />
+            <span>{todosPaginaSeleccionados ? 'Deseleccionar página' : `Seleccionar todo (${usuariosPaginados.length})`}</span>
+          </Button>
+          {seleccionados.size > 0 && (
+            <Badge bg="danger" className="p-2 d-flex align-items-center gap-1 fs-7">
+              <i className="bi bi-check-circle-fill"></i> {seleccionados.size} seleccionado{seleccionados.size !== 1 ? 's' : ''}
+            </Badge>
+          )}
+        </div>
+
+        {seleccionados.size > 0 && (
+          <div className="d-flex flex-wrap align-items-center gap-2">
+            {seleccionados.size === 1 && (
+              <Button
+                variant="outline-primary"
+                size="sm"
+                className="d-inline-flex align-items-center gap-1 fw-semibold"
+                onClick={() => {
+                  const idSel = Array.from(seleccionados)[0];
+                  const usuSel = usuarios.find(u => u.id === idSel);
+                  if (usuSel) handleShowModal(usuSel);
+                }}
+                title="Editar el usuario seleccionado"
+              >
+                <i className="bi bi-pencil-fill"></i>
+                <span>Editar</span>
+              </Button>
+            )}
+            <Button
+              variant="outline-warning"
+              size="sm"
+              className="d-inline-flex align-items-center gap-1 fw-semibold"
+              onClick={solicitarCambioEstadoMasivo}
+              title="Activar o desactivar los usuarios seleccionados"
+            >
+              <i className="bi bi-arrow-repeat"></i>
+              <span>Activar / Desactivar ({seleccionados.size})</span>
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              className="d-inline-flex align-items-center gap-1 fw-semibold"
+              onClick={solicitarEliminacionMasiva}
+              title="Eliminar los usuarios seleccionados"
+            >
+              <i className="bi bi-trash-fill"></i>
+              <span>Eliminar ({seleccionados.size})</span>
+            </Button>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => setSeleccionados(new Set())}
+              title="Limpiar selección"
+            >
+              <i className="bi bi-x-lg me-1"></i> Deseleccionar
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Tabla de Usuarios Responsiva */}
       <Card className="shadow-sm border-0 admin-card-table">
         <Card.Body className="p-0">
           <Table responsive hover className="admin-table align-middle mb-0">
             <thead>
               <tr>
-                <th className="d-none d-md-table-cell" style={{ width: '50px' }}>ID</th>
+                <th style={{ width: '50px' }}>ID</th>
                 <th>Nombre</th>
                 <th>Email</th>
                 <th className="d-none d-lg-table-cell" style={{ width: '130px' }}>Teléfono</th>
                 <th style={{ width: '110px' }}>Rol</th>
                 <th className="d-none d-sm-table-cell" style={{ width: '100px' }}>Estado</th>
-                <th className="text-center" style={{ minWidth: '110px' }}>Acciones</th>
+                <th className="text-center" style={{ width: '130px', minWidth: '100px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -332,61 +588,86 @@ function AdminUsuariosPage() {
                   </td>
                 </tr>
               ) : (
-                usuariosPaginados.map((usuario) => (
-                  <tr key={usuario.id}>
-                    <td className="align-middle d-none d-md-table-cell">{usuario.id}</td>
-                    <td className="align-middle fw-bold">
-                      <div>{usuario.nombre} {usuario.apellido || ''}</div>
-                      <small className="d-lg-none text-muted d-block">{usuario.telefono || ''}</small>
-                    </td>
-                    <td className="align-middle">{usuario.email}</td>
-                    <td className="align-middle d-none d-lg-table-cell">{usuario.telefono || '-'}</td>
-                    <td className="align-middle">
-                      <Badge bg={getRolBadgeVariant(usuario.rol)}>
-                        {usuario.rol}
-                      </Badge>
-                    </td>
-                    <td className="align-middle d-none d-sm-table-cell">
-                      <Badge bg={usuario.activo ? 'success' : 'secondary'}>
-                        {usuario.activo ? 'Activo' : 'Inactivo'}
-                      </Badge>
-                    </td>
-                    <td className="align-middle text-center">
-                      <div className="action-btn-group">
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          className="btn-action-table"
-                          onClick={() => handleShowModal(usuario)}
-                          title="Editar usuario"
-                        >
-                          <SvgIcon name="pencil" />
-                          <span className="btn-text">Editar</span>
-                        </Button>
-                        <Button
-                          variant={usuario.activo ? 'outline-warning' : 'outline-success'}
-                          size="sm"
-                          className="btn-action-table"
-                          onClick={() => handleToggleActivo(usuario)}
-                          title={usuario.activo ? 'Desactivar usuario' : 'Activar usuario'}
-                        >
-                          <SvgIcon name={usuario.activo ? 'x-circle' : 'check-circle'} />
-                          <span className="btn-text">{usuario.activo ? 'Desactivar' : 'Activar'}</span>
-                        </Button>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          className="btn-action-table"
-                          onClick={() => handleEliminar(usuario.id)}
-                          title="Eliminar usuario"
-                        >
-                          <SvgIcon name="trash" />
-                          <span className="btn-text">Eliminar</span>
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                usuariosPaginados.map((usuario) => {
+                  const estaSeleccionado = seleccionados.has(usuario.id);
+                  return (
+                    <tr 
+                      key={usuario.id}
+                      onClick={() => toggleSeleccionarUsuario(usuario.id)}
+                      className={`fila-admin ${estaSeleccionado ? 'fila-admin-seleccionada' : ''}`}
+                      title="Haz clic para seleccionar/deseleccionar este usuario"
+                    >
+                      <td className="align-middle fw-bold">
+                        <div className="d-flex align-items-center gap-2">
+                          <i 
+                            className={`bi bi-${estaSeleccionado ? 'check-circle-fill text-danger' : 'circle text-muted'} fs-6 d-inline-block`}
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <span>{usuario.id}</span>
+                        </div>
+                      </td>
+                      <td className="align-middle fw-bold">
+                        <div>{usuario.nombre} {usuario.apellido || ''}</div>
+                        <small className="d-lg-none text-muted d-block">{usuario.telefono || ''}</small>
+                      </td>
+                      <td className="align-middle">{usuario.email}</td>
+                      <td className="align-middle d-none d-lg-table-cell">{usuario.telefono || '-'}</td>
+                      <td className="align-middle">
+                        <Badge bg={getRolBadgeVariant(usuario.rol)}>
+                          {usuario.rol}
+                        </Badge>
+                      </td>
+                      <td className="align-middle d-none d-sm-table-cell">
+                        <Badge bg={usuario.activo ? 'success' : 'secondary'}>
+                          {usuario.activo ? 'Activo' : 'Inactivo'}
+                        </Badge>
+                      </td>
+                      <td className="align-middle text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="action-btn-group">
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            className="btn-action-table"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShowModal(usuario);
+                            }}
+                            title="Editar usuario"
+                          >
+                            <i className="bi bi-pencil" />
+                            <span className="btn-text">Editar</span>
+                          </Button>
+                          <Button
+                            variant={usuario.activo ? 'outline-warning' : 'outline-success'}
+                            size="sm"
+                            className="btn-action-table"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              solicitarCambioEstado(usuario);
+                            }}
+                            title={usuario.activo ? 'Desactivar usuario' : 'Activar usuario'}
+                          >
+                            <i className={`bi bi-${usuario.activo ? 'x-circle' : 'check-circle'}`} />
+                            <span className="btn-text">{usuario.activo ? 'Desactivar' : 'Activar'}</span>
+                          </Button>
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            className="btn-action-table"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              solicitarEliminar(usuario);
+                            }}
+                            title="Eliminar usuario"
+                          >
+                            <i className="bi bi-trash" />
+                            <span className="btn-text">Eliminar</span>
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </Table>
@@ -419,66 +700,98 @@ function AdminUsuariosPage() {
         </div>
       )}
 
-      {/* Modal Usuario */}
-      <Modal show={showModal} onHide={handleCloseModal} centered>
-        <Modal.Header closeButton>
-          <Modal.Title className="h5 fw-bold text-navy">
-            {editando ? 'Editar Usuario' : 'Nuevo Usuario'}
-          </Modal.Title>
-        </Modal.Header>
+      {/* Modal Crear / Editar Usuario Minimalista */}
+      <Modal 
+        show={showModal} 
+        onHide={handleCloseModal} 
+        centered
+        dialogClassName="modal-producto-form"
+        backdrop="static"
+      >
+        <div className="product-minimal-header">
+          <div>
+            <h6 className="fw-bold mb-0 text-navy fs-6">
+              {editando ? 'Editar Usuario' : 'Nuevo Usuario'}
+            </h6>
+            <small className="text-muted" style={{ fontSize: '0.8rem' }}>
+              {editando ? `ID #${usuarioActual.id} — ${usuarioActual.email}` : 'Ingresa los datos para registrar un usuario'}
+            </small>
+          </div>
+          <button 
+            type="button" 
+            className="btn-close" 
+            onClick={handleCloseModal}
+            aria-label="Cerrar"
+          />
+        </div>
+
         <Form onSubmit={handleSubmit}>
-          <Modal.Body>
+          <Modal.Body className="p-3 p-sm-4">
             <Row className="g-2 mb-3">
-              <Col md={6}>
+              <Col sm={6}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold">Nombre <span className="text-danger">*</span></Form.Label>
+                  <Form.Label className="small fw-semibold text-secondary mb-1">
+                    Nombre <span className="text-danger">*</span>
+                  </Form.Label>
                   <Form.Control
                     type="text"
                     value={usuarioActual.nombre}
                     onChange={(e) => setUsuarioActual({ ...usuarioActual, nombre: e.target.value })}
                     required
+                    placeholder="Ej: Carlos"
+                    className="product-minimal-input"
                   />
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col sm={6}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold">Apellido</Form.Label>
+                  <Form.Label className="small fw-semibold text-secondary mb-1">
+                    Apellido
+                  </Form.Label>
                   <Form.Control
                     type="text"
                     value={usuarioActual.apellido}
                     onChange={(e) => setUsuarioActual({ ...usuarioActual, apellido: e.target.value })}
+                    placeholder="Ej: Gómez"
+                    className="product-minimal-input"
                   />
                 </Form.Group>
               </Col>
             </Row>
 
             <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">Email <span className="text-danger">*</span></Form.Label>
+              <Form.Label className="small fw-semibold text-secondary mb-1">
+                Correo Electrónico <span className="text-danger">*</span>
+              </Form.Label>
               <Form.Control
                 type="email"
                 value={usuarioActual.email}
                 onChange={(e) => setUsuarioActual({ ...usuarioActual, email: e.target.value })}
                 required
+                placeholder="correo@ejemplo.com"
+                className="product-minimal-input"
               />
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">
-                Contraseña {editando ? '(opcional)' : <span className="text-danger">*</span>}
+              <Form.Label className="small fw-semibold text-secondary mb-1">
+                Contraseña {editando ? <span className="text-muted">(dejar en blanco para mantener)</span> : <span className="text-danger">*</span>}
               </Form.Label>
               <InputGroup>
                 <Form.Control
                   type={showPassword ? 'text' : 'password'}
-                  placeholder={editando ? 'Dejar en blanco para mantener actual' : 'Ingrese contraseña'}
+                  placeholder={editando ? '••••••••' : 'Mínimo 6 caracteres'}
                   value={usuarioActual.password}
                   onChange={(e) => setUsuarioActual({ ...usuarioActual, password: e.target.value })}
                   required={!editando}
+                  className="product-minimal-input"
                 />
                 <Button
                   variant="outline-secondary"
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                  style={{ border: '1px solid #e2e8f0', borderLeft: 'none' }}
                 >
                   <i className={`bi bi-eye${showPassword ? '-slash' : ''}`}></i>
                 </Button>
@@ -486,22 +799,37 @@ function AdminUsuariosPage() {
             </Form.Group>
 
             <Row className="g-2 mb-3">
-              <Col md={6}>
+              <Col sm={6}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold">Teléfono</Form.Label>
+                  <Form.Label className="small fw-semibold text-secondary mb-1">
+                    Teléfono
+                  </Form.Label>
                   <Form.Control
-                    type="text"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength="10"
                     value={usuarioActual.telefono}
-                    onChange={(e) => setUsuarioActual({ ...usuarioActual, telefono: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setUsuarioActual({ ...usuarioActual, telefono: val });
+                    }}
+                    placeholder="Ej: 3001234567"
+                    className="product-minimal-input"
                   />
+                  <Form.Text className="text-muted" style={{ fontSize: '0.72rem' }}>
+                    10 dígitos numéricos
+                  </Form.Text>
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col sm={6}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold">Rol</Form.Label>
+                  <Form.Label className="small fw-semibold text-secondary mb-1">
+                    Rol en el Sistema
+                  </Form.Label>
                   <Form.Select
                     value={usuarioActual.rol}
                     onChange={(e) => setUsuarioActual({ ...usuarioActual, rol: e.target.value })}
+                    className="product-minimal-input"
                   >
                     <option value="cliente">Cliente</option>
                     <option value="auxiliar">Auxiliar</option>
@@ -512,32 +840,102 @@ function AdminUsuariosPage() {
             </Row>
 
             <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">Dirección</Form.Label>
+              <Form.Label className="small fw-semibold text-secondary mb-1">
+                Dirección
+              </Form.Label>
               <Form.Control
                 as="textarea"
                 rows={2}
                 value={usuarioActual.direccion}
                 onChange={(e) => setUsuarioActual({ ...usuarioActual, direccion: e.target.value })}
+                placeholder="Dirección de envío o residencia..."
+                className="product-minimal-input"
               />
             </Form.Group>
 
-            <Form.Check
-              type="checkbox"
-              id="usuario-activo"
-              label="Usuario activo"
-              checked={usuarioActual.activo}
-              onChange={(e) => setUsuarioActual({ ...usuarioActual, activo: e.target.checked })}
-            />
+            <div className="pt-1">
+              <Form.Check
+                type="switch"
+                id="usuario-switch-activo"
+                label="Usuario activo (habilitado para iniciar sesión)"
+                checked={usuarioActual.activo}
+                onChange={(e) => setUsuarioActual({ ...usuarioActual, activo: e.target.checked })}
+                className="small text-secondary fw-medium"
+              />
+            </div>
           </Modal.Body>
-          <Modal.Footer>
-            <Button variant="outline-secondary" onClick={handleCloseModal}>
+
+          <div className="product-minimal-footer">
+            <button 
+              type="button"
+              onClick={handleCloseModal}
+              className="btn-minimal-cancel"
+            >
               Cancelar
-            </Button>
-            <Button variant="primary" type="submit">
-              {editando ? 'Actualizar' : 'Crear'}
-            </Button>
-          </Modal.Footer>
+            </button>
+            <button 
+              type="submit"
+              className="btn-minimal-submit"
+            >
+              <i className={`bi bi-${editando ? 'check2' : 'plus-lg'}`} />
+              {editando ? 'Actualizar Usuario' : 'Guardar Usuario'}
+            </button>
+          </div>
         </Form>
+      </Modal>
+
+      {/* Modal de Confirmación Compacto Estilo Dashboard */}
+      <Modal 
+        show={modalConfirmacion.show} 
+        onHide={() => setModalConfirmacion(prev => ({ ...prev, show: false }))} 
+        centered
+        backdrop="static"
+        dialogClassName="modal-confirmacion-compacto"
+      >
+        <Modal.Body className="text-center p-3 p-sm-4">
+          <div 
+            className={`confirm-icon-wrapper mb-3 mx-auto bg-${
+              modalConfirmacion.tipo === 'danger' ? 'danger-subtle' :
+              modalConfirmacion.tipo === 'warning' ? 'warning-subtle' :
+              modalConfirmacion.tipo === 'primary' || modalConfirmacion.tipo === 'info' ? 'primary-subtle' :
+              'success-subtle'
+            } text-${modalConfirmacion.tipo || 'primary'}`}
+          >
+            <i className={`bi bi-${modalConfirmacion.icono || 'exclamation-circle-fill'} confirm-icon`} />
+          </div>
+          
+          <h5 className="fw-bold text-navy mb-2 fs-5">
+            {modalConfirmacion.titulo}
+          </h5>
+          
+          <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
+            {modalConfirmacion.mensaje}
+          </p>
+
+          <div className="d-flex gap-2 justify-content-center w-100 mt-2">
+            <Button 
+              variant="outline-secondary" 
+              className="px-3 py-2 fw-semibold flex-fill"
+              onClick={() => {
+                setModalConfirmacion(prev => ({ ...prev, show: false }));
+                if (modalConfirmacion.onCancel) modalConfirmacion.onCancel();
+              }}
+            >
+              {modalConfirmacion.textoCancelar || 'Cancelar'}
+            </Button>
+            <Button 
+              variant={modalConfirmacion.tipo || 'primary'} 
+              className="px-3 py-2 fw-semibold flex-fill shadow-sm"
+              onClick={async () => {
+                const action = modalConfirmacion.onConfirm;
+                setModalConfirmacion(prev => ({ ...prev, show: false }));
+                if (action) await action();
+              }}
+            >
+              {modalConfirmacion.textoConfirmar || 'Confirmar'}
+            </Button>
+          </div>
+        </Modal.Body>
       </Modal>
     </Container>
   );

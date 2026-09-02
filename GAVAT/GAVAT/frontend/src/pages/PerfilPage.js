@@ -24,6 +24,14 @@ const PerfilPage = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'telefono') {
+      const numericValue = value.replace(/\D/g, '').slice(0, 10);
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue
+      }));
+      return;
+    }
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -31,6 +39,11 @@ const PerfilPage = () => {
   };
 
   const handleSave = async () => {
+    if (formData.telefono && formData.telefono.length !== 10) {
+      setError('El teléfono debe tener exactamente 10 dígitos numéricos');
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
@@ -167,11 +180,16 @@ const PerfilPage = () => {
                       <Form.Control
                         id="perfil-telefono"
                         type="tel"
+                        inputMode="numeric"
                         name="telefono"
+                        maxLength="10"
                         value={formData.telefono}
                         onChange={handleInputChange}
-                        placeholder="Ingresa tu teléfono"
+                        placeholder="Ej: 3001234567"
                       />
+                      <Form.Text className="text-muted" style={{ fontSize: '0.75rem' }}>
+                        10 dígitos numéricos
+                      </Form.Text>
                     </div>
                   </div>
                 )}

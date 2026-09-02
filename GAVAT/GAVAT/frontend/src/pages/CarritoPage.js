@@ -12,6 +12,7 @@ import carritoService from '../services/carritoService';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import SvgIcon from '../components/SvgIcon';
+import { getImageUrl } from '../utils/helpers';
 
 const CarritoPage = () => {
   const [carrito, setCarrito] = useState(null);
@@ -175,11 +176,12 @@ const CarritoPage = () => {
                         <td>
                           <div className="d-flex align-items-center">
                             <img
-                              src={item.producto?.imagen || item.imagen || '/producto-default.jpg'}
+                              src={getImageUrl(item.producto?.imagen || item.imagen)}
                               alt={item.producto?.nombre || item.nombre}
                               style={{ width: '60px', height: '60px', objectFit: 'cover' }}
                               className="rounded me-3"
                               onError={(e) => {
+                                e.target.onerror = null;
                                 e.target.src = '/producto-default.jpg';
                               }}
                             />

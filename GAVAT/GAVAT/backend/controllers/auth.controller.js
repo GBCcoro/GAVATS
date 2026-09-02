@@ -29,25 +29,26 @@ const { handleServerError } = require("./_sharedControllerHelpers");
 const register = async (req, res) => {
   try {
     // Desestructura los datos enviados en el body de la petición HTTP.
-    // req.body contiene los datos que el cliente envía en formato JSON.
-    const { nombre, email, password, telefono, direccion } = req.body;
+    const { nombre, apellido, email, password, telefono, direccion } = req.body;
+    
     // VALIDACIÓN 1: Verifica que los campos obligatorios existan.
-    // El operador ! convierte a booleano: si es vacío, null o undefined, retorna true.
     if (!email || !password) {
       return res.status(400).json({
         success: false,
         message: "Faltan campos requeridos: email y password son obligatorios",
       });
     }
-    // VALIDACIÓN 2: Verifica que el email tenga un formato válido usando una expresión regular.
-    // La regex valida: texto@texto.texto (estructura básica de un email)
+
+    // VALIDACIÓN 2: Verifica que el email tenga un formato válido
     const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    const emailNormalizado = String(email).trim().toLowerCase();
+    if (!emailRegex.test(emailNormalizado)) {
       return res.status(400).json({
         success: false,
         message: "Formato de email inválido",
       });
     }
+
     // VALIDACIÓN 3: Verifica que la contraseña tenga al menos 6 caracteres.
     if (password.length < 6) {
       return res.status(400).json({
@@ -55,29 +56,39 @@ const register = async (req, res) => {
         message: "La contraseña debe tener al menos 6 caracteres",
       });
     }
+
     // VALIDACIÓN 4: Busca en la BD si ya existe un usuario con ese email.
-    const usuarioExistente = await Usuario.findOne({ where: { email } });
+    const usuarioExistente = await Usuario.findOne({ where: { email: emailNormalizado } });
     if (usuarioExistente) {
       return res.status(400).json({
         success: false,
         message: "El email ya está registrado",
       });
     }
+
+    // Procesar y formatear nombre completo si viene nombre y/o apellido
+    const partesNombre = [nombre, apellido].filter(Boolean).map(p => String(p).trim()).filter(Boolean);
+    const nombreCompleto = partesNombre.length > 0 ? partesNombre.join(' ') : null;
+
+    // Limpieza de campos opcionales (máximo 10 dígitos numéricos para teléfono)
+    const telefonoLimpio = telefono && String(telefono).trim() !== '' ? String(telefono).replace(/\D/g, '').slice(0, 10) : null;
+    const direccionLimpia = direccion && String(direccion).trim() !== '' ? String(direccion).trim() : null;
+
     // CREAR USUARIO en la base de datos.
     const nuevoUsuario = await Usuario.create({
-      nombre: nombre || null, // Nombre opcional
-      email, // Email (único)
-      password, // Contraseña (será hasheada por el hook)
-      telefono: telefono || null, // Teléfono opcional
-      direccion: direccion || null, // Dirección opcional
-      rol: "cliente", // Fuerza rol 'cliente' por seguridad
+      nombre: nombreCompleto,
+      email: emailNormalizado,
+      password,
+      telefono: telefonoLimpio,
+      direccion: direccionLimpia,
+      rol: "cliente",
     });
+
     // GENERAR TOKEN JWT con los datos básicos del usuario recién creado.
-    // Este token se envía al cliente para que lo use en las siguientes peticiones.
     const token = generateToken({
-      id: nuevoUsuario.id, // ID del usuario en la BD
-      email: nuevoUsuario.email, // Email del usuario
-      rol: nuevoUsuario.rol, // Rol del usuario ('cliente')
+      id: nuevoUsuario.id,
+      email: nuevoUsuario.email,
+      rol: nuevoUsuario.rol,
     });
     // PREPARAR RESPUESTA: convierte el objeto Sequelize a JSON plano
     // y elimina el campo password para no enviarlo al cliente por seguridad.
