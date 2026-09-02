@@ -40,7 +40,8 @@ const {
   login,             // Función que autentica al usuario y retorna un token JWT
   getMe,             // Función que retorna los datos del usuario autenticado
   updateMe,          // Función que actualiza el perfil del usuario autenticado
-  changePassword     // Función que permite cambiar la contraseña
+  changePassword,    // Función que permite cambiar la contraseña
+  deleteMe           // Función que permite al cliente eliminar su propia cuenta
 } = require('../controllers/auth.controller');
 
 // ==========================================
@@ -134,6 +135,10 @@ router.put('/me', verificarAuth, updateMe);
 // Respuesta exitosa (200 OK):
 //   { success: true, message: "Contraseña actualizada exitosamente" }
 router.put('/change-password', verificarAuth, changePassword);
+
+// DELETE /api/auth/me → Elimina la cuenta propia del usuario autenticado (solo clientes)
+// Headers requeridos: { "Authorization": "Bearer <token>" }
+router.delete('/me', verificarAuth, deleteMe);
 
 // ==========================================
 // EXPORTAR ROUTER

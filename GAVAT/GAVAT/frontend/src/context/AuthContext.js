@@ -79,6 +79,13 @@ export const AuthProvider = ({ children }) => {
     return response;
   }, []);
 
+  // Eliminar cuenta propia (cliente)
+  const deleteAccount = useCallback(async () => {
+    const response = await authService.deleteAccount();
+    setUser(null);
+    return response;
+  }, []);
+
   const value = useMemo(() => ({
     user,
     loading,
@@ -86,11 +93,12 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateProfile,
+    deleteAccount,
     isAuthenticated: !!user,
     isAdmin: user?.rol === 'administrador',
     isAuxiliar: user?.rol === 'auxiliar',
     isCliente: user?.rol === 'cliente',
-  }), [user, loading, login, register, logout, updateProfile]);
+  }), [user, loading, login, register, logout, updateProfile, deleteAccount]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

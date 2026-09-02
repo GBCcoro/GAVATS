@@ -9,7 +9,9 @@
 // Importa el modelo Usuario desde la carpeta models.
 // Este modelo representa la tabla 'Usuario' en la BD y permite hacer operaciones CRUD.
 
+const { Op } = require("sequelize");
 const Usuario = require("../models/Usuario");
+const Pedido = require("../models/Pedido");
 // Importa la función generateToken desde config/jwt.js.
 // Se usa para crear un token JWT después de un registro o login exitoso.
 
@@ -245,7 +247,7 @@ const updateMe = async (req, res) => {
   try {
     // Solo extrae los campos que el usuario tiene PERMITIDO cambiar.
     // No extrae 'rol' ni 'activo' por seguridad.
-    const { nombre, apellido, telefono, direccion } = req.body;
+    const { nombre, apellido, email, telefono, direccion } = req.body;
     // Busca el usuario en la BD por su ID (viene del token via middleware)
     const usuario = await Usuario.findByPk(req.usuario.id);
     if (!usuario) {
@@ -254,27 +256,82 @@ const updateMe = async (req, res) => {
         message: "Usuario no encontrado",
       });
     }
+
+    let tokenActualizado = null;
+
+    // Si viene email y es diferente al actual, validar formato y unicidad
+    if (email !== undefined && email !== null) {
+      const emailNormalizado = String(email).trim().toLowerCase();
+      if (!emailNormalizado) {
+        return res.status(400).json({
+          success: false,
+          message: "El correo electrónico no puede estar vacío",
+        });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailNormalizado)) {
+        return res.status(400).json({
+          success: false,
+          message: "Formato de correo electrónico inválido",
+        });
+      }
+
+      if (emailNormalizado !== usuario.email.toLowerCase()) {
+        const usuarioExistente = await Usuario.findOne({
+          where: {
+            email: emailNormalizado,
+            id: { [Op.ne]: usuario.id },
+          },
+        });
+
+        if (usuarioExistente) {
+          return res.status(400).json({
+            success: false,
+            message: "El correo electrónico ya está registrado por otro usuario",
+          });
+        }
+
+        usuario.email = emailNormalizado;
+        tokenActualizado = generateToken({
+          id: usuario.id,
+          email: usuario.email,
+          rol: usuario.rol,
+        });
+      }
+    }
+
     // ACTUALIZAR CAMPOS: solo actualiza si el campo viene definido en el body.
-    // La condición !== undefined permite enviar valores vacíos o null intencionalmente.
-    // Si el campo no viene en el body, no lo modifica (mantiene el valor actual).
     if (nombre !== undefined) usuario.nombre = nombre;
     if (apellido !== undefined) usuario.apellido = apellido;
     if (telefono !== undefined) usuario.telefono = telefono;
     if (direccion !== undefined) usuario.direccion = direccion;
+
     // .save() persiste los cambios en la base de datos.
-    // Sequelize genera un UPDATE SQL solo con los campos que cambiaron.
     await usuario.save();
+
     // Responde con los datos actualizados.
-    // toJSON() convierte el objeto Sequelize a un objeto plano
-    // y el modelo excluye automáticamente el password en toJSON().
     res.json({
       success: true,
       message: "Perfil actualizado exitosamente",
       data: {
         usuario: usuario.toJSON(),
+        ...(tokenActualizado ? { token: tokenActualizado } : {}),
       },
     });
   } catch (error) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({
+        success: false,
+        message: "El correo electrónico ya está registrado por otro usuario",
+      });
+    }
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: error.errors?.[0]?.message || "Datos de perfil inválidos",
+      });
+    }
     return handleServerError(res, error, "Error al actualizar perfil");
   }
 };
@@ -342,6 +399,53 @@ const changePassword = async (req, res) => {
     return handleServerError(res, error, "Error al cambiar contraseña");
   }
 };
+
+/**
+ * Eliminar cuenta propia (solo para clientes)
+ *
+ * Ruta: DELETE /api/auth/me
+ * Headers: { Authorization: 'Bearer TOKEN' }
+ */
+const deleteMe = async (req, res) => {
+  try {
+    const usuario = await Usuario.findByPk(req.usuario.id);
+    if (!usuario) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado",
+      });
+    }
+
+    // Regla de seguridad: Solo clientes pueden auto-eliminarse desde su perfil
+    if (usuario.rol !== "cliente") {
+      return res.status(403).json({
+        success: false,
+        message: "Solo los clientes pueden eliminar su propia cuenta desde el perfil",
+      });
+    }
+
+    // Si tiene pedidos asociados, desactivar la cuenta para preservar la integridad referencial fiscal
+    const tienePedidos = await Pedido.count({ where: { usuarioId: usuario.id } });
+    if (tienePedidos > 0) {
+      usuario.activo = false;
+      await usuario.save();
+      return res.json({
+        success: true,
+        message: "Cuenta eliminada exitosamente",
+      });
+    }
+
+    // Si no tiene pedidos, se elimina definitivamente
+    await usuario.destroy();
+    return res.json({
+      success: true,
+      message: "Cuenta eliminada exitosamente",
+    });
+  } catch (error) {
+    return handleServerError(res, error, "Error al eliminar la cuenta");
+  }
+};
+
 // Exporta todas las funciones del controlador como un objeto.
 // Estas funciones se importan en routes/auth.routes.js para asociarlas a las rutas.
 // Ejemplo en rutas: router.post('/register', authController.register);
@@ -352,4 +456,5 @@ module.exports = {
   getMe, // GET /api/auth/me - Obtener perfil propio
   updateMe, // PUT /api/auth/me - Actualizar perfil propio
   changePassword, // PUT /api/auth/change-password - Cambiar contraseña
+  deleteMe, // DELETE /api/auth/me - Eliminar cuenta propia (cliente)
 };

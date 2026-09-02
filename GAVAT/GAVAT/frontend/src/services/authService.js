@@ -73,9 +73,15 @@ const authService = {
     try {
       const response = await api.put('/auth/me', userData);
       
-      // Actualizar usuario en localStorage
+      // Actualizar usuario y token en localStorage
       if (response.data.success) {
-        localStorage.setItem('user', JSON.stringify(response.data.data.usuario));
+        if (response.data.data?.token) {
+          localStorage.setItem('token', response.data.data.token);
+        }
+        const updatedUser = response.data.data?.usuario || response.data.usuario;
+        if (updatedUser) {
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
       }
       
       return response.data;
@@ -93,6 +99,19 @@ const authService = {
         currentPassword,
         newPassword,
       });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { success: false, message: 'Error de conexión' };
+    }
+  },
+
+  /**
+   * Eliminar cuenta propia (solo clientes)
+   */
+  deleteAccount: async () => {
+    try {
+      const response = await api.delete('/auth/me');
+      authService.logout();
       return response.data;
     } catch (error) {
       throw error.response?.data || { success: false, message: 'Error de conexión' };
