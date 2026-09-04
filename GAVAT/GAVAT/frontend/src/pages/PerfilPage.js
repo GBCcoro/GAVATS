@@ -98,7 +98,7 @@ const PerfilPage = () => {
     if (nombreOriginal !== nombreNuevo) return true;
     if (!isAuxiliar && emailOriginal !== emailNuevo) return true;
     if (telefonoOriginal !== telefonoNuevo) return true;
-    if (isCliente && direccionOriginal !== direccionNuevo) return true;
+    if ((isCliente || isAdmin) && direccionOriginal !== direccionNuevo) return true;
 
     return false;
   };
@@ -423,9 +423,11 @@ const PerfilPage = () => {
                   )}
                 </span>
               </div>
-              {isCliente && (
+              {(isCliente || isAdmin) && (
                 <div className="resumen-item mb-2">
-                  <span className="resumen-label text-muted small d-block">Dirección registrada</span>
+                  <span className="resumen-label text-muted small d-block">
+                    {isAdmin ? 'Dirección registrada / contacto' : 'Dirección de entrega'}
+                  </span>
                   <span className="resumen-value fw-semibold text-navy">
                     {user?.direccion ? (
                       <><i className="bi bi-geo-alt-fill me-1 text-gold small" />{user.direccion}</>
@@ -650,12 +652,12 @@ const PerfilPage = () => {
                     </Form.Group>
                   </Col>
 
-                  {/* Dirección de Envío (Solo Clientes) */}
-                  {isCliente && (
+                  {/* Dirección de Envío / Ubicación (Clientes y Administradores) */}
+                  {(isCliente || isAdmin) && (
                     <Col xs={12}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold text-navy small">
-                          Dirección de Envío Principal
+                          {isAdmin ? 'Dirección de Contacto / Ubicación' : 'Dirección de Envío Principal'}
                         </Form.Label>
                         <div className="input-group">
                           <span className="input-group-text bg-white border-end-0 align-items-start pt-2">
@@ -669,7 +671,7 @@ const PerfilPage = () => {
                             value={formData.direccion}
                             onChange={handleInputChange}
                             disabled={!isEditing}
-                            placeholder="Ej: Calle 123 #45-67, Apto 802, Bogotá"
+                            placeholder={isAdmin ? "Ej: Calle 123 #45-67, Oficina 802, Bogotá" : "Ej: Calle 123 #45-67, Apto 802, Bogotá"}
                             className={isEditing ? 'border-start-0 perfil-input-edit' : 'border-start-0 bg-white'}
                           />
                         </div>

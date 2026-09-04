@@ -200,11 +200,11 @@ function AdminPedidosPage() {
               setPedidoSeleccionado(pedidoActualizado);
             }
           }
-          await cargarPedidos();
+          recargarPedidos();
         } catch (error) {
           console.error('Error al cambiar estado del pedido:', error);
           setMensaje({ tipo: 'danger', texto: 'Error al cambiar estado del pedido' });
-          await cargarPedidos();
+          recargarPedidos();
         }
       }
     });
@@ -240,11 +240,11 @@ function AdminPedidosPage() {
             texto: `${exitosos} de ${ids.length} pedidos actualizados a "${nuevoEstado}" exitosamente` 
           });
           
-          await cargarPedidos();
+          recargarPedidos();
         } catch (error) {
           console.error('Error al cambiar estado masivo:', error);
           setMensaje({ tipo: 'danger', texto: 'Error al procesar el cambio de estado masivo' });
-          await cargarPedidos();
+          recargarPedidos();
         }
       }
     });
@@ -789,14 +789,14 @@ function AdminPedidosPage() {
             )}
 
             <h6 className="fw-bold text-navy mb-2 fs-6">Productos Comprados</h6>
-            <div className="table-responsive rounded-3 border mb-3">
-              <Table size="sm" className="mb-0 align-middle">
-                <thead className="bg-light">
+            <div className="table-responsive table-no-round border mb-3" style={{ borderRadius: 0 }}>
+              <Table size="sm" className="mb-0 align-middle table-no-round" style={{ borderRadius: 0 }}>
+                <thead className="bg-light table-no-round" style={{ borderRadius: 0 }}>
                   <tr>
-                    <th className="py-2">Producto</th>
-                    <th className="py-2 text-center">Cantidad</th>
-                    <th className="py-2">Precio Unit.</th>
-                    <th className="py-2 text-end">Subtotal</th>
+                    <th className="py-2" style={{ borderRadius: 0 }}>Producto</th>
+                    <th className="py-2 text-center" style={{ borderRadius: 0 }}>Precio Unit.</th>
+                    <th className="py-2 text-center" style={{ borderRadius: 0 }}>Cantidad</th>
+                    <th className="py-2 text-end" style={{ borderRadius: 0 }}>Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -806,8 +806,8 @@ function AdminPedidosPage() {
                     return (
                       <tr key={detalleKey}>
                         <td className="py-2 fw-medium">{detalle.producto?.nombre || detalle.Producto?.nombre || 'Producto no disponible'}</td>
+                        <td className="py-2 text-center">{formatearPrecio(detalle.precioUnitario)}</td>
                         <td className="py-2 text-center">{detalle.cantidad}</td>
-                        <td className="py-2">{formatearPrecio(detalle.precioUnitario)}</td>
                         <td className="py-2 text-end fw-bold">{formatearPrecio(detalle.subtotal)}</td>
                       </tr>
                     );

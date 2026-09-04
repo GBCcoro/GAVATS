@@ -227,14 +227,14 @@ const PedidoConfirmadoPage = () => {
                 </div>
               </Card.Header>
               <Card.Body className="p-0 bg-white">
-                <div className="table-responsive">
-                  <Table className="align-middle mb-0 pedido-table">
-                    <thead>
+                <div className="table-responsive table-no-round" style={{ borderRadius: 0 }}>
+                  <Table className="align-middle mb-0 pedido-table table-no-round" style={{ borderRadius: 0 }}>
+                    <thead className="table-no-round" style={{ borderRadius: 0 }}>
                       <tr>
-                        <th className="ps-4">Producto</th>
-                        <th className="text-center">Precio Unit.</th>
-                        <th className="text-center">Cantidad</th>
-                        <th className="text-end pe-4">Subtotal</th>
+                        <th className="ps-4" style={{ borderRadius: 0 }}>Producto</th>
+                        <th className="text-center" style={{ borderRadius: 0 }}>Precio Unit.</th>
+                        <th className="text-center" style={{ borderRadius: 0 }}>Cantidad</th>
+                        <th className="text-end pe-4" style={{ borderRadius: 0 }}>Subtotal</th>
                       </tr>
                     </thead>
                     <tbody>

@@ -34,10 +34,17 @@
   --gradient-positive-negative: linear-gradient(135deg, var(--bg-positiva), var(--bg-negativo));
 }
 
-.App {
+.App,
+.app-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+.main-content-wrapper {
+  flex: 1 0 auto;
+  width: 100%;
+  min-height: calc(100vh - 360px);
 }
 
 /* Optimizaciones de rendimiento */
@@ -663,6 +670,16 @@ img {
 .table-responsive {
   overflow-x: auto;
   border-radius: 1.25rem;
+}
+
+/* Tablas con encabezado y bordes no redondeados (rectos) */
+.table-no-round,
+.table-no-round.table-responsive,
+.table-no-round thead,
+.table-no-round thead tr,
+.table-no-round thead th,
+.table-no-round th {
+  border-radius: 0 !important;
 }
 
 .admin-card-table {
