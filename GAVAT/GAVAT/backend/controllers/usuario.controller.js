@@ -26,34 +26,40 @@ const { handleServerError } = require("./_sharedControllerHelpers");
 const getUsuarios = async (req, res) => {
   try {
     // Extrae filtros y paginación de los query params
-    const { rol, activo, buscar, pagina = 1, limite = 10 } = req.query;
+    const { rol, activo, buscar, orden, pagina = 1, limite = 25 } = req.query;
     // Construye filtros dinámicamente
     const where = {};
-    if (rol) where.rol = rol; // Filtra por rol
-    if (activo !== undefined) where.activo = activo === "true"; // Convierte string a boolean
+    if (rol && rol !== 'todos') where.rol = rol; // Filtra por rol si no es 'todos'
+    if (activo !== undefined && activo !== '' && activo !== 'todos') {
+      where.activo = activo === "true" || activo === true || activo === 'activo';
+    }
     // Búsqueda por texto en nombre, apellido o email
-    if (buscar) {
-      const { Op } = require("sequelize"); // Importa operadores de Sequelize
-      // Op.or: busca donde coincida CUALQUIERA de las condiciones
-      // Op.like: equivale a LIKE en SQL. %texto% busca en cualquier posición.
+    if (buscar && typeof buscar === 'string' && buscar.trim()) {
+      const term = buscar.trim();
+      const { Op } = require("sequelize");
       where[Op.or] = [
-        { nombre: { [Op.like]: `%${buscar}%` } },
-        { apellido: { [Op.like]: `%${buscar}%` } },
-        { email: { [Op.like]: `%${buscar}%` } },
+        { nombre: { [Op.like]: `%${term}%` } },
+        { apellido: { [Op.like]: `%${term}%` } },
+        { email: { [Op.like]: `%${term}%` } },
       ];
     }
     // Calcula el offset para paginación (cuántos registros saltar)
-    const paginaNumero = Number.parseInt(pagina, 10);
-    const limiteNumero = Number.parseInt(limite, 10);
+    const paginaNumero = Math.max(1, Number.parseInt(pagina, 10) || 1);
+    const limiteNumero = Math.max(1, Math.min(1000, Number.parseInt(limite, 10) || 25));
     const offset = (paginaNumero - 1) * limiteNumero;
+
+    let order = [["id", "ASC"]];
+    if (orden === 'reciente' || orden === 'desc') {
+      order = [["createdAt", "DESC"]];
+    }
+
     // Consulta usuarios con paginación.
-    // attributes.exclude: ['password'] → trae TODOS los campos EXCEPTO password (seguridad).
     const { count, rows: usuarios } = await Usuario.findAndCountAll({
       where,
       attributes: { exclude: ["password"] }, // Nunca enviar la contraseña al frontend
       limit: limiteNumero,
       offset,
-      order: [["createdAt", "DESC"]], // Más recientes primero
+      order,
     });
     // Responde con los usuarios y la paginación
     res.json({

@@ -42,7 +42,7 @@ const getProductos = async (req, res) => {
   try {
     const { where, order, limit, offset } = buildProductListQuery(req.query, {
       isPublic: false,
-      defaultLimit: 100,
+      defaultLimit: 25,
     });
 
     const opciones = {

@@ -370,7 +370,8 @@ const seedDatosCompletos = async () => {
 
       for (let i = 0; i < servicios.length; i++) {
         const nombreServicio = servicios[i];
-        const svgContent = getSvgForSubcategory(subcategoria.nombre, categoria.nombre);
+        const cat = categorias.find(c => c.id === subcategoria.categoriaId);
+        const svgContent = getSvgForSubcategory(subcategoria.nombre, cat?.nombre || '');
         const svgBuffer = Buffer.from(svgContent, 'utf8');
 
         await Producto.findOrCreate({

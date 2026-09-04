@@ -526,14 +526,31 @@ const obtenerComentariosPorUsuario = async (req, res) => {
  */
 const obtenerTodosComentarios = async (req, res) => {
   try {
-    const { page, limit, offset } = parsePaginationQuery(req.query, {
-      pageKey: 'pagina',
-      limitKey: 'limite',
-      defaultLimit: 20,
-      maxLimit: 50,
-    });
+    const pagina = Number.parseInt(req.query.pagina || req.query.page, 10) || 1;
+    const limite = Math.min(Number.parseInt(req.query.limite || req.query.limit, 10) || 25, 1000);
+    const offset = (pagina - 1) * limite;
+
+    const where = {};
+    if (req.query.estado && req.query.estado !== 'todos') {
+      if (req.query.estado === 'visible' || req.query.estado === 'true') {
+        where.estado = true;
+      } else if (req.query.estado === 'no_visible' || req.query.estado === 'false') {
+        where.estado = false;
+      }
+    }
+
+    if (req.query.buscar && req.query.buscar.trim()) {
+      const termino = `%${req.query.buscar.trim()}%`;
+      where[Op.or] = [
+        { comentario: { [Op.like]: termino } },
+        { '$usuario.nombre$': { [Op.like]: termino } },
+        { '$usuario.email$': { [Op.like]: termino } },
+        { '$producto.nombre$': { [Op.like]: termino } }
+      ];
+    }
 
     const { count, rows: comentarios } = await Comentario.findAndCountAll({
+      where,
       include: [
         {
           model: Usuario,
@@ -547,7 +564,7 @@ const obtenerTodosComentarios = async (req, res) => {
         }
       ],
       order: [['fecha', 'DESC']],
-      limit,
+      limit: limite,
       offset,
       distinct: true
     });
@@ -557,10 +574,13 @@ const obtenerTodosComentarios = async (req, res) => {
       data: {
         comentarios: comentarios.map(serializarComentario),
         paginacion: {
-          paginaActual: page,
-          totalPaginas: Math.ceil(count / limit),
+          pagina,
+          paginaActual: pagina,
+          limite,
+          comentariosPorPagina: limite,
+          total: count,
           totalComentarios: count,
-          comentariosPorPagina: limit
+          totalPaginas: Math.ceil(count / limite) || 0
         }
       }
     });

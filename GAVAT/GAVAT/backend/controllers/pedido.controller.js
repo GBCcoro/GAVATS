@@ -472,15 +472,47 @@ const cancelarPedido = async (req, res) => {
  */
 const getAllPedidos = async (req, res) => {
   try {
+    const { Op } = require('sequelize');
     // Extrae filtros y paginación de los query params
-    const { estado, usuarioId, pagina = 1, limite = 20 } = req.query;
+    const { estado, usuarioId, buscar, fechaInicio, fechaFin, pagina = 1, limite = 25 } = req.query;
     
     // Construye filtros dinámicamente según lo que se envíe
     const where = {};
-    if (estado) where.estado = estado;           // Filtro por estado
-    if (usuarioId) where.usuarioId = usuarioId;  // Filtro por usuario específico
+    if (estado && estado !== 'todos') where.estado = estado; // Filtro por estado
+    if (usuarioId) where.usuarioId = usuarioId; // Filtro por usuario específico
     
-    const offset = (Number.parseInt(pagina, 10) - 1) * Number.parseInt(limite, 10);
+    // Filtro por rango de fechas
+    if (fechaInicio || fechaFin) {
+      where.createdAt = {};
+      if (fechaInicio) {
+        const dInicio = new Date(fechaInicio);
+        dInicio.setHours(0, 0, 0, 0);
+        where.createdAt[Op.gte] = dInicio;
+      }
+      if (fechaFin) {
+        const dFin = new Date(fechaFin);
+        dFin.setHours(23, 59, 59, 999);
+        where.createdAt[Op.lte] = dFin;
+      }
+    }
+
+    // Búsqueda por ID, nombre o email del usuario
+    if (buscar && typeof buscar === 'string' && buscar.trim()) {
+      const term = buscar.trim();
+      const numId = Number.parseInt(term, 10);
+      const orConditions = [
+        { '$usuario.nombre$': { [Op.like]: `%${term}%` } },
+        { '$usuario.email$': { [Op.like]: `%${term}%` } }
+      ];
+      if (!Number.isNaN(numId) && String(numId) === term) {
+        orConditions.push({ id: numId });
+      }
+      where[Op.or] = orConditions;
+    }
+
+    const paginaNumero = Math.max(1, Number.parseInt(pagina, 10) || 1);
+    const limiteNumero = Math.max(1, Math.min(1000, Number.parseInt(limite, 10) || 25));
+    const offset = (paginaNumero - 1) * limiteNumero;
     
     // Consulta todos los pedidos con datos del usuario y detalles
     const { count, rows: pedidos } = await Pedido.findAndCountAll({
@@ -489,7 +521,7 @@ const getAllPedidos = async (req, res) => {
         {
           model: Usuario,
           as: 'usuario',
-          attributes: ['id', 'nombre', 'email']    // Datos del usuario que hizo el pedido
+          attributes: ['id', 'nombre', 'email'] // Datos del usuario que hizo el pedido
         },
         {
           model: DetallePedido,
@@ -501,9 +533,10 @@ const getAllPedidos = async (req, res) => {
           }]
         }
       ],
-      limit: Number.parseInt(limite, 10),
+      limit: limiteNumero,
       offset,
-      order: [['createdAt', 'DESC']]     // Más recientes primero
+      order: [['createdAt', 'DESC']], // Más recientes primero
+      distinct: true
     });
     
     // Responde con todos los pedidos y la paginación
@@ -513,9 +546,9 @@ const getAllPedidos = async (req, res) => {
         pedidos,
         paginacion: {
           total: count,
-          pagina: Number.parseInt(pagina),
-          limite: Number.parseInt(limite),
-          totalPaginas: Math.ceil(count / Number.parseInt(limite))
+          pagina: paginaNumero,
+          limite: limiteNumero,
+          totalPaginas: Math.ceil(count / limiteNumero)
         }
       }
     });

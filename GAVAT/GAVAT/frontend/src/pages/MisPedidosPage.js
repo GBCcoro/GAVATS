@@ -6,12 +6,13 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Container, Card, Table, Badge, Button, Alert } from 'react-bootstrap';
+import { Container, Card, Table, Badge, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import pedidoService from '../services/pedidoService';
 import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import FloatingToast from '../components/FloatingToast';
 
 const MisPedidosPage = () => {
   const [pedidos, setPedidos] = useState([]);
@@ -141,17 +142,16 @@ const MisPedidosPage = () => {
           <i className="bi bi-box-seam me-2"></i>{' '}
           Mis Pedidos
         </h1>
-        <Button className="btn-seguir-comprando" onClick={() => navigate('/catalogo')}>
-          <i className="bi bi-shop me-2"></i>{' '}
+        <Button className="btn-seguir-comprando d-inline-flex align-items-center gap-2" onClick={() => navigate('/catalogo')}>
+          <i className="bi bi-grid-fill"></i>{' '}
           Seguir Comprando
         </Button>
       </div>
 
-      {mensaje.texto && (
-        <Alert variant={mensaje.tipo} dismissible onClose={() => setMensaje({ tipo: '', texto: '' })}>
-          {mensaje.texto}
-        </Alert>
-      )}
+      <FloatingToast
+        mensaje={mensaje}
+        onClose={() => setMensaje({ tipo: '', texto: '' })}
+      />
 
       {pedidos.length === 0 ? (
         <Card className="text-center py-5 empty-card">
@@ -207,7 +207,7 @@ const MisPedidosPage = () => {
                         onClick={() => navigate(`/pedido-confirmado/${pedido.id}`)}
                         title="Ver detalles del pedido"
                       >
-                        <i className="bi bi-search me-1"></i>{' '}
+                        <i className="bi bi-eye-fill me-1"></i>{' '}
                         Ver Detalle
                       </Button>
                       {pedido.estado === 'pagado' && (
@@ -217,7 +217,7 @@ const MisPedidosPage = () => {
                           onClick={() => handleDescargarFactura(pedido.id)}
                           title="Descargar factura en PDF"
                         >
-                          <i className="bi bi-download me-1"></i>{' '}
+                          <i className="bi bi-file-earmark-pdf-fill me-1"></i>{' '}
                           Factura
                         </Button>
                       )}
@@ -280,11 +280,19 @@ const MisPedidosPage = () => {
         .pedidos-table-header {
           background: var(--bg-positiva, #DBE1ED);
           color: var(--bg-negativo, #192847);
-          font-weight: 600;
+          font-weight: 700;
         }
         .pedidos-table-header th {
-          border-bottom: none;
-          padding: 1rem;
+          border-bottom: 2px solid #cbd5e1;
+          padding: 0.95rem 1.15rem;
+          font-size: 0.85rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .pedidos-table td {
+          padding: 0.95rem 1.15rem;
+          vertical-align: middle;
+          font-size: 0.92rem;
         }
         .pedido-id {
           color: var(--bg-negativo, #192847);

@@ -66,8 +66,22 @@ const pedidoService = {
    */
   obtenerTodosPedidos: async (params = '') => {
     try {
-      const response = await api.get(`/admin/pedidos${params}`);
+      const queryStr = typeof params === 'string' ? params : `?${new URLSearchParams(params).toString()}`;
+      const response = await api.get(`/admin/pedidos${queryStr}`);
       return response.data.data?.pedidos || response.data.pedidos || [];
+    } catch (error) {
+      throw error.response?.data || { success: false, message: 'Error de conexión' };
+    }
+  },
+
+  /**
+   * MÉTODOS ADMIN - Obtener todos los pedidos con metadata de paginación
+   */
+  obtenerTodosPedidosPaginados: async (params = {}) => {
+    try {
+      const queryStr = typeof params === 'string' ? params : `?${new URLSearchParams(params).toString()}`;
+      const response = await api.get(`/admin/pedidos${queryStr}`);
+      return response.data;
     } catch (error) {
       throw error.response?.data || { success: false, message: 'Error de conexión' };
     }

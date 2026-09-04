@@ -5,7 +5,7 @@
  * Moderación y gestión de comentarios de productos
  */
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -22,6 +22,7 @@ const AdminComentariosPage = () => {
   const [showDetalleModal, setShowDetalleModal] = useState(false);
   const [comentarioSeleccionado, setComentarioSeleccionado] = useState(null);
   const [tipoExportacion, setTipoExportacion] = useState('pdf');
+  const [exportando, setExportando] = useState(false);
   const [seleccionados, setSeleccionados] = useState(new Set());
   
   // Modal de confirmación en pantalla
@@ -42,13 +43,45 @@ const AdminComentariosPage = () => {
     busqueda: '',
     estado: 'todos'
   });
+  const [busquedaDebounced, setBusquedaDebounced] = useState('');
   
   // Paginación
   const [paginaActual, setPaginaActual] = useState(1);
+  const [totalComentarios, setTotalComentarios] = useState(0);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [reloadKey, setReloadKey] = useState(0);
   const registrosPorPagina = 25;
+
+  // Debounce para búsqueda
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setBusquedaDebounced(filtros.busqueda);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [filtros.busqueda]);
+
+  const filtrosAnteriores = useRef({
+    busquedaDebounced,
+    estado: filtros.estado
+  });
+
+  useEffect(() => {
+    const prev = filtrosAnteriores.current;
+    if (
+      prev.busquedaDebounced !== busquedaDebounced ||
+      prev.estado !== filtros.estado
+    ) {
+      filtrosAnteriores.current = {
+        busquedaDebounced,
+        estado: filtros.estado
+      };
+      setPaginaActual(1);
+    }
+  }, [busquedaDebounced, filtros.estado]);
 
   const normalizarComentario = (comentario) => ({
     ...comentario,
+    estado: comentario.estado === true || comentario.estado === 'visible',
     usuario: typeof comentario.usuario === 'object' && comentario.usuario !== null
       ? comentario.usuario
       : {
@@ -61,55 +94,82 @@ const AdminComentariosPage = () => {
           nombre: comentario.producto || null
         }
   });
-  
-  const comentariosFiltrados = useMemo(() => {
-    return comentarios.filter(comentario => {
-      if (filtros.busqueda) {
-        const busqueda = filtros.busqueda.toLowerCase();
-        const coincide = 
-          comentario.usuario?.nombre?.toLowerCase().includes(busqueda) ||
-          comentario.producto?.nombre?.toLowerCase().includes(busqueda) ||
-          comentario.comentario?.toLowerCase().includes(busqueda);
-        if (!coincide) return false;
-      }
-      
-      if (filtros.estado !== 'todos') {
-        const estado = filtros.estado === 'visible';
-        if (comentario.estado !== estado) return false;
-      }
-      
-      return true;
-    });
-  }, [comentarios, filtros.busqueda, filtros.estado]);
-  
-  const totalPaginas = Math.ceil(comentariosFiltrados.length / registrosPorPagina);
-  const comentariosPaginados = useMemo(() => {
-    const inicio = (paginaActual - 1) * registrosPorPagina;
-    return comentariosFiltrados.slice(inicio, inicio + registrosPorPagina);
-  }, [comentariosFiltrados, paginaActual, registrosPorPagina]);
-  
-  useEffect(() => {
-    setPaginaActual(1);
-  }, [filtros.busqueda, filtros.estado]);
+
+  const comentariosFiltrados = comentarios;
+  const comentariosPaginados = comentarios;
 
   const loadComentarios = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await comentariosService.obtenerTodosComentarios({ limite: 1000 });
+      const params = {
+        pagina: paginaActual,
+        limite: registrosPorPagina
+      };
+      if (busquedaDebounced.trim()) params.buscar = busquedaDebounced.trim();
+      if (filtros.estado && filtros.estado !== 'todos') params.estado = filtros.estado;
+
+      const response = await comentariosService.obtenerTodosComentarios(params);
       const comentariosData = response.data?.comentarios || response.data || [];
+      const paginacion = response.data?.paginacion || response.paginacion || {};
+      const total = paginacion.total !== undefined ? paginacion.total : (paginacion.totalComentarios !== undefined ? paginacion.totalComentarios : comentariosData.length);
+      const numPags = paginacion.totalPaginas || Math.max(1, Math.ceil(total / registrosPorPagina));
+
       setComentarios(Array.isArray(comentariosData) ? comentariosData.map(normalizarComentario) : []);
+      setTotalComentarios(total);
+      setTotalPaginas(numPags);
     } catch (error) {
       console.error('Error al cargar comentarios:', error);
       setMensaje({ tipo: 'danger', texto: 'Error al cargar comentarios' });
       setComentarios([]);
+      setTotalComentarios(0);
+      setTotalPaginas(1);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [paginaActual, busquedaDebounced, filtros.estado]);
 
   useEffect(() => {
     loadComentarios();
-  }, [loadComentarios]);
+  }, [loadComentarios, reloadKey]);
+
+  const recargarComentarios = useCallback(() => {
+    setReloadKey(prev => prev + 1);
+  }, []);
+
+  const obtenerComentariosParaExportar = async () => {
+    const params = {
+      pagina: 1,
+      limite: 1000
+    };
+    if (busquedaDebounced.trim()) params.buscar = busquedaDebounced.trim();
+    if (filtros.estado && filtros.estado !== 'todos') params.estado = filtros.estado;
+
+    try {
+      const res = await comentariosService.obtenerTodosComentarios(params);
+      const items = res.data?.comentarios || res.data || [];
+      return Array.isArray(items) ? items.map(normalizarComentario) : comentarios;
+    } catch (err) {
+      console.error('Error al obtener comentarios para exportar:', err);
+      return comentarios;
+    }
+  };
+
+  const handleExportar = async (formato) => {
+    setExportando(true);
+    try {
+      const itemsParaExportar = await obtenerComentariosParaExportar();
+      if (formato === 'pdf') {
+        exportarComentariosAPDF(itemsParaExportar);
+      } else {
+        await exportarComentariosAExcel(itemsParaExportar);
+      }
+    } catch (error) {
+      console.error('Error al exportar comentarios:', error);
+      setMensaje({ tipo: 'danger', texto: 'Error al exportar comentarios' });
+    } finally {
+      setExportando(false);
+    }
+  };
 
   const handleVerDetalle = (comentario) => {
     setComentarioSeleccionado(comentario);
@@ -138,11 +198,11 @@ const AdminComentariosPage = () => {
 
           await comentariosService.toggleComentario(comentario.id);
           setMensaje({ tipo: 'success', texto: `Comentario ${nuevoEstado ? 'activado y visible' : 'ocultado'} exitosamente` });
-          await loadComentarios();
+          recargarComentarios();
         } catch (error) {
           console.error('Error al actualizar visibilidad:', error);
           setMensaje({ tipo: 'danger', texto: 'Error al actualizar visibilidad del comentario' });
-          await loadComentarios();
+          recargarComentarios();
         }
       }
     });
@@ -170,11 +230,11 @@ const AdminComentariosPage = () => {
           await comentariosService.eliminarComentario(comentario.id);
           setMensaje({ tipo: 'success', texto: 'Comentario eliminado exitosamente' });
           setShowDetalleModal(false);
-          await loadComentarios();
+          recargarComentarios();
         } catch (error) {
           console.error('Error al eliminar comentario:', error);
           setMensaje({ tipo: 'danger', texto: 'Error al eliminar el comentario' });
-          await loadComentarios();
+          recargarComentarios();
         }
       }
     });
@@ -209,11 +269,11 @@ const AdminComentariosPage = () => {
             texto: `${exitosos} de ${ids.length} comentarios eliminados exitosamente` 
           });
 
-          await loadComentarios();
+          recargarComentarios();
         } catch (error) {
           console.error('Error en eliminación masiva:', error);
           setMensaje({ tipo: 'danger', texto: 'Error al procesar la eliminación masiva' });
-          await loadComentarios();
+          recargarComentarios();
         }
       }
     });
@@ -245,11 +305,11 @@ const AdminComentariosPage = () => {
             texto: `Visibilidad actualizada en ${exitosos} de ${ids.length} comentarios` 
           });
 
-          await loadComentarios();
+          recargarComentarios();
         } catch (error) {
           console.error('Error al cambiar visibilidad masiva:', error);
           setMensaje({ tipo: 'danger', texto: 'Error al procesar la actualización masiva' });
-          await loadComentarios();
+          recargarComentarios();
         }
       }
     });
@@ -305,7 +365,7 @@ const AdminComentariosPage = () => {
     });
   };
 
-  if (loading) {
+  if (loading && comentarios.length === 0 && !busquedaDebounced && filtros.estado === 'todos') {
     return <LoadingSpinner message="Cargando comentarios..." />;
   }
 
@@ -318,35 +378,30 @@ const AdminComentariosPage = () => {
             <span className="bi bi-chat-dots-fill me-2 text-gold" aria-hidden="true"></span> Moderación de Comentarios
           </h1>
           <p className="text-muted mb-0">
-            Total: {comentariosFiltrados.length} de {comentarios.length} comentario{comentarios.length !== 1 ? 's' : ''}
+            Total: <strong>{totalComentarios}</strong> comentario{totalComentarios !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="d-flex flex-wrap align-items-center gap-2">
           <Dropdown as={ButtonGroup}>
             <Button
               variant="primary"
-              onClick={async () => {
-                if (tipoExportacion === 'pdf') {
-                  exportarComentariosAPDF(comentariosFiltrados);
-                } else {
-                  await exportarComentariosAExcel(comentariosFiltrados);
-                }
-              }}
+              disabled={exportando}
+              onClick={() => handleExportar(tipoExportacion)}
             >
               <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
-              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+              {exportando ? 'Exportando...' : `Exportar a ${tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}`}
             </Button>
-            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" />
+            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" disabled={exportando} />
             <Dropdown.Menu>
               <Dropdown.Item onClick={() => {
                 setTipoExportacion('pdf');
-                exportarComentariosAPDF(comentariosFiltrados);
+                handleExportar('pdf');
               }}>
                 <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
               </Dropdown.Item>
-              <Dropdown.Item onClick={async () => {
+              <Dropdown.Item onClick={() => {
                 setTipoExportacion('excel');
-                await exportarComentariosAExcel(comentariosFiltrados);
+                handleExportar('excel');
               }}>
                 <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
               </Dropdown.Item>
@@ -610,24 +665,24 @@ const AdminComentariosPage = () => {
 
       {/* Paginación */}
       {totalPaginas > 1 && (
-        <div className="d-flex justify-content-between align-items-center mt-3">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 mt-4 p-3 bg-white rounded shadow-sm">
           <small className="text-muted">
-            Página {paginaActual} de {totalPaginas} - Mostrando {comentariosPaginados.length} de {comentariosFiltrados.length} registros
+            Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> — Mostrando <strong>{comentarios.length}</strong> de <strong>{totalComentarios}</strong> comentarios
           </small>
           <ButtonGroup size="sm">
-            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1 || loading}>
               ««
             </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1}>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1 || loading}>
               Anterior
             </Button>
             <Button variant="primary" disabled>
               {paginaActual} / {totalPaginas}
             </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas}>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas || loading}>
               Siguiente
             </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas || loading}>
               »»
             </Button>
           </ButtonGroup>

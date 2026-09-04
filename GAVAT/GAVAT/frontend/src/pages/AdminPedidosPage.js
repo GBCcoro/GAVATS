@@ -5,7 +5,7 @@
  * Gestión y seguimiento de pedidos de clientes
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import pedidoService from '../services/pedidoService';
@@ -41,27 +41,86 @@ function AdminPedidosPage() {
     fechaInicio: '',
     fechaFin: ''
   });
+  const [busquedaDebounced, setBusquedaDebounced] = useState('');
   
   const [paginaActual, setPaginaActual] = useState(1);
+  const [totalPedidos, setTotalPedidos] = useState(0);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [reloadKey, setReloadKey] = useState(0);
   const registrosPorPagina = 25;
+
+  // Debounce para búsqueda
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setBusquedaDebounced(filtros.busqueda);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [filtros.busqueda]);
+
+  const filtrosAnteriores = useRef({
+    busquedaDebounced,
+    estado: filtros.estado,
+    fechaInicio: filtros.fechaInicio,
+    fechaFin: filtros.fechaFin
+  });
+
+  useEffect(() => {
+    const prev = filtrosAnteriores.current;
+    if (
+      prev.busquedaDebounced !== busquedaDebounced ||
+      prev.estado !== filtros.estado ||
+      prev.fechaInicio !== filtros.fechaInicio ||
+      prev.fechaFin !== filtros.fechaFin
+    ) {
+      filtrosAnteriores.current = {
+        busquedaDebounced,
+        estado: filtros.estado,
+        fechaInicio: filtros.fechaInicio,
+        fechaFin: filtros.fechaFin
+      };
+      setPaginaActual(1);
+    }
+  }, [busquedaDebounced, filtros.estado, filtros.fechaInicio, filtros.fechaFin]);
 
   const cargarPedidos = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await pedidoService.obtenerTodosPedidos('?limite=1000');
-      setPedidos(Array.isArray(data) ? data : []);
+      const params = {
+        pagina: paginaActual,
+        limite: registrosPorPagina
+      };
+      if (busquedaDebounced.trim()) params.buscar = busquedaDebounced.trim();
+      if (filtros.estado && filtros.estado !== 'todos') params.estado = filtros.estado;
+      if (filtros.fechaInicio) params.fechaInicio = filtros.fechaInicio;
+      if (filtros.fechaFin) params.fechaFin = filtros.fechaFin;
+
+      const res = await pedidoService.obtenerTodosPedidosPaginados(params);
+      const peds = res.data?.pedidos || res.pedidos || res.data || [];
+      const paginacion = res.data?.paginacion || res.paginacion || {};
+
+      setPedidos(Array.isArray(peds) ? peds : []);
+      const total = paginacion.total !== undefined ? paginacion.total : peds.length;
+      const numPags = paginacion.totalPaginas || Math.max(1, Math.ceil(total / registrosPorPagina));
+      setTotalPedidos(total);
+      setTotalPaginas(numPags);
     } catch (error) {
       console.error('Error al cargar pedidos:', error);
       setMensaje({ tipo: 'danger', texto: 'Error al cargar los pedidos' });
       setPedidos([]);
+      setTotalPedidos(0);
+      setTotalPaginas(1);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [paginaActual, busquedaDebounced, filtros.estado, filtros.fechaInicio, filtros.fechaFin]);
 
   useEffect(() => {
     cargarPedidos();
-  }, [cargarPedidos]);
+  }, [cargarPedidos, reloadKey]);
+
+  const recargarPedidos = useCallback(() => {
+    setReloadKey(prev => prev + 1);
+  }, []);
 
   const formatearPrecio = (precio) => {
     return new Intl.NumberFormat('es-CO', { 
@@ -196,41 +255,47 @@ function AdminPedidosPage() {
     setShowDetalleModal(true);
   };
 
-  const pedidosFiltrados = useMemo(() => {
-    return pedidos.filter(pedido => {
-      if (filtros.busqueda) {
-        const busqueda = filtros.busqueda.toLowerCase();
-        const nombreCliente = pedido.usuario?.nombre?.toLowerCase() || '';
-        const emailCliente = pedido.usuario?.email?.toLowerCase() || '';
-        const idStr = String(pedido.id);
-        if (!nombreCliente.includes(busqueda) && !emailCliente.includes(busqueda) && !idStr.includes(busqueda)) return false;
-      }
-      if (filtros.estado !== 'todos' && pedido.estado !== filtros.estado) return false;
-      if (filtros.fechaInicio) {
-        const fechaPedido = new Date(pedido.createdAt);
-        const fechaInicio = new Date(filtros.fechaInicio);
-        fechaInicio.setHours(0,0,0,0);
-        if (fechaPedido < fechaInicio) return false;
-      }
-      if (filtros.fechaFin) {
-        const fechaPedido = new Date(pedido.createdAt);
-        const fechaFin = new Date(filtros.fechaFin);
-        fechaFin.setHours(23,59,59,999);
-        if (fechaPedido > fechaFin) return false;
-      }
-      return true;
-    });
-  }, [pedidos, filtros]);
+  const pedidosFiltrados = pedidos;
+  const pedidosPaginados = pedidos;
 
-  const totalPaginas = Math.ceil(pedidosFiltrados.length / registrosPorPagina);
-  const pedidosPaginados = useMemo(() => {
-    const inicio = (paginaActual - 1) * registrosPorPagina;
-    return pedidosFiltrados.slice(inicio, inicio + registrosPorPagina);
-  }, [pedidosFiltrados, paginaActual]);
+  const [exportando, setExportando] = useState(false);
 
-  useEffect(() => {
-    setPaginaActual(1);
-  }, [filtros.busqueda, filtros.estado, filtros.fechaInicio, filtros.fechaFin]);
+  const obtenerPedidosParaExportar = async () => {
+    const params = {
+      pagina: 1,
+      limite: 1000
+    };
+    if (busquedaDebounced.trim()) params.buscar = busquedaDebounced.trim();
+    if (filtros.estado && filtros.estado !== 'todos') params.estado = filtros.estado;
+    if (filtros.fechaInicio) params.fechaInicio = filtros.fechaInicio;
+    if (filtros.fechaFin) params.fechaFin = filtros.fechaFin;
+
+    try {
+      const res = await pedidoService.obtenerTodosPedidosPaginados(params);
+      const items = res.data?.pedidos || res.pedidos || res.data || [];
+      return Array.isArray(items) ? items : pedidos;
+    } catch (err) {
+      console.error('Error al obtener pedidos para exportar:', err);
+      return pedidos;
+    }
+  };
+
+  const handleExportar = async (formato) => {
+    setExportando(true);
+    try {
+      const itemsParaExportar = await obtenerPedidosParaExportar();
+      if (formato === 'pdf') {
+        exportarPedidosAPDF(itemsParaExportar);
+      } else {
+        await exportarPedidosAExcel(itemsParaExportar);
+      }
+    } catch (error) {
+      console.error('Error al exportar pedidos:', error);
+      setMensaje({ tipo: 'danger', texto: 'Error al exportar pedidos' });
+    } finally {
+      setExportando(false);
+    }
+  };
 
   // Selección de filas
   const todosPaginaSeleccionados = useMemo(() => {
@@ -261,7 +326,7 @@ function AdminPedidosPage() {
     });
   };
 
-  if (loading) {
+  if (loading && pedidos.length === 0 && !busquedaDebounced && filtros.estado === 'todos' && !filtros.fechaInicio && !filtros.fechaFin) {
     return <LoadingSpinner message="Cargando pedidos..." />;
   }
 
@@ -274,35 +339,30 @@ function AdminPedidosPage() {
             <span className="bi bi-cart-check-fill me-2 text-gold" aria-hidden="true"></span> Gestión de Pedidos
           </h1>
           <p className="text-muted mb-0">
-            Total: {pedidosFiltrados.length} de {pedidos.length} pedido{pedidos.length !== 1 ? 's' : ''}
+            Total: <strong>{totalPedidos}</strong> pedido{totalPedidos !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="d-flex flex-wrap align-items-center gap-2">
           <Dropdown as={ButtonGroup}>
             <Button
               variant="primary"
-              onClick={async () => {
-                if (tipoExportacion === 'pdf') {
-                  exportarPedidosAPDF(pedidosFiltrados);
-                } else {
-                  await exportarPedidosAExcel(pedidosFiltrados);
-                }
-              }}
+              disabled={exportando}
+              onClick={() => handleExportar(tipoExportacion)}
             >
               <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
-              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+              {exportando ? 'Exportando...' : `Exportar a ${tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}`}
             </Button>
-            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" />
+            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" disabled={exportando} />
             <Dropdown.Menu>
               <Dropdown.Item onClick={() => {
                 setTipoExportacion('pdf');
-                exportarPedidosAPDF(pedidosFiltrados);
+                handleExportar('pdf');
               }}>
                 <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
               </Dropdown.Item>
-              <Dropdown.Item onClick={async () => {
+              <Dropdown.Item onClick={() => {
                 setTipoExportacion('excel');
-                await exportarPedidosAExcel(pedidosFiltrados);
+                handleExportar('excel');
               }}>
                 <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
               </Dropdown.Item>
@@ -637,24 +697,24 @@ function AdminPedidosPage() {
 
       {/* Paginación */}
       {totalPaginas > 1 && (
-        <div className="d-flex justify-content-between align-items-center mt-3">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 mt-4 p-3 bg-white rounded shadow-sm">
           <small className="text-muted">
-            Página {paginaActual} de {totalPaginas} - Mostrando {pedidosPaginados.length} de {pedidosFiltrados.length} registros
+            Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> — Mostrando <strong>{pedidos.length}</strong> de <strong>{totalPedidos}</strong> pedidos
           </small>
           <ButtonGroup size="sm">
-            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1 || loading}>
               ««
             </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1}>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1 || loading}>
               Anterior
             </Button>
             <Button variant="primary" disabled>
               {paginaActual} / {totalPaginas}
             </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas}>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas || loading}>
               Siguiente
             </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas || loading}>
               »»
             </Button>
           </ButtonGroup>

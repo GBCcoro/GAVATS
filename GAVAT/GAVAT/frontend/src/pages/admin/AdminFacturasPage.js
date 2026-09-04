@@ -5,7 +5,7 @@
  * Gestión de facturas (consultar, descargar, anular)
  */
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -22,6 +22,7 @@ const AdminFacturasPage = () => {
   const [showDetalleModal, setShowDetalleModal] = useState(false);
   const [facturaSeleccionada, setFacturaSeleccionada] = useState(null);
   const [tipoExportacion, setTipoExportacion] = useState('pdf');
+  const [exportando, setExportando] = useState(false);
   const [seleccionados, setSeleccionados] = useState(new Set());
   
   // Modal de confirmación en pantalla
@@ -42,62 +43,116 @@ const AdminFacturasPage = () => {
     busqueda: '',
     estado: 'todos'
   });
+  const [busquedaDebounced, setBusquedaDebounced] = useState('');
   
   // Paginación
   const [paginaActual, setPaginaActual] = useState(1);
+  const [totalFacturas, setTotalFacturas] = useState(0);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [reloadKey, setReloadKey] = useState(0);
   const registrosPorPagina = 25;
-  
-  // Facturas filtradas y paginadas
-  const facturasFiltradas = useMemo(() => {
-    return facturas.filter(factura => {
-      if (filtros.busqueda) {
-        const busqueda = filtros.busqueda.toLowerCase();
-        const coincide = 
-          factura.numero_factura?.toLowerCase().includes(busqueda) ||
-          factura.numeroFactura?.toLowerCase().includes(busqueda) ||
-          factura.cliente_nombre?.toLowerCase().includes(busqueda) ||
-          factura.clienteNombre?.toLowerCase().includes(busqueda) ||
-          factura.cliente_email?.toLowerCase().includes(busqueda) ||
-          factura.clienteEmail?.toLowerCase().includes(busqueda);
-        if (!coincide) return false;
-      }
-      
-      if (filtros.estado !== 'todos') {
-        if (filtros.estado !== factura.estado) return false;
-      }
-      
-      return true;
-    });
-  }, [facturas, filtros.busqueda, filtros.estado]);
-  
-  const totalPaginas = Math.ceil(facturasFiltradas.length / registrosPorPagina);
-  const facturasPaginadas = useMemo(() => {
-    const inicio = (paginaActual - 1) * registrosPorPagina;
-    return facturasFiltradas.slice(inicio, inicio + registrosPorPagina);
-  }, [facturasFiltradas, paginaActual, registrosPorPagina]);
-  
+
+  // Debounce para búsqueda
   useEffect(() => {
-    setPaginaActual(1);
-  }, [filtros.busqueda, filtros.estado]);
+    const timer = setTimeout(() => {
+      setBusquedaDebounced(filtros.busqueda);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [filtros.busqueda]);
+
+  const filtrosAnteriores = useRef({
+    busquedaDebounced,
+    estado: filtros.estado
+  });
+
+  useEffect(() => {
+    const prev = filtrosAnteriores.current;
+    if (
+      prev.busquedaDebounced !== busquedaDebounced ||
+      prev.estado !== filtros.estado
+    ) {
+      filtrosAnteriores.current = {
+        busquedaDebounced,
+        estado: filtros.estado
+      };
+      setPaginaActual(1);
+    }
+  }, [busquedaDebounced, filtros.estado]);
+
+  const facturasFiltradas = facturas;
+  const facturasPaginadas = facturas;
 
   const loadFacturas = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await adminService.getFacturas({ limite: 1000 });
+      const params = {
+        pagina: paginaActual,
+        limite: registrosPorPagina
+      };
+      if (busquedaDebounced.trim()) params.buscar = busquedaDebounced.trim();
+      if (filtros.estado && filtros.estado !== 'todos') params.estado = filtros.estado;
+
+      const response = await adminService.getFacturas(params);
       const facturasData = response.data?.facturas || response.data || [];
+      const total = response.data?.total !== undefined ? response.data.total : (response.total !== undefined ? response.total : facturasData.length);
+      const numPags = response.data?.totalPaginas || Math.max(1, Math.ceil(total / registrosPorPagina));
+
       setFacturas(Array.isArray(facturasData) ? facturasData : []);
+      setTotalFacturas(total);
+      setTotalPaginas(numPags);
     } catch (error) {
       console.error('Error al cargar facturas:', error);
       setMensaje({ tipo: 'danger', texto: 'Error al cargar las facturas' });
       setFacturas([]);
+      setTotalFacturas(0);
+      setTotalPaginas(1);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [paginaActual, busquedaDebounced, filtros.estado]);
 
   useEffect(() => {
     loadFacturas();
-  }, [loadFacturas]);
+  }, [loadFacturas, reloadKey]);
+
+  const recargarFacturas = useCallback(() => {
+    setReloadKey(prev => prev + 1);
+  }, []);
+
+  const obtenerFacturasParaExportar = async () => {
+    const params = {
+      pagina: 1,
+      limite: 1000
+    };
+    if (busquedaDebounced.trim()) params.buscar = busquedaDebounced.trim();
+    if (filtros.estado && filtros.estado !== 'todos') params.estado = filtros.estado;
+
+    try {
+      const res = await adminService.getFacturas(params);
+      const items = res.data?.facturas || res.data || [];
+      return Array.isArray(items) ? items : facturas;
+    } catch (err) {
+      console.error('Error al obtener facturas para exportar:', err);
+      return facturas;
+    }
+  };
+
+  const handleExportar = async (formato) => {
+    setExportando(true);
+    try {
+      const itemsParaExportar = await obtenerFacturasParaExportar();
+      if (formato === 'pdf') {
+        exportarFacturasAPDF(itemsParaExportar);
+      } else {
+        await exportarFacturasAExcel(itemsParaExportar);
+      }
+    } catch (error) {
+      console.error('Error al exportar facturas:', error);
+      setMensaje({ tipo: 'danger', texto: 'Error al exportar facturas' });
+    } finally {
+      setExportando(false);
+    }
+  };
 
   const handleVerDetalle = async (factura) => {
     try {
@@ -153,11 +208,11 @@ const AdminFacturasPage = () => {
           await adminService.anularFactura(factura.id);
           setMensaje({ tipo: 'success', texto: `Factura "${numFactura}" anulada exitosamente` });
           setShowDetalleModal(false);
-          await loadFacturas();
+          recargarFacturas();
         } catch (error) {
           console.error('Error al anular factura:', error);
           setMensaje({ tipo: 'danger', texto: error.message || 'Error al anular la factura' });
-          await loadFacturas();
+          recargarFacturas();
         }
       }
     });
@@ -222,7 +277,7 @@ const AdminFacturasPage = () => {
     });
   };
 
-  if (loading) {
+  if (loading && facturas.length === 0 && !busquedaDebounced && filtros.estado === 'todos') {
     return <LoadingSpinner message="Cargando facturas..." />;
   }
 
@@ -235,35 +290,30 @@ const AdminFacturasPage = () => {
             <span className="bi bi-file-earmark-pdf me-2 text-gold" aria-hidden="true"></span> Gestión de Facturas
           </h1>
           <p className="text-muted mb-0">
-            Total: {facturasFiltradas.length} de {facturas.length} factura{facturas.length !== 1 ? 's' : ''}
+            Total: <strong>{totalFacturas}</strong> factura{totalFacturas !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="d-flex flex-wrap align-items-center gap-2">
           <Dropdown as={ButtonGroup}>
             <Button
               variant="primary"
-              onClick={async () => {
-                if (tipoExportacion === 'pdf') {
-                  exportarFacturasAPDF(facturasFiltradas);
-                } else {
-                  await exportarFacturasAExcel(facturasFiltradas);
-                }
-              }}
+              disabled={exportando}
+              onClick={() => handleExportar(tipoExportacion)}
             >
               <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
-              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+              {exportando ? 'Exportando...' : `Exportar a ${tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}`}
             </Button>
-            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" />
+            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" disabled={exportando} />
             <Dropdown.Menu>
               <Dropdown.Item onClick={() => {
                 setTipoExportacion('pdf');
-                exportarFacturasAPDF(facturasFiltradas);
+                handleExportar('pdf');
               }}>
                 <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
               </Dropdown.Item>
-              <Dropdown.Item onClick={async () => {
+              <Dropdown.Item onClick={() => {
                 setTipoExportacion('excel');
-                await exportarFacturasAExcel(facturasFiltradas);
+                handleExportar('excel');
               }}>
                 <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
               </Dropdown.Item>
@@ -506,24 +556,24 @@ const AdminFacturasPage = () => {
 
       {/* Paginación */}
       {totalPaginas > 1 && (
-        <div className="d-flex justify-content-between align-items-center mt-3">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 mt-4 p-3 bg-white rounded shadow-sm">
           <small className="text-muted">
-            Página {paginaActual} de {totalPaginas} - Mostrando {facturasPaginadas.length} de {facturasFiltradas.length} registros
+            Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> — Mostrando <strong>{facturas.length}</strong> de <strong>{totalFacturas}</strong> facturas
           </small>
           <ButtonGroup size="sm">
-            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1 || loading}>
               ««
             </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1}>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1 || loading}>
               Anterior
             </Button>
             <Button variant="primary" disabled>
               {paginaActual} / {totalPaginas}
             </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas}>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas || loading}>
               Siguiente
             </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
+            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas || loading}>
               »»
             </Button>
           </ButtonGroup>

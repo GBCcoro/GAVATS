@@ -45,57 +45,18 @@ const AdminDashboardPage = () => {
     }
 
     try {
-      const results = await Promise.allSettled([
-        api.get('/admin/categorias'),
-        api.get('/admin/subcategorias'),
-        api.get('/admin/productos'),
-        api.get('/admin/usuarios'),
-        api.get('/admin/pedidos'),
-        api.get('/admin/facturas'),
-        api.get('/admin/comentarios')
-      ]);
-
-      const extractData = (result) => {
-        if (result.status === 'rejected') {
-          return [];
-        }
-        return result.value?.data || [];
-      };
-
-      const [categorias, subcategorias, productos, usuarios, pedidos, facturas, comentarios] = results;
-
-      const getArray = (data) => {
-        if (!data) return [];
-        if (Array.isArray(data)) return data;
-        if (Array.isArray(data.data)) return data.data;
-
-        const target = data.data || data;
-        const keys = ['categorias', 'subcategorias', 'productos', 'usuarios', 'pedidos', 'facturas', 'comentarios'];
-        const foundKey = Object.keys(target || {}).find(k => keys.includes(k) && Array.isArray(target[k]));
-        return foundKey ? target[foundKey] : [];
-      };
-
-      const categoriasData = getArray(extractData(categorias));
-      const subcategoriasData = getArray(extractData(subcategorias));
-      const productosData = getArray(extractData(productos));
-      const usuariosData = getArray(extractData(usuarios));
-      const pedidosData = getArray(extractData(pedidos));
-      const facturasData = getArray(extractData(facturas));
-      const comentariosData = getArray(extractData(comentarios));
-
-      const pedidosPendientes = Array.isArray(pedidosData)
-        ? pedidosData.filter(p => p.estado === 'pendiente').length
-        : 0;
+      const response = await api.get('/admin/dashboard/stats');
+      const data = response.data?.data || response.data || {};
 
       setStats({
-        categorias: categoriasData.length,
-        subcategorias: subcategoriasData.length,
-        productos: productosData.length,
-        usuarios: usuariosData.length,
-        pedidos: pedidosData.length,
-        pedidosPendientes: pedidosPendientes,
-        facturas: facturasData.length,
-        comentarios: comentariosData.length
+        categorias: Number(data.categorias) || 0,
+        subcategorias: Number(data.subcategorias) || 0,
+        productos: Number(data.productos) || 0,
+        usuarios: Number(data.usuarios) || 0,
+        pedidos: Number(data.pedidos) || 0,
+        pedidosPendientes: Number(data.pedidosPendientes) || 0,
+        facturas: Number(data.facturas) || 0,
+        comentarios: Number(data.comentarios) || 0
       });
       setLastUpdated(new Date());
     } catch (error) {

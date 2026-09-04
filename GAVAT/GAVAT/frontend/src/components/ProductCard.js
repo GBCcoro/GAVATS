@@ -70,18 +70,18 @@ const ProductCard = memo(({ producto, onAddToCart, showActions = true }) => {
         
         {showActions && producto.stock > 0 && (
           <Button
-            className="btn-add-to-cart w-100"
+            className="btn-add-to-cart w-100 d-flex align-items-center justify-content-center gap-2"
             onClick={handleAddToCart}
           >
-            <i className="bi bi-cart-plus" />
-            {' '}
-            Agregar al carrito
+            <i className="bi bi-cart-plus-fill fs-6" />
+            <span>Agregar al carrito</span>
           </Button>
         )}
         
         {showActions && producto.stock === 0 && (
-          <Button variant="secondary" className="w-100" disabled style={{ borderRadius: '0.75rem' }}>
-            No disponible
+          <Button variant="secondary" className="btn-sin-stock w-100 d-flex align-items-center justify-content-center gap-2" disabled>
+            <i className="bi bi-slash-circle" />
+            <span>No disponible</span>
           </Button>
         )}
       </Card.Body>
@@ -90,15 +90,17 @@ const ProductCard = memo(({ producto, onAddToCart, showActions = true }) => {
       <style>{`
         .product-card {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          border: none !important;
+          border: 1px solid rgba(0, 0, 0, 0.06) !important;
           background: var(--bg, #ffffff);
+          border-radius: 1rem !important;
         }
         .product-card:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+          transform: translateY(-6px);
+          box-shadow: 0 16px 24px -5px rgba(25, 40, 71, 0.1) !important;
+          border-color: rgba(197, 151, 74, 0.3) !important;
         }
         .product-card:hover .product-title {
-          color: var(--bs-oldGold-bg, #916934);
+          color: #c7984e;
         }
         .product-title {
           color: var(--bg-negativo, #192847);
@@ -117,37 +119,48 @@ const ProductCard = memo(({ producto, onAddToCart, showActions = true }) => {
           color: var(--fnt-black, #000000);
           padding: 0.5rem 0.75rem;
           border-radius: 0.5rem;
-          font-weight: 500;
+          font-weight: 600;
         }
         .badge-stock-success {
           background: linear-gradient(135deg, #10b981, #059669);
-          padding: 0.5rem 0.75rem;
+          padding: 0.4rem 0.7rem;
           border-radius: 0.5rem;
-          font-weight: 500;
+          font-weight: 600;
           color: white;
         }
         .badge-stock-danger {
           background: linear-gradient(135deg, #ef4444, #dc2626);
-          padding: 0.5rem 0.75rem;
+          padding: 0.4rem 0.7rem;
           border-radius: 0.5rem;
-          font-weight: 500;
+          font-weight: 600;
+          color: white;
         }
         .btn-add-to-cart {
-          background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e));
-          border: none;
-          border-radius: 0.75rem;
-          padding: 0.625rem;
-          font-weight: 500;
-          color: var(--fnt-black, #000000);
-          transition: all 0.3s ease;
+          background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e)) !important;
+          border: none !important;
+          border-radius: 0.75rem !important;
+          padding: 0.65rem 1rem !important;
+          font-weight: 700 !important;
+          color: #192847 !important;
+          transition: all 0.25s ease !important;
+          box-shadow: 0 4px 12px rgba(199, 152, 78, 0.25) !important;
         }
         .btn-add-to-cart:hover {
-          background: linear-gradient(135deg, var(--bs-gold-dark, #c7984e), var(--bs-oldGold-bg, #916934));
-          transform: translateY(-2px);
-          box-shadow: 0 4px 15px 0 rgba(145, 105, 52, 0.3);
+          background: linear-gradient(135deg, var(--bs-gold-dark, #c7984e), var(--bs-gold, #f5c271)) !important;
+          transform: translateY(-2px) !important;
+          box-shadow: 0 6px 16px rgba(199, 152, 78, 0.35) !important;
+          color: #192847 !important;
         }
         .btn-add-to-cart:active {
-          transform: translateY(0);
+          transform: translateY(0) !important;
+        }
+        .btn-sin-stock {
+          border-radius: 0.75rem !important;
+          padding: 0.65rem 1rem !important;
+          font-weight: 600 !important;
+          background: #e2e8f0 !important;
+          color: #64748b !important;
+          border: none !important;
         }
       `}</style>
     </Card>

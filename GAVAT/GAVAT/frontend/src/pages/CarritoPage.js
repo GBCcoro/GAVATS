@@ -525,11 +525,19 @@ const CarritoPage = () => {
         .carrito-table-header {
           background: var(--bg-positiva, #DBE1ED);
           color: var(--bg-negativo, #192847);
-          font-weight: 600;
+          font-weight: 700;
         }
         .carrito-table-header th {
-          border-bottom: none;
-          padding: 1rem;
+          border-bottom: 2px solid #cbd5e1;
+          padding: 0.95rem 1.15rem;
+          font-size: 0.85rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .carrito-table td {
+          padding: 0.95rem 1.15rem;
+          vertical-align: middle;
+          font-size: 0.92rem;
         }
         .btn-cantidad {
           background: transparent;

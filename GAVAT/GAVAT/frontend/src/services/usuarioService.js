@@ -13,8 +13,22 @@ const usuarioService = {
    */
   obtenerUsuarios: async (params = '') => {
     try {
-      const response = await api.get(`/admin/usuarios${params}`);
+      const queryStr = typeof params === 'string' ? params : `?${new URLSearchParams(params).toString()}`;
+      const response = await api.get(`/admin/usuarios${queryStr}`);
       return response.data.data?.usuarios || response.data.usuarios || [];
+    } catch (error) {
+      throw error.response?.data || { success: false, message: 'Error de conexión' };
+    }
+  },
+
+  /**
+   * Obtener usuarios con metadata de paginación
+   */
+  obtenerUsuariosPaginados: async (params = {}) => {
+    try {
+      const queryStr = typeof params === 'string' ? params : `?${new URLSearchParams(params).toString()}`;
+      const response = await api.get(`/admin/usuarios${queryStr}`);
+      return response.data;
     } catch (error) {
       throw error.response?.data || { success: false, message: 'Error de conexión' };
     }

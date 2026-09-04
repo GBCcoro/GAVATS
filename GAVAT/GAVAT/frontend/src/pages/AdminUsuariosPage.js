@@ -5,7 +5,7 @@
  * Gestión CRUD de usuarios y roles
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import usuarioService from '../services/usuarioService';
@@ -53,9 +53,34 @@ function AdminUsuariosPage() {
     rol: 'todos',
     estado: 'todos'
   });
+  const [busquedaDebounced, setBusquedaDebounced] = useState('');
   
   const [paginaActual, setPaginaActual] = useState(1);
+  const [totalUsuarios, setTotalUsuarios] = useState(0);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [reloadKey, setReloadKey] = useState(0);
   const registrosPorPagina = 25;
+
+  // Debounce para búsqueda
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setBusquedaDebounced(filtros.busqueda);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [filtros.busqueda]);
+
+  const filtrosAnteriores = useRef({ busquedaDebounced, rol: filtros.rol, estado: filtros.estado });
+  useEffect(() => {
+    const prev = filtrosAnteriores.current;
+    if (
+      prev.busquedaDebounced !== busquedaDebounced ||
+      prev.rol !== filtros.rol ||
+      prev.estado !== filtros.estado
+    ) {
+      filtrosAnteriores.current = { busquedaDebounced, rol: filtros.rol, estado: filtros.estado };
+      setPaginaActual(1);
+    }
+  }, [busquedaDebounced, filtros.rol, filtros.estado]);
 
   const getRolBadgeVariant = (rol) => {
     if (rol === 'administrador') return 'danger';
@@ -66,20 +91,43 @@ function AdminUsuariosPage() {
   const cargarUsuarios = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await usuarioService.obtenerUsuarios('?limite=1000');
-      setUsuarios(Array.isArray(data) ? data : []);
+      const params = {
+        pagina: paginaActual,
+        limite: registrosPorPagina
+      };
+      if (busquedaDebounced.trim()) params.buscar = busquedaDebounced.trim();
+      if (filtros.rol && filtros.rol !== 'todos') params.rol = filtros.rol;
+      if (filtros.estado && filtros.estado !== 'todos') {
+        params.activo = filtros.estado === 'activo';
+      }
+
+      const res = await usuarioService.obtenerUsuariosPaginados(params);
+      const usus = res.data?.usuarios || res.usuarios || res.data || [];
+      const paginacion = res.data?.paginacion || res.paginacion || {};
+
+      setUsuarios(Array.isArray(usus) ? usus : []);
+      const total = paginacion.total !== undefined ? paginacion.total : usus.length;
+      const numPags = paginacion.totalPaginas || Math.max(1, Math.ceil(total / registrosPorPagina));
+      setTotalUsuarios(total);
+      setTotalPaginas(numPags);
     } catch (error) {
       console.error('Error al cargar usuarios:', error);
       setMensaje({ tipo: 'danger', texto: 'Error al cargar los usuarios' });
       setUsuarios([]);
+      setTotalUsuarios(0);
+      setTotalPaginas(1);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [paginaActual, busquedaDebounced, filtros.rol, filtros.estado]);
 
   useEffect(() => {
     cargarUsuarios();
-  }, [cargarUsuarios]);
+  }, [cargarUsuarios, reloadKey]);
+
+  const recargarUsuarios = useCallback(() => {
+    setReloadKey(prev => prev + 1);
+  }, []);
 
   const limpiarFormulario = () => {
     setUsuarioActual({
@@ -136,7 +184,7 @@ function AdminUsuariosPage() {
         setMensaje({ tipo: 'success', texto: `Usuario "${usuarioActual.nombre}" creado exitosamente` });
       }
       handleCloseModal();
-      await cargarUsuarios();
+      recargarUsuarios();
     } catch (error) {
       console.error('Error al guardar usuario:', error);
       setMensaje({ tipo: 'danger', texto: error.response?.data?.message || 'Error al guardar usuario' });
@@ -163,30 +211,43 @@ function AdminUsuariosPage() {
     }
   };
 
-  // Selección de filas
-  const usuariosFiltrados = useMemo(() => {
-    return usuarios.filter(usuario => {
-      const busquedaLower = filtros.busqueda.toLowerCase().trim();
-      const pasaBusqueda = !busquedaLower || 
-        usuario.nombre.toLowerCase().includes(busquedaLower) ||
-        usuario.email.toLowerCase().includes(busquedaLower);
-      const pasaRol = filtros.rol === 'todos' || usuario.rol === filtros.rol;
-      const pasaEstado = filtros.estado === 'todos' ||
-        (filtros.estado === 'activo' && usuario.activo) ||
-        (filtros.estado === 'inactivo' && !usuario.activo);
-      return pasaBusqueda && pasaRol && pasaEstado;
-    });
-  }, [usuarios, filtros]);
+  // Los usuarios recibidos corresponden a la página actual consultada al backend
+  const usuariosPaginados = usuarios;
+  const usuariosFiltrados = usuarios;
 
-  const totalPaginas = Math.ceil(usuariosFiltrados.length / registrosPorPagina);
-  const usuariosPaginados = useMemo(() => {
-    const inicio = (paginaActual - 1) * registrosPorPagina;
-    return usuariosFiltrados.slice(inicio, inicio + registrosPorPagina);
-  }, [usuariosFiltrados, paginaActual]);
+  // Exportar usuarios bajo demanda consultando el total filtrado
+  const obtenerUsuariosParaExportar = async () => {
+    try {
+      const params = { limite: 1000 };
+      if (busquedaDebounced.trim()) params.buscar = busquedaDebounced.trim();
+      if (filtros.rol && filtros.rol !== 'todos') params.rol = filtros.rol;
+      if (filtros.estado && filtros.estado !== 'todos') {
+        params.activo = filtros.estado === 'activo';
+      }
+      const res = await usuarioService.obtenerUsuariosPaginados(params);
+      return res.data?.usuarios || res.usuarios || res.data || [];
+    } catch (err) {
+      console.error('Error al exportar usuarios:', err);
+      return usuarios;
+    }
+  };
 
-  useEffect(() => {
-    setPaginaActual(1);
-  }, [filtros.busqueda, filtros.rol, filtros.estado]);
+  const handleExportar = async (formato) => {
+    setLoading(true);
+    try {
+      const users = await obtenerUsuariosParaExportar();
+      if (formato === 'pdf') {
+        exportarUsuariosAPDF(users);
+      } else {
+        await exportarUsuariosAExcel(users);
+      }
+    } catch (e) {
+      console.error('Error en exportación de usuarios:', e);
+      setMensaje({ tipo: 'danger', texto: 'Error al exportar usuarios' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const todosPaginaSeleccionados = useMemo(() => {
     return usuariosPaginados.length > 0 && usuariosPaginados.every(u => seleccionados.has(u.id));
@@ -237,11 +298,11 @@ function AdminUsuariosPage() {
 
           await usuarioService.eliminarUsuario(usuario.id);
           setMensaje({ tipo: 'success', texto: `Usuario "${usuario.nombre}" eliminado exitosamente` });
-          await cargarUsuarios();
+          recargarUsuarios();
         } catch (error) {
           console.error('Error al eliminar usuario:', error);
           setMensaje({ tipo: 'danger', texto: error.response?.data?.message || 'Error al eliminar usuario' });
-          await cargarUsuarios();
+          recargarUsuarios();
         }
       }
     });
@@ -272,6 +333,7 @@ function AdminUsuariosPage() {
             tipo: 'success', 
             texto: `Usuario "${usuario.nombre}" ${nuevoEstado ? 'activado' : 'desactivado'} exitosamente` 
           });
+          recargarUsuarios();
         } catch (error) {
           console.error('Error al cambiar estado del usuario:', error);
           setMensaje({ tipo: 'danger', texto: error.response?.data?.message || 'Error al cambiar estado del usuario' });
@@ -309,11 +371,11 @@ function AdminUsuariosPage() {
             texto: `${exitosos} de ${ids.length} usuarios eliminados exitosamente` 
           });
           
-          await cargarUsuarios();
+          recargarUsuarios();
         } catch (error) {
           console.error('Error en eliminación masiva:', error);
           setMensaje({ tipo: 'danger', texto: 'Error al procesar la eliminación masiva' });
-          await cargarUsuarios();
+          recargarUsuarios();
         }
       }
     });
@@ -345,17 +407,17 @@ function AdminUsuariosPage() {
             texto: `Estado actualizado en ${exitosos} de ${ids.length} usuarios` 
           });
           
-          await cargarUsuarios();
+          recargarUsuarios();
         } catch (error) {
           console.error('Error al cambiar estado masivo:', error);
           setMensaje({ tipo: 'danger', texto: 'Error al procesar el cambio de estado masivo' });
-          await cargarUsuarios();
+          recargarUsuarios();
         }
       }
     });
   };
 
-  if (loading) {
+  if (loading && usuarios.length === 0 && !filtros.busqueda && filtros.rol === 'todos' && filtros.estado === 'todos') {
     return <LoadingSpinner message="Cargando usuarios..." />;
   }
 
@@ -368,35 +430,30 @@ function AdminUsuariosPage() {
             <span className="bi bi-people-fill me-2 text-gold" aria-hidden="true"></span> Gestión de Usuarios
           </h1>
           <p className="text-muted mb-0">
-            Total: {usuariosFiltrados.length} de {usuarios.length} usuario{usuarios.length !== 1 ? 's' : ''}
+            Total: <strong>{totalUsuarios}</strong> usuario{totalUsuarios !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="d-flex flex-wrap align-items-center gap-2">
           <Dropdown as={ButtonGroup}>
             <Button
               variant="primary"
-              onClick={async () => {
-                if (tipoExportacion === 'pdf') {
-                  exportarUsuariosAPDF(usuariosFiltrados);
-                } else {
-                  await exportarUsuariosAExcel(usuariosFiltrados);
-                }
-              }}
+              disabled={loading}
+              onClick={() => handleExportar(tipoExportacion)}
             >
               <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
               Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
             </Button>
-            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" />
+            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" disabled={loading} />
             <Dropdown.Menu>
               <Dropdown.Item onClick={() => {
                 setTipoExportacion('pdf');
-                exportarUsuariosAPDF(usuariosFiltrados);
+                handleExportar('pdf');
               }}>
                 <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
               </Dropdown.Item>
-              <Dropdown.Item onClick={async () => {
+              <Dropdown.Item onClick={() => {
                 setTipoExportacion('excel');
-                await exportarUsuariosAExcel(usuariosFiltrados);
+                handleExportar('excel');
               }}>
                 <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
               </Dropdown.Item>
@@ -675,30 +732,28 @@ function AdminUsuariosPage() {
       </Card>
 
       {/* Paginación */}
-      {totalPaginas > 1 && (
-        <div className="d-flex justify-content-between align-items-center mt-3">
-          <small className="text-muted">
-            Página {paginaActual} de {totalPaginas} - Mostrando {usuariosPaginados.length} de {usuariosFiltrados.length} registros
-          </small>
-          <ButtonGroup size="sm">
-            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
-              ««
-            </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1}>
-              Anterior
-            </Button>
-            <Button variant="primary" disabled>
-              {paginaActual} / {totalPaginas}
-            </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas}>
-              Siguiente
-            </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
-              »»
-            </Button>
-          </ButtonGroup>
-        </div>
-      )}
+      <div className="d-flex justify-content-between align-items-center mt-3">
+        <small className="text-muted">
+          Página <strong>{paginaActual}</strong> de <strong>{totalPaginas || 1}</strong> — Mostrando <strong>{totalUsuarios === 0 ? '0-0' : `${(paginaActual - 1) * registrosPorPagina + 1}-${Math.min(paginaActual * registrosPorPagina, totalUsuarios)}`}</strong> de <strong>{totalUsuarios}</strong> registros
+        </small>
+        <ButtonGroup size="sm">
+          <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1 || loading}>
+            ««
+          </Button>
+          <Button variant="outline-primary" onClick={() => setPaginaActual(p => Math.max(1, p - 1))} disabled={paginaActual === 1 || loading}>
+            Anterior
+          </Button>
+          <Button variant="primary" disabled>
+            {paginaActual} / {totalPaginas || 1}
+          </Button>
+          <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual >= totalPaginas || loading}>
+            Siguiente
+          </Button>
+          <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual >= totalPaginas || loading}>
+            »»
+          </Button>
+        </ButtonGroup>
+      </div>
 
       {/* Modal Crear / Editar Usuario Minimalista */}
       <Modal 

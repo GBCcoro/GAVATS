@@ -58,13 +58,17 @@ const AdminProductosPage = () => {
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [tipoExportacion, setTipoExportacion] = useState('pdf');
   
-  // Estados para filtros
+  // Estados para filtros y paginación del servidor
   const [busqueda, setBusqueda] = useState('');
+  const [busquedaDebounced, setBusquedaDebounced] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [filtroSubcategoria, setFiltroSubcategoria] = useState('');
   const [precioMin, setPrecioMin] = useState('');
   const [precioMax, setPrecioMax] = useState('');
   const [paginaActual, setPaginaActual] = useState(1);
+  const [totalProductos, setTotalProductos] = useState(0);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [reloadKey, setReloadKey] = useState(0);
   const ITEMS_POR_PAGINA = 25;
   
   // Estado para selección de productos
@@ -96,42 +100,91 @@ const AdminProductosPage = () => {
   const fileInputRef = useRef(null);
   const [modalPreviewFoto, setModalPreviewFoto] = useState(false);
   const [zoomNivel, setZoomNivel] = useState(1);
+  const [posicionFoto, setPosicionFoto] = useState({ x: 0, y: 0 });
+  const [arrastrandoFoto, setArrastrandoFoto] = useState(false);
+  const inicioArrastreFoto = useRef({ x: 0, y: 0 });
 
   const handleZoomIn = () => setZoomNivel(prev => Math.min(Number((prev + 0.25).toFixed(2)), 3.5));
   const handleZoomOut = () => setZoomNivel(prev => Math.max(Number((prev - 0.25).toFixed(2)), 0.5));
-  const handleResetZoom = () => setZoomNivel(1);
-  const handleToggleZoom = () => setZoomNivel(prev => (prev === 1 ? 2 : 1));
-  
-  // Productos filtrados
-  const productosFiltrados = useMemo(() => {
-    return productos.filter(prod => {
-      // Filtro de búsqueda
-      const coincideBusqueda = busqueda === '' || 
-        prod.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        prod.descripcion?.toLowerCase().includes(busqueda.toLowerCase());
-      
-      // Filtro de categoría
-      const coincideCategoria = filtroCategoria === '' || prod.categoriaId === Number.parseInt(filtroCategoria);
-      
-      // Filtro de subcategoría
-      const coincideSubcategoria = filtroSubcategoria === '' || prod.subcategoriaId === Number.parseInt(filtroSubcategoria);
-      
-      // Filtro de precio
-      const min = precioMin === '' ? 0 : Number.parseFloat(precioMin);
-      const max = precioMax === '' ? Infinity : Number.parseFloat(precioMax);
-      const coincidePrecio = prod.precio >= min && prod.precio <= max;
-      
-      return coincideBusqueda && coincideCategoria && coincideSubcategoria && coincidePrecio;
-    }).sort((a, b) => a.id - b.id);
-  }, [productos, busqueda, filtroCategoria, filtroSubcategoria, precioMin, precioMax]);
+  const handleResetZoom = () => {
+    setZoomNivel(1);
+    setPosicionFoto({ x: 0, y: 0 });
+  };
 
-  // Cálculo de paginación
-  const totalPaginas = Math.ceil(productosFiltrados.length / ITEMS_POR_PAGINA);
+  const handleMouseDownFoto = (e) => {
+    e.preventDefault();
+    setArrastrandoFoto(true);
+    inicioArrastreFoto.current = {
+      x: e.clientX - posicionFoto.x,
+      y: e.clientY - posicionFoto.y
+    };
+  };
+
+  const handleMouseMoveFoto = (e) => {
+    if (!arrastrandoFoto) return;
+    setPosicionFoto({
+      x: e.clientX - inicioArrastreFoto.current.x,
+      y: e.clientY - inicioArrastreFoto.current.y
+    });
+  };
+
+  const handleMouseUpFoto = () => {
+    setArrastrandoFoto(false);
+  };
+
+  const handleTouchStartFoto = (e) => {
+    if (e.touches.length === 1) {
+      setArrastrandoFoto(true);
+      inicioArrastreFoto.current = {
+        x: e.touches[0].clientX - posicionFoto.x,
+        y: e.touches[0].clientY - posicionFoto.y
+      };
+    }
+  };
+
+  const handleTouchMoveFoto = (e) => {
+    if (!arrastrandoFoto || e.touches.length !== 1) return;
+    setPosicionFoto({
+      x: e.touches[0].clientX - inicioArrastreFoto.current.x,
+      y: e.touches[0].clientY - inicioArrastreFoto.current.y
+    });
+  };
+
+  const cerrarModalFoto = () => {
+    setModalPreviewFoto(false);
+    setArrastrandoFoto(false);
+    setZoomNivel(1);
+    setPosicionFoto({ x: 0, y: 0 });
+  };
+  
+  // Debounce para búsqueda en servidor (350ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setBusquedaDebounced(busqueda);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [busqueda]);
+
+  // Resetear a página 1 cuando cambien los filtros
+  const filtrosAnteriores = useRef({ busquedaDebounced, filtroCategoria, filtroSubcategoria, precioMin, precioMax });
+  useEffect(() => {
+    const prev = filtrosAnteriores.current;
+    if (
+      prev.busquedaDebounced !== busquedaDebounced ||
+      prev.filtroCategoria !== filtroCategoria ||
+      prev.filtroSubcategoria !== filtroSubcategoria ||
+      prev.precioMin !== precioMin ||
+      prev.precioMax !== precioMax
+    ) {
+      filtrosAnteriores.current = { busquedaDebounced, filtroCategoria, filtroSubcategoria, precioMin, precioMax };
+      setPaginaActual(1);
+    }
+  }, [busquedaDebounced, filtroCategoria, filtroSubcategoria, precioMin, precioMax]);
+
+  // Los productos actuales ya corresponden a la página solicitada al backend
+  const productosPaginados = productos;
   const indiceInicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
-  const indiceFin = indiceInicio + ITEMS_POR_PAGINA;
-  const productosPaginados = useMemo(() => {
-    return productosFiltrados.slice(indiceInicio, indiceFin);
-  }, [productosFiltrados, indiceInicio, indiceFin]);
+  const indiceFin = Math.min(paginaActual * ITEMS_POR_PAGINA, totalProductos);
 
   // Limpiar mensaje automáticamente
   useEffect(() => {
@@ -143,51 +196,102 @@ const AdminProductosPage = () => {
     }
   }, [mensaje]);
 
-  // Resetear a página 1 cuando cambien los filtros
-  useEffect(() => {
-    setPaginaActual(1);
-  }, [busqueda, filtroCategoria, filtroSubcategoria, precioMin, precioMax]);
-
-  useEffect(() => {
-    if (totalPaginas > 0 && paginaActual > totalPaginas) {
-      setPaginaActual(totalPaginas);
-    }
-  }, [paginaActual, totalPaginas]);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  // Cargar categorías y subcategorías una sola vez para los selectores
+  const loadCategoriasYSubcategorias = useCallback(async () => {
     try {
-      const [prodResponse, catResponse, subcatResponse] = await Promise.all([
-        api.get('/admin/productos?limite=1000'),
+      const [catResponse, subcatResponse] = await Promise.all([
         api.get('/admin/categorias'),
         api.get('/admin/subcategorias')
       ]);
-      
-      const productos = prodResponse.data?.data?.productos || prodResponse.data?.productos || prodResponse.data?.data || [];
-      const categorias = catResponse.data?.data?.categorias || catResponse.data?.categorias || catResponse.data?.data || [];
-      const subcategorias = subcatResponse.data?.data?.subcategorias || subcatResponse.data?.subcategorias || subcatResponse.data?.data || [];
-      
-      // Pequeño delay para suavizar la renderización
-      setTimeout(() => {
-        setProductos(Array.isArray(productos) ? productos : []);
-        setCategorias(Array.isArray(categorias) ? categorias : []);
-        setSubcategorias(Array.isArray(subcategorias) ? subcategorias : []);
-        setLoading(false);
-      }, 100);
+      const cats = catResponse.data?.data?.categorias || catResponse.data?.categorias || catResponse.data?.data || [];
+      const subcats = subcatResponse.data?.data?.subcategorias || subcatResponse.data?.subcategorias || subcatResponse.data?.data || [];
+      setCategorias(Array.isArray(cats) ? cats : []);
+      setSubcategorias(Array.isArray(subcats) ? subcats : []);
     } catch (error) {
-      console.error('Error al cargar datos:', error);
-      setMensaje({ tipo: 'danger', texto: 'Error al cargar los datos' });
-      setProductos([]);
-      setCategorias([]);
-      setSubcategorias([]);
-      setLoading(false);
+      console.error('Error al cargar categorías y subcategorías:', error);
     }
   }, []);
 
-  // Cargar datos al montar el componente
+  useEffect(() => {
+    loadCategoriasYSubcategorias();
+  }, [loadCategoriasYSubcategorias]);
+
+  // Cargar productos con paginación y filtros directamente en el servidor
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        pagina: String(paginaActual),
+        limite: String(ITEMS_POR_PAGINA)
+      });
+      if (busquedaDebounced.trim()) params.append('buscar', busquedaDebounced.trim());
+      if (filtroCategoria) params.append('categoriaId', filtroCategoria);
+      if (filtroSubcategoria) params.append('subcategoriaId', filtroSubcategoria);
+      if (precioMin !== '' && precioMin !== undefined) params.append('precioMin', precioMin);
+      if (precioMax !== '' && precioMax !== undefined) params.append('precioMax', precioMax);
+
+      const prodResponse = await api.get(`/admin/productos?${params.toString()}`);
+      const prods = prodResponse.data?.data?.productos || prodResponse.data?.productos || prodResponse.data?.data || [];
+      const paginacion = prodResponse.data?.data?.paginacion || prodResponse.data?.paginacion || {};
+
+      setProductos(Array.isArray(prods) ? prods : []);
+      const total = paginacion.total !== undefined ? paginacion.total : prods.length;
+      const numPaginas = paginacion.totalPaginas || Math.max(1, Math.ceil(total / ITEMS_POR_PAGINA));
+      setTotalProductos(total);
+      setTotalPaginas(numPaginas);
+    } catch (error) {
+      console.error('Error al cargar productos:', error);
+      setMensaje({ tipo: 'danger', texto: 'Error al cargar los productos' });
+      setProductos([]);
+      setTotalProductos(0);
+      setTotalPaginas(1);
+    } finally {
+      setLoading(false);
+    }
+  }, [paginaActual, busquedaDebounced, filtroCategoria, filtroSubcategoria, precioMin, precioMax]);
+
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, [loadData, reloadKey]);
+
+  const recargarProductos = useCallback(() => {
+    setReloadKey(prev => prev + 1);
+  }, []);
+
+  // Función bajo demanda para exportar productos completos según filtros activos
+  const obtenerProductosParaExportar = async () => {
+    try {
+      const params = new URLSearchParams({ limite: '1000' });
+      if (busquedaDebounced.trim()) params.append('buscar', busquedaDebounced.trim());
+      if (filtroCategoria) params.append('categoriaId', filtroCategoria);
+      if (filtroSubcategoria) params.append('subcategoriaId', filtroSubcategoria);
+      if (precioMin !== '' && precioMin !== undefined) params.append('precioMin', precioMin);
+      if (precioMax !== '' && precioMax !== undefined) params.append('precioMax', precioMax);
+
+      const res = await api.get(`/admin/productos?${params.toString()}`);
+      return res.data?.data?.productos || res.data?.productos || res.data?.data || [];
+    } catch (err) {
+      console.error('Error al obtener productos para exportar:', err);
+      return productos;
+    }
+  };
+
+  const handleExportar = async (formato) => {
+    setLoading(true);
+    try {
+      const prods = await obtenerProductosParaExportar();
+      if (formato === 'pdf') {
+        exportarProductosAPDF(prods);
+      } else {
+        await exportarProductosAExcel(prods);
+      }
+    } catch (e) {
+      console.error('Error en exportación:', e);
+      setMensaje({ tipo: 'danger', texto: 'Error al exportar productos' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleShowModal = (producto = null) => {
     if (producto) {
@@ -312,7 +416,7 @@ const AdminProductosPage = () => {
       }
 
       handleCloseModal();
-      loadData();
+      recargarProductos();
     } catch (error) {
       console.error('Error al guardar producto:', error);
       setMensaje({ 
@@ -400,7 +504,7 @@ const AdminProductosPage = () => {
             texto: res.data?.message || `Producto "${producto.nombre}" eliminado exitosamente` 
           });
           
-          await loadData();
+          recargarProductos();
         } catch (error) {
           console.error('Error al eliminar producto:', error);
           setMensaje({ 
@@ -479,7 +583,7 @@ const AdminProductosPage = () => {
             texto: `${exitosos} producto${exitosos !== 1 ? 's eliminados' : ' eliminado'} exitosamente` 
           });
           
-          await loadData();
+          recargarProductos();
         } catch (error) {
           console.error('Error en eliminación masiva:', error);
           setMensaje({ tipo: 'danger', texto: 'Error al eliminar los productos seleccionados' });
@@ -494,7 +598,7 @@ const AdminProductosPage = () => {
     if (count === 0) return;
     
     const productosSeleccionados = productos.filter(p => seleccionados.has(p.id));
-    const todosActivos = productosSeleccionados.every(p => p.activo);
+    const todosActivos = productosSeleccionados.length > 0 ? productosSeleccionados.every(p => p.activo) : false;
     const nuevoEstado = !todosActivos;
     
     setModalConfirmacion({
@@ -507,19 +611,19 @@ const AdminProductosPage = () => {
       textoCancelar: 'Cancelar',
       onConfirm: async () => {
         try {
-          const productosParaCambiar = productosSeleccionados.filter(p => p.activo !== nuevoEstado);
+          const ids = Array.from(seleccionados);
           const resultados = await Promise.allSettled(
-            productosParaCambiar.map(prod => api.patch(`/admin/productos/${prod.id}/toggle`))
+            ids.map(id => api.patch(`/admin/productos/${id}/toggle`))
           );
           
           const exitosos = resultados.filter(r => r.status === 'fulfilled').length;
           
           setMensaje({ 
             tipo: exitosos > 0 ? 'success' : 'danger', 
-            texto: `${exitosos} de ${productosParaCambiar.length || count} producto${count !== 1 ? 's actualizados' : ' actualizado'} a ${nuevoEstado ? 'Activo' : 'Inactivo'}` 
+            texto: `${exitosos} de ${count} producto${count !== 1 ? 's actualizados' : ' actualizado'} a ${nuevoEstado ? 'Activo' : 'Inactivo'}` 
           });
           setSeleccionados(new Set());
-          loadData();
+          recargarProductos();
         } catch (error) {
           console.error('Error al actualizar estado masivo:', error);
           setMensaje({ tipo: 'danger', texto: 'Error al cambiar estado de los productos' });
@@ -541,7 +645,7 @@ const AdminProductosPage = () => {
     return subcategorias.filter(sub => sub.categoriaId === Number.parseInt(formData.categoriaId));
   }, [subcategorias, formData.categoriaId]);
 
-  if (loading) {
+  if (loading && productos.length === 0 && !busqueda && !filtroCategoria && !filtroSubcategoria && !precioMin && !precioMax) {
     return <LoadingSpinner message="Cargando productos..." />;
   }
 
@@ -555,38 +659,33 @@ const AdminProductosPage = () => {
   Gestión de Productos
 </h1>
           <p className="text-muted mb-0">
-            Total: {productosFiltrados.length} de {productos.length} producto{productos.length !== 1 ? 's' : ''}
+            Total: <strong>{totalProductos}</strong> producto{totalProductos !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="d-flex flex-wrap align-items-center gap-2">
           <Dropdown as={ButtonGroup}>
             <Button
               variant="primary"
-              onClick={async () => {
-                if (tipoExportacion === 'pdf') {
-                  exportarProductosAPDF(productosFiltrados);
-                } else {
-                  await exportarProductosAExcel(productosFiltrados);
-                }
-              }}
+              disabled={loading}
+              onClick={() => handleExportar(tipoExportacion)}
             >
               <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
               Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
             </Button>
-            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" />
+            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" disabled={loading} />
             <Dropdown.Menu>
               <Dropdown.Item 
                 onClick={() => {
                   setTipoExportacion('pdf');
-                  exportarProductosAPDF(productosFiltrados);
+                  handleExportar('pdf');
                 }}
               >
                 <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
               </Dropdown.Item>
               <Dropdown.Item 
-                onClick={async () => {
+                onClick={() => {
                   setTipoExportacion('excel');
-                  await exportarProductosAExcel(productosFiltrados);
+                  handleExportar('excel');
                 }}
               >
                 <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
@@ -753,9 +852,17 @@ const AdminProductosPage = () => {
                 variant="outline-primary"
                 size="sm"
                 className="d-inline-flex align-items-center gap-1 fw-semibold"
-                onClick={() => {
+                onClick={async () => {
                   const idSel = Array.from(seleccionados)[0];
-                  const prodSel = productos.find(p => p.id === idSel);
+                  let prodSel = productos.find(p => p.id === idSel);
+                  if (!prodSel) {
+                    try {
+                      const res = await api.get(`/admin/productos/${idSel}`);
+                      prodSel = res.data?.data?.producto || res.data?.producto;
+                    } catch (err) {
+                      console.error('Error al obtener producto para editar:', err);
+                    }
+                  }
                   if (prodSel) handleShowModal(prodSel);
                 }}
                 title="Editar el producto seleccionado"
@@ -924,7 +1031,7 @@ const AdminProductosPage = () => {
         <Card.Footer className="text-muted">
           <div className="d-flex justify-content-between align-items-center">
             <small>
-              <span className="bi bi-file-text me-1" aria-hidden="true"></span> Mostrando <strong>{productosFiltrados.length === 0 ? '0-0' : `${indiceInicio + 1}-${Math.min(indiceFin, productosFiltrados.length)}`}</strong> de <strong>{productosFiltrados.length}</strong> producto{productosFiltrados.length !== 1 ? 's' : ''}
+              <span className="bi bi-file-text me-1" aria-hidden="true"></span> Mostrando <strong>{totalProductos === 0 ? '0-0' : `${indiceInicio + 1}-${indiceFin}`}</strong> de <strong>{totalProductos}</strong> producto{totalProductos !== 1 ? 's' : ''}
             </small>
             
             {/* Controles de paginación */}
@@ -932,7 +1039,7 @@ const AdminProductosPage = () => {
               <Button
                 variant="outline-secondary"
                 size="sm"
-                disabled={paginaActual === 1}
+                disabled={paginaActual === 1 || loading}
                 onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
               >
                 <i className="bi bi-arrow-left" />
@@ -945,7 +1052,7 @@ const AdminProductosPage = () => {
               <Button
                 variant="outline-secondary"
                 size="sm"
-                disabled={paginaActual >= totalPaginas}
+                disabled={paginaActual >= totalPaginas || loading}
                 onClick={() => setPaginaActual(prev => prev + 1)}
               >
                 <i className="bi bi-arrow-right" />
@@ -998,6 +1105,9 @@ const AdminProductosPage = () => {
                   className={`product-minimal-avatar-box ${previewImagen ? 'has-img' : ''}`}
                   onClick={() => {
                     if (previewImagen) {
+                      setZoomNivel(1);
+                      setPosicionFoto({ x: 0, y: 0 });
+                      setArrastrandoFoto(false);
                       setModalPreviewFoto(true);
                     } else {
                       fileInputRef.current?.click();
@@ -1213,19 +1323,19 @@ const AdminProductosPage = () => {
         </Form>
       </Modal>
 
-      {/* Modal para Visualizar / Cambiar / Eliminar Foto con Lupa y Zoom */}
+      {/* Modal para Visualizar / Cambiar / Eliminar Foto con Cursor de Movimiento y Arrastre */}
       <Modal
         show={modalPreviewFoto}
-        onHide={() => setModalPreviewFoto(false)}
+        onHide={cerrarModalFoto}
         centered
         dialogClassName="modal-preview-foto-dialog"
       >
         <div className="modal-preview-foto-header">
           <div className="fw-semibold text-navy small d-flex align-items-center gap-2">
-            <i className="bi bi-image text-primary" /> Fotografía del Producto
+            <i className="bi bi-arrows-move text-primary" /> Fotografía del Producto
           </div>
 
-          {/* Barra de controles de Lupa / Zoom */}
+          {/* Barra de controles de Zoom */}
           <div className="zoom-toolbar">
             <button
               type="button"
@@ -1250,7 +1360,7 @@ const AdminProductosPage = () => {
             <button
               type="button"
               onClick={handleResetZoom}
-              title="Restablecer tamaño original (100%)"
+              title="Restablecer tamaño original y centrar"
             >
               <i className="bi bi-aspect-ratio" />
             </button>
@@ -1259,24 +1369,36 @@ const AdminProductosPage = () => {
           <button 
             type="button" 
             className="btn-close" 
-            onClick={() => setModalPreviewFoto(false)}
+            onClick={cerrarModalFoto}
             aria-label="Cerrar"
           />
         </div>
 
         <Modal.Body className="p-3 p-md-4 text-center bg-light">
-          <div className="modal-preview-foto-wrapper mb-3">
+          <div 
+            className="modal-preview-foto-wrapper mb-3"
+            onMouseMove={handleMouseMoveFoto}
+            onMouseUp={handleMouseUpFoto}
+            onMouseLeave={handleMouseUpFoto}
+            onTouchMove={handleTouchMoveFoto}
+            onTouchEnd={handleMouseUpFoto}
+            style={{ cursor: arrastrandoFoto ? 'grabbing' : 'move', overflow: 'hidden' }}
+          >
             <img
               src={previewImagen}
               alt="Vista detallada del producto"
               className="modal-preview-foto-img"
+              draggable={false}
+              onDragStart={(e) => e.preventDefault()}
+              onMouseDown={handleMouseDownFoto}
+              onTouchStart={handleTouchStartFoto}
               style={{ 
-                transform: `scale(${zoomNivel})`, 
+                transform: `translate(${posicionFoto.x}px, ${posicionFoto.y}px) scale(${zoomNivel})`, 
                 transformOrigin: 'center center',
-                cursor: zoomNivel > 1 ? 'zoom-out' : 'zoom-in'
+                cursor: arrastrandoFoto ? 'grabbing' : 'move',
+                transition: arrastrandoFoto ? 'none' : 'transform 0.15s ease-out'
               }}
-              onClick={handleToggleZoom}
-              title={zoomNivel > 1 ? "Haz clic para alejar" : "Haz clic para agrandar con la lupa (200%)"}
+              title="Arrastra para mover la imagen"
               onError={(e) => { 
                 e.target.onerror = null;
                 e.target.src = '/producto-default.jpg'; 
@@ -1286,8 +1408,8 @@ const AdminProductosPage = () => {
 
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-1">
             <small className="text-muted text-start" style={{ fontSize: '0.78rem' }}>
-              <i className="bi bi-info-circle me-1" />
-              Haz clic en la imagen o usa los botones para acercar o alejar
+              <i className="bi bi-arrows-move me-1" />
+              Arrastra con el ratón para mover la imagen o usa los botones para ajustar el tamaño
             </small>
 
             <div className="d-flex gap-2 ms-auto">
@@ -1297,7 +1419,7 @@ const AdminProductosPage = () => {
                 className="d-flex align-items-center gap-1 px-3 py-1"
                 style={{ borderRadius: '8px', fontSize: '0.85rem' }}
                 onClick={() => {
-                  setModalPreviewFoto(false);
+                  cerrarModalFoto();
                   setTimeout(() => fileInputRef.current?.click(), 150);
                 }}
               >
@@ -1310,7 +1432,7 @@ const AdminProductosPage = () => {
                 style={{ borderRadius: '8px', fontSize: '0.85rem' }}
                 onClick={(e) => {
                   handleQuitarImagen(e);
-                  setModalPreviewFoto(false);
+                  cerrarModalFoto();
                 }}
               >
                 <i className="bi bi-trash3" /> Eliminar foto
