@@ -43,9 +43,6 @@ const HomePage = () => {
       {/* HERO SECTION: Azul Marino profundo con halos dorados                      */}
       {/* ========================================================================= */}
       <section className="hero-section text-white py-5 position-relative overflow-hidden">
-        <div className="hero-radial-glow hero-glow-1" />
-        <div className="hero-radial-glow hero-glow-2" />
-
         <Container className="position-relative z-1 py-4 py-lg-5">
           <Row className="align-items-center gx-5 gy-4">
             <Col lg={7} className="text-center text-lg-start">
@@ -218,7 +215,6 @@ const HomePage = () => {
         {/* ========================================================================= */}
         {!isAuthenticated && (
           <div className="cta-banner-card mt-5 p-4 p-md-5 rounded-4 shadow-sm text-center text-white position-relative overflow-hidden">
-            <div className="cta-glow-bg" />
             <div className="position-relative z-1 py-2">
               <div className="cta-badge d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-3">
                 <i className="bi bi-building-check text-gold" />
@@ -250,28 +246,16 @@ const HomePage = () => {
 
         /* Hero Section */
         .hero-section {
-          background: linear-gradient(135deg, #131f37 0%, #192847 60%, #0d172a 100%);
+          background: 
+            radial-gradient(ellipse 650px 380px at 85% 15%, rgba(245, 194, 113, 0.12) 0%, transparent 70%),
+            radial-gradient(ellipse 550px 320px at 10% 85%, rgba(199, 152, 78, 0.10) 0%, transparent 70%),
+            linear-gradient(135deg, #131f37 0%, #192847 60%, #0d172a 100%);
           border-bottom: 1px solid rgba(197, 151, 74, 0.2);
+          contain: paint;
+          transform: translateZ(0);
         }
-        .hero-radial-glow {
-          position: absolute;
-          border-radius: 50%;
-          pointer-events: none;
-          contain: strict;
-        }
-        .hero-glow-1 {
-          width: 450px;
-          height: 450px;
-          top: -100px;
-          right: 5%;
-          background: radial-gradient(circle, rgba(245, 194, 113, 0.22) 0%, rgba(245, 194, 113, 0.08) 40%, transparent 70%);
-        }
-        .hero-glow-2 {
-          width: 380px;
-          height: 380px;
-          bottom: -80px;
-          left: 5%;
-          background: radial-gradient(circle, rgba(199, 152, 78, 0.18) 0%, rgba(199, 152, 78, 0.06) 40%, transparent 70%);
+        .hero-section::before {
+          display: none !important;
         }
         .hero-badge {
           background: rgba(25, 40, 71, 0.75);
@@ -328,29 +312,26 @@ const HomePage = () => {
           justify-content: center;
         }
         .hero-logo-halo {
-          width: 320px;
-          height: 320px;
+          width: 300px;
+          height: 300px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(25, 40, 71, 0.4) 70%);
-          border: 2px solid rgba(197, 151, 74, 0.3);
-          box-shadow: 0 0 40px rgba(197, 151, 74, 0.2);
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, rgba(25, 40, 71, 0.4) 70%);
+          border: 2px solid rgba(197, 151, 74, 0.35);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(197, 151, 74, 0.15);
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 2.5rem;
-          will-change: transform;
-          transform: translateZ(0);
-          animation: floatHalo 5s ease-in-out infinite;
+          padding: 2rem;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .hero-logo-halo:hover {
+          transform: scale(1.03);
+          box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35), 0 0 30px rgba(197, 151, 74, 0.25);
         }
         .hero-logo-img {
           width: 100%;
-          max-width: 220px;
-          filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.4));
+          max-width: 200px;
           user-select: none;
-        }
-        @keyframes floatHalo {
-          0%, 100% { transform: translateY(0) translateZ(0); }
-          50% { transform: translateY(-10px) translateZ(0); }
         }
 
         /* Enlace catálogo */
@@ -368,7 +349,7 @@ const HomePage = () => {
         .feature-card {
           background: #ffffff;
           border: 1px solid rgba(0, 0, 0, 0.06) !important;
-          transition: all 0.3s ease;
+          transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
         }
         .feature-card:hover {
           transform: translateY(-5px);
@@ -385,7 +366,7 @@ const HomePage = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: all 0.3s ease;
+          transition: transform 0.25s ease, background 0.25s ease, color 0.25s ease;
         }
         .feature-card:hover .feature-icon-wrapper {
           background: linear-gradient(135deg, #f5c271 0%, #c7984e 100%);
@@ -395,18 +376,11 @@ const HomePage = () => {
 
         /* Banner CTA */
         .cta-banner-card {
-          background: linear-gradient(135deg, #131f37 0%, #192847 60%, #0d172a 100%);
+          background: 
+            radial-gradient(ellipse 600px 250px at 50% 50%, rgba(197, 151, 74, 0.25) 0%, transparent 70%),
+            linear-gradient(135deg, #131f37 0%, #192847 60%, #0d172a 100%);
           border: 1px solid rgba(197, 151, 74, 0.3);
-        }
-        .cta-glow-bg {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 600px;
-          height: 250px;
-          background: radial-gradient(ellipse, rgba(197, 151, 74, 0.25) 0%, transparent 70%);
-          pointer-events: none;
+          contain: paint;
         }
         .cta-badge {
           background: rgba(255, 255, 255, 0.08);

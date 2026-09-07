@@ -457,7 +457,6 @@ const Footer = memo(() => {
         .footer-brand-img {
           height: 36px;
           object-fit: contain;
-          filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
         }
 
         .footer-brand-title {
