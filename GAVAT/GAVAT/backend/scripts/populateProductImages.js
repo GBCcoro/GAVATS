@@ -1,5 +1,47 @@
 const { Producto, Categoria, Subcategoria } = require('../models');
-const { getSvgForSubcategory, getDefaultProductSvg } = require('./productImageSvgs');
+const { getSvgForSubcategory } = require('./productImageSvgs');
+
+/**
+ * Determina si la imagen actual es inválida, nula o un placeholder por defecto.
+ */
+function isDefaultOrInvalidImage(rawImagen) {
+  if (!rawImagen) {
+    return true;
+  }
+  if (Buffer.isBuffer(rawImagen)) {
+    const text = rawImagen.toString('utf8').trim();
+    return text === 'default.jpg' || rawImagen.length <= 100;
+  }
+  if (typeof rawImagen === 'string') {
+    return rawImagen === 'default.jpg' || rawImagen === 'data:image/jpeg;base64,ZGVmYXVsdC5qcGc=';
+  }
+  return false;
+}
+
+/**
+ * Actualiza la imagen del producto con un SVG según su subcategoría si requiere actualización.
+ */
+async function updateProductImageIfNeeded(producto) {
+  const rawImagen = producto.getDataValue('imagen');
+  const catNombre = producto.categoria?.nombre || '';
+  const subcatNombre = producto.subcategoria?.nombre || '';
+
+  if (!isDefaultOrInvalidImage(rawImagen)) {
+    console.log(`ℹ️ [${producto.id}] "${producto.nombre}" ya cuenta con imagen válida.`);
+    return false;
+  }
+
+  const svgContent = getSvgForSubcategory(subcatNombre, catNombre);
+  const svgBuffer = Buffer.from(svgContent, 'utf8');
+
+  await producto.update({
+    imagen: svgBuffer,
+    mimeType: 'image/svg+xml'
+  });
+
+  console.log(`✅ [${producto.id}] "${producto.nombre}" (${catNombre} > ${subcatNombre}) actualizado con imagen SVG.`);
+  return true;
+}
 
 async function populateProductImages() {
   try {
@@ -16,41 +58,9 @@ async function populateProductImages() {
 
     let actualizados = 0;
     for (const producto of productos) {
-      const rawImagen = producto.getDataValue('imagen');
-      const catNombre = producto.categoria ? producto.categoria.nombre : '';
-      const subcatNombre = producto.subcategoria ? producto.subcategoria.nombre : '';
-
-      let shouldUpdate = false;
-
-      // Si no tiene imagen
-      if (!rawImagen) {
-        shouldUpdate = true;
-      } else if (Buffer.isBuffer(rawImagen)) {
-        const text = rawImagen.toString('utf8').trim();
-        // Si contiene texto como "default.jpg" o longitud muy pequeña
-        if (text === 'default.jpg' || rawImagen.length <= 100) {
-          shouldUpdate = true;
-        }
-      } else if (typeof rawImagen === 'string') {
-        if (rawImagen === 'default.jpg' || rawImagen === 'data:image/jpeg;base64,ZGVmYXVsdC5qcGc=') {
-          shouldUpdate = true;
-        }
-      }
-
-      // Si es un producto con imagen corrupta o default, asignarle SVG de su subcategoría
-      if (shouldUpdate) {
-        const svgContent = getSvgForSubcategory(subcatNombre, catNombre);
-        const svgBuffer = Buffer.from(svgContent, 'utf8');
-
-        await producto.update({
-          imagen: svgBuffer,
-          mimeType: 'image/svg+xml'
-        });
-
+      const updated = await updateProductImageIfNeeded(producto);
+      if (updated) {
         actualizados++;
-        console.log(`✅ [${producto.id}] "${producto.nombre}" (${catNombre} > ${subcatNombre}) actualizado con imagen SVG.`);
-      } else {
-        console.log(`ℹ️ [${producto.id}] "${producto.nombre}" ya cuenta con imagen válida.`);
       }
     }
 
