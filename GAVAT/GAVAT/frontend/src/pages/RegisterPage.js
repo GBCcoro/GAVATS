@@ -6,10 +6,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Alert, InputGroup } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { isValidEmail, isValidPhone } from '../utils/helpers';
+import { isValidEmail } from '../utils/helpers';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -21,6 +21,8 @@ const RegisterPage = () => {
     telefono: '',
     direccion: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [tieneCarrito, setTieneCarrito] = useState(false);
@@ -34,10 +36,19 @@ const RegisterPage = () => {
   }, []);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    if (name === 'telefono') {
+      const numericValue = value.replace(/\D/g, '').slice(0, 10);
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue,
+      }));
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -59,8 +70,8 @@ const RegisterPage = () => {
       return;
     }
 
-    if (formData.telefono && !isValidPhone(formData.telefono)) {
-      setError('Teléfono inválido (debe ser 10 dígitos iniciando con 3)');
+    if (formData.telefono && formData.telefono.length !== 10) {
+      setError('El teléfono debe tener exactamente 10 dígitos numéricos (ej: 3001234567)');
       return;
     }
 
@@ -150,28 +161,51 @@ const RegisterPage = () => {
                   <Col md={6}>
                     <Form.Group className="mb-3">
                       <Form.Label className="register-label">Contraseña *</Form.Label>
-                      <Form.Control
-                        type="password"
-                        name="password"
-                        placeholder="Mínimo 6 caracteres"
-                        value={formData.password}
-                        onChange={handleChange}
-                        required
-                        className="register-input"
-                      />
+                      <InputGroup>
+                        <Form.Control
+                          type={showPassword ? 'text' : 'password'}
+                          name="password"
+                          placeholder="Mínimo 6 caracteres"
+                          value={formData.password}
+                          onChange={handleChange}
+                          required
+                          className="register-input register-password-input"
+                        />
+                        <Button
+                          variant="outline-secondary"
+                          type="button"
+                          className="register-password-toggle-btn"
+                          onClick={() => setShowPassword(!showPassword)}
+                          aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                        >
+                          <i className={`bi bi-eye${showPassword ? '-slash' : ''}`}></i>
+                        </Button>
+                      </InputGroup>
                     </Form.Group>
                   </Col>
                   <Col md={6}>
                     <Form.Group className="mb-3">
                       <Form.Label className="register-label">Confirmar Contraseña *</Form.Label>
-                      <Form.Control
-                        type="password"
-                        name="confirmPassword"
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                        required
-                        className="register-input"
-                      />
+                      <InputGroup>
+                        <Form.Control
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          name="confirmPassword"
+                          placeholder="Repite la contraseña"
+                          value={formData.confirmPassword}
+                          onChange={handleChange}
+                          required
+                          className="register-input register-password-input"
+                        />
+                        <Button
+                          variant="outline-secondary"
+                          type="button"
+                          className="register-password-toggle-btn"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                        >
+                          <i className={`bi bi-eye${showConfirmPassword ? '-slash' : ''}`}></i>
+                        </Button>
+                      </InputGroup>
                     </Form.Group>
                   </Col>
                 </Row>
@@ -179,16 +213,17 @@ const RegisterPage = () => {
                 <Form.Group className="mb-3">
                   <Form.Label className="register-label">Teléfono</Form.Label>
                   <Form.Control
-                    type="text"
+                    type="tel"
+                    inputMode="numeric"
                     name="telefono"
-                    placeholder="3001234567"
+                    placeholder="Ej: 3001234567"
                     value={formData.telefono}
                     onChange={handleChange}
                     maxLength="10"
                     className="register-input"
                   />
                   <Form.Text className="register-hint">
-                    10 dígitos, iniciando con 3
+                    10 dígitos numéricos (ej: 3001234567)
                   </Form.Text>
                 </Form.Group>
 
@@ -272,6 +307,32 @@ const RegisterPage = () => {
         .register-input:focus {
           border-color: var(--bs-gold, #f5c271);
           box-shadow: 0 0 0 3px rgba(145, 105, 52, 0.1);
+        }
+        .register-password-input {
+          border-top-right-radius: 0 !important;
+          border-bottom-right-radius: 0 !important;
+        }
+        .register-password-toggle-btn {
+          border-top-right-radius: 0.75rem !important;
+          border-bottom-right-radius: 0.75rem !important;
+          border-top-left-radius: 0 !important;
+          border-bottom-left-radius: 0 !important;
+          border: 1px solid var(--gray-300, #d1d5db);
+          border-left: none;
+          background-color: var(--bg, #ffffff);
+          color: var(--bg-negativo, #192847);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0.625rem 0.85rem;
+          transition: all 0.3s ease;
+        }
+        .register-password-toggle-btn:hover,
+        .register-password-toggle-btn:focus {
+          background-color: var(--gray-100, #f3f4f6);
+          color: var(--bs-gold-dark, #c7984e);
+          border-color: var(--gray-300, #d1d5db);
+          box-shadow: none;
         }
         .register-hint {
           color: var(--gray-600, #4b5563);

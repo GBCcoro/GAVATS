@@ -9,7 +9,9 @@
 // Importa el modelo Usuario desde la carpeta models.
 // Este modelo representa la tabla 'Usuario' en la BD y permite hacer operaciones CRUD.
 
+const { Op } = require("sequelize");
 const Usuario = require("../models/Usuario");
+const Pedido = require("../models/Pedido");
 // Importa la función generateToken desde config/jwt.js.
 // Se usa para crear un token JWT después de un registro o login exitoso.
 
@@ -29,25 +31,26 @@ const { handleServerError } = require("./_sharedControllerHelpers");
 const register = async (req, res) => {
   try {
     // Desestructura los datos enviados en el body de la petición HTTP.
-    // req.body contiene los datos que el cliente envía en formato JSON.
-    const { nombre, email, password, telefono, direccion } = req.body;
+    const { nombre, apellido, email, password, telefono, direccion } = req.body;
+    
     // VALIDACIÓN 1: Verifica que los campos obligatorios existan.
-    // El operador ! convierte a booleano: si es vacío, null o undefined, retorna true.
     if (!email || !password) {
       return res.status(400).json({
         success: false,
         message: "Faltan campos requeridos: email y password son obligatorios",
       });
     }
-    // VALIDACIÓN 2: Verifica que el email tenga un formato válido usando una expresión regular.
-    // La regex valida: texto@texto.texto (estructura básica de un email)
+
+    // VALIDACIÓN 2: Verifica que el email tenga un formato válido
     const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    const emailNormalizado = String(email).trim().toLowerCase();
+    if (!emailRegex.test(emailNormalizado)) {
       return res.status(400).json({
         success: false,
         message: "Formato de email inválido",
       });
     }
+
     // VALIDACIÓN 3: Verifica que la contraseña tenga al menos 6 caracteres.
     if (password.length < 6) {
       return res.status(400).json({
@@ -55,29 +58,39 @@ const register = async (req, res) => {
         message: "La contraseña debe tener al menos 6 caracteres",
       });
     }
+
     // VALIDACIÓN 4: Busca en la BD si ya existe un usuario con ese email.
-    const usuarioExistente = await Usuario.findOne({ where: { email } });
+    const usuarioExistente = await Usuario.findOne({ where: { email: emailNormalizado } });
     if (usuarioExistente) {
       return res.status(400).json({
         success: false,
         message: "El email ya está registrado",
       });
     }
+
+    // Procesar y formatear nombre completo si viene nombre y/o apellido
+    const partesNombre = [nombre, apellido].filter(Boolean).map(p => String(p).trim()).filter(Boolean);
+    const nombreCompleto = partesNombre.length > 0 ? partesNombre.join(' ') : null;
+
+    // Limpieza de campos opcionales (máximo 10 dígitos numéricos para teléfono)
+    const telefonoLimpio = telefono && String(telefono).trim() !== '' ? String(telefono).replace(/\D/g, '').slice(0, 10) : null;
+    const direccionLimpia = direccion && String(direccion).trim() !== '' ? String(direccion).trim() : null;
+
     // CREAR USUARIO en la base de datos.
     const nuevoUsuario = await Usuario.create({
-      nombre: nombre || null, // Nombre opcional
-      email, // Email (único)
-      password, // Contraseña (será hasheada por el hook)
-      telefono: telefono || null, // Teléfono opcional
-      direccion: direccion || null, // Dirección opcional
-      rol: "cliente", // Fuerza rol 'cliente' por seguridad
+      nombre: nombreCompleto,
+      email: emailNormalizado,
+      password,
+      telefono: telefonoLimpio,
+      direccion: direccionLimpia,
+      rol: "cliente",
     });
+
     // GENERAR TOKEN JWT con los datos básicos del usuario recién creado.
-    // Este token se envía al cliente para que lo use en las siguientes peticiones.
     const token = generateToken({
-      id: nuevoUsuario.id, // ID del usuario en la BD
-      email: nuevoUsuario.email, // Email del usuario
-      rol: nuevoUsuario.rol, // Rol del usuario ('cliente')
+      id: nuevoUsuario.id,
+      email: nuevoUsuario.email,
+      rol: nuevoUsuario.rol,
     });
     // PREPARAR RESPUESTA: convierte el objeto Sequelize a JSON plano
     // y elimina el campo password para no enviarlo al cliente por seguridad.
@@ -234,36 +247,117 @@ const updateMe = async (req, res) => {
   try {
     // Solo extrae los campos que el usuario tiene PERMITIDO cambiar.
     // No extrae 'rol' ni 'activo' por seguridad.
-    const { nombre, apellido, telefono, direccion } = req.body;
-    // Busca el usuario en la BD por su ID (viene del token via middleware)
-    const usuario = await Usuario.findByPk(req.usuario.id);
+    const { nombre, apellido, email, telefono, direccion, passwordActual } = req.body;
+    // Busca el usuario en la BD con scope 'withPassword' para verificar contraseña si es administrador
+    const usuario = await Usuario.scope("withPassword").findByPk(req.usuario.id);
     if (!usuario) {
       return res.status(404).json({
         success: false,
         message: "Usuario no encontrado",
       });
     }
+
+    // Regla de seguridad: Para hacer cambios en la cuenta de Administrador, es OBLIGATORIO ingresar la contraseña
+    if (usuario.rol === "administrador") {
+      if (!passwordActual) {
+        return res.status(400).json({
+          success: false,
+          message: "Se requiere ingresar tu contraseña actual para autorizar los cambios en la cuenta de Administrador",
+        });
+      }
+      const bcrypt = require("bcryptjs");
+      const esPasswordValida = await bcrypt.compare(passwordActual, usuario.password);
+      if (!esPasswordValida) {
+        return res.status(400).json({
+          success: false,
+          message: "Contraseña incorrecta. No se pudieron aplicar los cambios",
+        });
+      }
+    }
+
+    let tokenActualizado = null;
+
+    // Si viene email y es diferente al actual, validar formato y unicidad
+    if (email !== undefined && email !== null) {
+      const emailNormalizado = String(email).trim().toLowerCase();
+      if (!emailNormalizado) {
+        return res.status(400).json({
+          success: false,
+          message: "El correo electrónico no puede estar vacío",
+        });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailNormalizado)) {
+        return res.status(400).json({
+          success: false,
+          message: "Formato de correo electrónico inválido",
+        });
+      }
+
+      if (emailNormalizado !== usuario.email.toLowerCase()) {
+        // Regla: El auxiliar no tiene permitido modificar su correo electrónico
+        if (usuario.rol === "auxiliar") {
+          return res.status(403).json({
+            success: false,
+            message: "Las cuentas con rol Auxiliar no tienen permitido modificar su correo electrónico",
+          });
+        }
+
+        const usuarioExistente = await Usuario.findOne({
+          where: {
+            email: emailNormalizado,
+            id: { [Op.ne]: usuario.id },
+          },
+        });
+
+        if (usuarioExistente) {
+          return res.status(400).json({
+            success: false,
+            message: "El correo electrónico ya está registrado por otro usuario",
+          });
+        }
+
+        usuario.email = emailNormalizado;
+        tokenActualizado = generateToken({
+          id: usuario.id,
+          email: usuario.email,
+          rol: usuario.rol,
+        });
+      }
+    }
+
     // ACTUALIZAR CAMPOS: solo actualiza si el campo viene definido en el body.
-    // La condición !== undefined permite enviar valores vacíos o null intencionalmente.
-    // Si el campo no viene en el body, no lo modifica (mantiene el valor actual).
     if (nombre !== undefined) usuario.nombre = nombre;
     if (apellido !== undefined) usuario.apellido = apellido;
     if (telefono !== undefined) usuario.telefono = telefono;
     if (direccion !== undefined) usuario.direccion = direccion;
+
     // .save() persiste los cambios en la base de datos.
-    // Sequelize genera un UPDATE SQL solo con los campos que cambiaron.
     await usuario.save();
+
     // Responde con los datos actualizados.
-    // toJSON() convierte el objeto Sequelize a un objeto plano
-    // y el modelo excluye automáticamente el password en toJSON().
     res.json({
       success: true,
       message: "Perfil actualizado exitosamente",
       data: {
         usuario: usuario.toJSON(),
+        ...(tokenActualizado ? { token: tokenActualizado } : {}),
       },
     });
   } catch (error) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({
+        success: false,
+        message: "El correo electrónico ya está registrado por otro usuario",
+      });
+    }
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: error.errors?.[0]?.message || "Datos de perfil inválidos",
+      });
+    }
     return handleServerError(res, error, "Error al actualizar perfil");
   }
 };
@@ -331,6 +425,118 @@ const changePassword = async (req, res) => {
     return handleServerError(res, error, "Error al cambiar contraseña");
   }
 };
+
+/**
+ * Desactivar cuenta propia (confirmación sencilla, solo para clientes)
+ *
+ * Ruta: PUT /api/auth/deactivate
+ * Headers: { Authorization: 'Bearer TOKEN' }
+ */
+const deactivateMe = async (req, res) => {
+  try {
+    const usuario = await Usuario.findByPk(req.usuario.id);
+    if (!usuario) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado",
+      });
+    }
+
+    // Regla de seguridad: Solo clientes pueden desactivarse desde su perfil
+    if (usuario.rol !== "cliente") {
+      return res.status(403).json({
+        success: false,
+        message: "Solo los clientes pueden desactivar su propia cuenta desde el perfil",
+      });
+    }
+
+    // Desactivar la cuenta (pasa a estado Inactivo)
+    usuario.activo = false;
+    await usuario.save();
+
+    return res.json({
+      success: true,
+      message: "Cuenta desactivada exitosamente",
+    });
+  } catch (error) {
+    return handleServerError(res, error, "Error al desactivar la cuenta");
+  }
+};
+
+/**
+ * Eliminar cuenta propia definitivamente (requiere correo y contraseña, solo para clientes)
+ *
+ * Ruta: DELETE /api/auth/me  o  POST /api/auth/delete-account
+ * Headers: { Authorization: 'Bearer TOKEN' }
+ * Body: { email, password }
+ */
+const deleteMe = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Se requiere ingresar tu correo y contraseña para confirmar la eliminación",
+      });
+    }
+
+    const usuario = await Usuario.scope("withPassword").findByPk(req.usuario.id);
+    if (!usuario) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado",
+      });
+    }
+
+    // Regla de seguridad: Solo clientes pueden auto-eliminarse desde su perfil
+    if (usuario.rol !== "cliente") {
+      return res.status(403).json({
+        success: false,
+        message: "Solo los clientes pueden eliminar su cuenta desde el perfil",
+      });
+    }
+
+    // Verificar que el correo ingresado coincida con la cuenta del usuario autenticado
+    if (String(email).trim().toLowerCase() !== usuario.email.toLowerCase()) {
+      return res.status(400).json({
+        success: false,
+        message: "El correo electrónico no coincide con tu cuenta actual",
+      });
+    }
+
+    // Verificar la contraseña con bcrypt
+    const bcrypt = require("bcryptjs");
+    const esPasswordValida = await bcrypt.compare(password, usuario.password);
+    if (!esPasswordValida) {
+      return res.status(400).json({
+        success: false,
+        message: "Contraseña incorrecta. No se pudo eliminar la cuenta",
+      });
+    }
+
+    // Si tiene pedidos asociados, desactivar la cuenta para preservar la integridad referencial fiscal (RESTRICT)
+    const tienePedidos = await Pedido.count({ where: { usuarioId: usuario.id } });
+    if (tienePedidos > 0) {
+      usuario.activo = false;
+      await usuario.save();
+      return res.json({
+        success: true,
+        message: "Cuenta eliminada exitosamente",
+      });
+    }
+
+    // Si no tiene pedidos, se elimina definitivamente
+    await usuario.destroy();
+    return res.json({
+      success: true,
+      message: "Cuenta eliminada exitosamente",
+    });
+  } catch (error) {
+    return handleServerError(res, error, "Error al eliminar la cuenta");
+  }
+};
+
 // Exporta todas las funciones del controlador como un objeto.
 // Estas funciones se importan en routes/auth.routes.js para asociarlas a las rutas.
 // Ejemplo en rutas: router.post('/register', authController.register);
@@ -341,4 +547,6 @@ module.exports = {
   getMe, // GET /api/auth/me - Obtener perfil propio
   updateMe, // PUT /api/auth/me - Actualizar perfil propio
   changePassword, // PUT /api/auth/change-password - Cambiar contraseña
+  deactivateMe, // PUT /api/auth/deactivate - Desactivar cuenta propia (cliente)
+  deleteMe, // DELETE /api/auth/me - Eliminar cuenta propia definitiva con contraseña (cliente)
 };

@@ -17,7 +17,9 @@ const catalogoService = {
       
       if (filters.categoriaId) params.append('categoriaId', filters.categoriaId);
       if (filters.subcategoriaId) params.append('subcategoriaId', filters.subcategoriaId);
-      if (filters.buscar) params.append('buscar', filters.buscar);
+      if (filters.buscar && typeof filters.buscar === 'string' && filters.buscar.trim()) {
+        params.append('buscar', filters.buscar.trim());
+      }
       if (filters.precioMin) params.append('precioMin', filters.precioMin);
       if (filters.precioMax) params.append('precioMax', filters.precioMax);
       if (filters.pagina) params.append('pagina', filters.pagina);

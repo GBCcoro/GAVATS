@@ -27,6 +27,10 @@ const ProductCard = memo(({ producto, onAddToCart, showActions = true }) => {
             src={getImageUrl(producto.imagen)}
             alt={producto.nombre}
             style={{ height: '200px', objectFit: 'cover', width: '100%' }}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = '/producto-default.jpg';
+            }}
           />
         </div>
         {producto.stock > 0 && producto.stock < 10 && (
@@ -66,86 +70,21 @@ const ProductCard = memo(({ producto, onAddToCart, showActions = true }) => {
         
         {showActions && producto.stock > 0 && (
           <Button
-            className="btn-add-to-cart w-100"
+            className="btn-add-to-cart w-100 d-flex align-items-center justify-content-center gap-2"
             onClick={handleAddToCart}
           >
-            <i className="bi bi-cart-plus" />
-            {' '}
-            Agregar al carrito
+            <i className="bi bi-cart-plus-fill fs-6" />
+            <span>Agregar al carrito</span>
           </Button>
         )}
         
         {showActions && producto.stock === 0 && (
-          <Button variant="secondary" className="w-100" disabled style={{ borderRadius: '0.75rem' }}>
-            No disponible
+          <Button variant="secondary" className="btn-sin-stock w-100 d-flex align-items-center justify-content-center gap-2" disabled>
+            <i className="bi bi-slash-circle" />
+            <span>No disponible</span>
           </Button>
         )}
       </Card.Body>
-
-      {/* Estilos personalizados usando las variables globales */}
-      <style>{`
-        .product-card {
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          border: none !important;
-          background: var(--bg, #ffffff);
-        }
-        .product-card:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
-        }
-        .product-card:hover .product-title {
-          color: var(--bs-oldGold-bg, #916934);
-        }
-        .product-title {
-          color: var(--bg-negativo, #192847);
-          font-weight: 600;
-          transition: color 0.3s ease;
-        }
-        .product-price {
-          background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e));
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-          font-weight: 700;
-        }
-        .badge-warning-custom {
-          background-color: var(--bg-aviso, #F7B517);
-          color: var(--fnt-black, #000000);
-          padding: 0.5rem 0.75rem;
-          border-radius: 0.5rem;
-          font-weight: 500;
-        }
-        .badge-stock-success {
-          background: linear-gradient(135deg, #10b981, #059669);
-          padding: 0.5rem 0.75rem;
-          border-radius: 0.5rem;
-          font-weight: 500;
-          color: white;
-        }
-        .badge-stock-danger {
-          background: linear-gradient(135deg, #ef4444, #dc2626);
-          padding: 0.5rem 0.75rem;
-          border-radius: 0.5rem;
-          font-weight: 500;
-        }
-        .btn-add-to-cart {
-          background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e));
-          border: none;
-          border-radius: 0.75rem;
-          padding: 0.625rem;
-          font-weight: 500;
-          color: var(--fnt-black, #000000);
-          transition: all 0.3s ease;
-        }
-        .btn-add-to-cart:hover {
-          background: linear-gradient(135deg, var(--bs-gold-dark, #c7984e), var(--bs-oldGold-bg, #916934));
-          transform: translateY(-2px);
-          box-shadow: 0 4px 15px 0 rgba(145, 105, 52, 0.3);
-        }
-        .btn-add-to-cart:active {
-          transform: translateY(0);
-        }
-      `}</style>
     </Card>
   );
 });

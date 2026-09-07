@@ -6,13 +6,14 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Alert, InputGroup } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [tieneCarrito, setTieneCarrito] = useState(false);
@@ -91,14 +92,25 @@ const LoginPage = () => {
                     <i className="bi bi-lock me-2"></i>{' '}
                     Contraseña
                   </Form.Label>
-                  <Form.Control
-                    type="password"
-                    placeholder="Tu contraseña"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="login-input"
-                  />
+                  <InputGroup>
+                    <Form.Control
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Tu contraseña"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="login-input login-password-input"
+                    />
+                    <Button
+                      variant="outline-secondary"
+                      type="button"
+                      className="login-password-toggle-btn"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                    >
+                      <i className={`bi bi-eye${showPassword ? '-slash' : ''}`}></i>
+                    </Button>
+                  </InputGroup>
                 </Form.Group>
 
                 <Button
@@ -168,6 +180,32 @@ const LoginPage = () => {
         .login-input:focus {
           border-color: var(--bs-gold, #f5c271);
           box-shadow: 0 0 0 3px rgba(145, 105, 52, 0.1);
+        }
+        .login-password-input {
+          border-top-right-radius: 0 !important;
+          border-bottom-right-radius: 0 !important;
+        }
+        .login-password-toggle-btn {
+          border-top-right-radius: 0.75rem !important;
+          border-bottom-right-radius: 0.75rem !important;
+          border-top-left-radius: 0 !important;
+          border-bottom-left-radius: 0 !important;
+          border: 1px solid var(--gray-300, #d1d5db);
+          border-left: none;
+          background-color: var(--bg, #ffffff);
+          color: var(--bg-negativo, #192847);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0.625rem 1rem;
+          transition: all 0.3s ease;
+        }
+        .login-password-toggle-btn:hover,
+        .login-password-toggle-btn:focus {
+          background-color: var(--gray-100, #f3f4f6);
+          color: var(--bs-gold-dark, #c7984e);
+          border-color: var(--gray-300, #d1d5db);
+          box-shadow: none;
         }
         .login-btn {
           background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e));

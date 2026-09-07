@@ -36,23 +36,30 @@ function buildProductListQuery(query = {}, opts = {}) {
   };
 
   const applyCategoryFilters = () => {
-    if (categoriaId) where.categoriaId = Number.parseInt(categoriaId, 10);
-    if (subcategoriaId) where.subcategoriaId = Number.parseInt(subcategoriaId, 10);
+    if (categoriaId && !Number.isNaN(Number.parseInt(categoriaId, 10))) {
+      where.categoriaId = Number.parseInt(categoriaId, 10);
+    }
+    if (subcategoriaId && !Number.isNaN(Number.parseInt(subcategoriaId, 10))) {
+      where.subcategoriaId = Number.parseInt(subcategoriaId, 10);
+    }
   };
 
   const applySearchFilter = () => {
-    if (!buscar) return;
+    if (!buscar || typeof buscar !== 'string' || !buscar.trim()) return;
+    const term = buscar.trim();
     where[Op.or] = [
-      { nombre: { [Op.like]: `%${buscar}%` } },
-      { descripcion: { [Op.like]: `%${buscar}%` } },
+      { nombre: { [Op.like]: `%${term}%` } },
+      { descripcion: { [Op.like]: `%${term}%` } },
     ];
   };
 
   const applyPriceFilter = () => {
-    if (precioMin === undefined && precioMax === undefined) return;
+    const min = precioMin !== undefined && precioMin !== '' ? Number.parseFloat(precioMin) : NaN;
+    const max = precioMax !== undefined && precioMax !== '' ? Number.parseFloat(precioMax) : NaN;
+    if (Number.isNaN(min) && Number.isNaN(max)) return;
     where.precio = {};
-    if (precioMin !== undefined) where.precio[Op.gte] = Number.parseFloat(precioMin);
-    if (precioMax !== undefined) where.precio[Op.lte] = Number.parseFloat(precioMax);
+    if (!Number.isNaN(min)) where.precio[Op.gte] = min;
+    if (!Number.isNaN(max)) where.precio[Op.lte] = max;
   };
 
   const buildOrder = () => {
@@ -69,7 +76,23 @@ function buildProductListQuery(query = {}, opts = {}) {
           return [['createdAt', 'DESC']];
       }
     }
-    return [['nombre', 'ASC']];
+    switch (orden) {
+      case 'id_desc':
+        return [['id', 'DESC']];
+      case 'precio_asc':
+        return [['precio', 'ASC']];
+      case 'precio_desc':
+        return [['precio', 'DESC']];
+      case 'nombre_desc':
+        return [['nombre', 'DESC']];
+      case 'nombre':
+      case 'nombre_asc':
+        return [['nombre', 'ASC']];
+      case 'id_asc':
+      case 'id':
+      default:
+        return [['id', 'ASC']];
+    }
   };
 
   // Aplicar filtros

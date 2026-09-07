@@ -76,6 +76,9 @@ const pedidoController = require('../controllers/pedido.controller');
 // Funciones: obtenerComentarios, moderarComentario
 const comentarioController = require('../controllers/comentario.controller');
 
+// Controlador de dashboard → desde controllers/dashboard.controller.js
+const dashboardController = require('../controllers/dashboard.controller');
+
 // ==========================================
 // MIDDLEWARE GLOBAL DEL ROUTER
 // ==========================================
@@ -84,6 +87,13 @@ const comentarioController = require('../controllers/comentario.controller');
 // Si alguno falla, retorna error 401/403 y NO llega al controlador
 // Esto evita repetir estos middlewares en cada ruta individual
 router.use(verificarAuth, esAdminOAuxiliar);
+
+// ==========================================
+// RUTAS DE DASHBOARD (/api/admin/dashboard)
+// ==========================================
+
+// GET /api/admin/dashboard/stats → Métricas consolidadas exactas por conteo en base de datos
+router.get('/dashboard/stats', dashboardController.getDashboardStats);
 
 // ==========================================
 // RUTAS DE CATEGORÍAS (/api/admin/categorias)

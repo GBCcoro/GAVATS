@@ -90,6 +90,8 @@ const comentariosService = {
       const params = new URLSearchParams();
       if (filters.pagina) params.append('pagina', filters.pagina);
       if (filters.limite) params.append('limite', filters.limite);
+      if (filters.buscar) params.append('buscar', filters.buscar);
+      if (filters.estado && filters.estado !== 'todos') params.append('estado', filters.estado);
       
       const response = await api.get(`/admin/comentarios?${params}`);
       return response.data;

@@ -19,6 +19,7 @@ const {
   DetallePedido,
   Producto,
 } = require("../models");
+const { Op } = require("sequelize");
 
 const {
   generarFacturaPDF,
@@ -366,13 +367,26 @@ exports.verDetalleFactura = async (req, res) => {
 
 exports.listarFacturasAdmin = async (req, res) => {
   try {
-    const { page, limit, offset } = parsePaginationQuery(req.query, {
-      defaultLimit: 20,
-    });
+    const pageNum = Number.parseInt(req.query.pagina || req.query.page, 10) || 1;
+    const limitNum = Math.min(Number.parseInt(req.query.limite || req.query.limit, 10) || 25, 1000);
+    const offset = (pageNum - 1) * limitNum;
+
     const where = {};
-    if (req.query.estado) {
+    if (req.query.estado && req.query.estado !== 'todos') {
       where.estado = req.query.estado;
     }
+    if (req.query.pedidoId) {
+      where.pedidoId = req.query.pedidoId;
+    }
+    if (req.query.buscar && req.query.buscar.trim()) {
+      const termino = `%${req.query.buscar.trim()}%`;
+      where[Op.or] = [
+        { numeroFactura: { [Op.like]: termino } },
+        { clienteNombre: { [Op.like]: termino } },
+        { clienteEmail: { [Op.like]: termino } }
+      ];
+    }
+
     const { count, rows } = await Factura.findAndCountAll({
       where,
       include: [
@@ -385,14 +399,15 @@ exports.listarFacturasAdmin = async (req, res) => {
           ],
         },
       ],
-      limit,
+      limit: limitNum,
       offset,
       order: [["fechaEmision", "DESC"]],
     });
+
     res.status(200).json({
       success: true,
       data: {
-        ...buildPaginationMeta(count, page, limit),
+        ...buildPaginationMeta(count, pageNum, limitNum),
         facturas: rows.map((f) => ({
           id: f.id,
           numeroFactura: f.numeroFactura,

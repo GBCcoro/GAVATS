@@ -50,9 +50,27 @@ export const formatDateTime = (dateString) => {
  * Obtener URL completa de la imagen
  */
 export const getImageUrl = (imagePath) => {
-  if (!imagePath) return '/producto-default.jpg';
+  if (!imagePath || imagePath === 'default.jpg' || imagePath === '/default.jpg') {
+    return '/producto-default.jpg';
+  }
 
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:')) {
+  if (typeof imagePath !== 'string') {
+    return '/producto-default.jpg';
+  }
+
+  // Filtrar Data URIs dummy o inválidos (como el base64 de la palabra 'default.jpg')
+  if (imagePath.startsWith('data:')) {
+    if (imagePath.includes('ZGVmYXVsdC5qcGc=') || (imagePath.length < 80 && !imagePath.includes('<svg'))) {
+      return '/producto-default.jpg';
+    }
+    return imagePath;
+  }
+
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+
+  if (imagePath.startsWith('/assests/') || imagePath.startsWith('/assets/') || imagePath.startsWith('/producto-default')) {
     return imagePath;
   }
 
@@ -89,11 +107,12 @@ export const isValidEmail = (email) => {
 };
 
 /**
- * Validar teléfono colombiano
+ * Validar teléfono colombiano (exactamente 10 dígitos numéricos)
  */
 export const isValidPhone = (phone) => {
-  const re = /^3\d{9}$/;
-  return re.test(phone);
+  if (!phone) return true;
+  const digits = String(phone).replace(/\D/g, '');
+  return digits.length === 10;
 };
 
 /**

@@ -40,10 +40,10 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 function AppContent() {
   return (
     <Router>
-      <div className="d-flex flex-column min-vh-100">
+      <div className="app-container d-flex flex-column min-vh-100">
         <Navbar />
         
-        <main className="flex-grow-1">
+        <main className="flex-grow-1 main-content-wrapper">
           <Routes>
             {/* Rutas públicas */}
             <Route path="/" element={<HomePage />} />

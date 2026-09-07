@@ -69,12 +69,13 @@ const crearPedido = async (req, res) => {
       });
     }
     
-    // VALIDACIÓN 1b: El teléfono es obligatorio
-    if (!telefono || telefono.trim() === '') {
+    // VALIDACIÓN 1b: El teléfono es obligatorio y debe tener 10 dígitos numéricos
+    const telLimpio = telefono ? String(telefono).replace(/\D/g, '').slice(0, 10) : '';
+    if (!telLimpio || telLimpio.length !== 10) {
       await t.rollback();
       return res.status(400).json({
         success: false,
-        message: 'El teléfono es requerido'
+        message: 'El teléfono debe tener exactamente 10 dígitos numéricos'
       });
     }
     
@@ -154,7 +155,7 @@ const crearPedido = async (req, res) => {
       total: totalPedido,            // Total calculado arriba
       estado: 'pendiente',           // Estado inicial del pedido
       direccionEnvio,                // Dirección enviada por el usuario
-      telefono,                      // Teléfono de contacto
+      telefono: telLimpio,           // Teléfono de contacto sanitizado
       metodoPago,                    // 'efectivo', 'tarjeta' o 'transferencia'
       notas: solicitudPedido || notasAdicionales || null  // Solicitud del pedido / notas opcionales
     }, { transaction: t });          // Parte de la transacción
@@ -260,7 +261,7 @@ const getMisPedidos = async (req, res) => {
           include: [{
             model: Producto,
             as: 'producto',
-            attributes: ['id', 'nombre', 'imagen']   // Solo datos básicos del producto
+            attributes: ['id', 'nombre']   // Solo datos esenciales para listado (sin transferir imagen en base64)
           }]
         }
       ],
@@ -471,15 +472,47 @@ const cancelarPedido = async (req, res) => {
  */
 const getAllPedidos = async (req, res) => {
   try {
+    const { Op } = require('sequelize');
     // Extrae filtros y paginación de los query params
-    const { estado, usuarioId, pagina = 1, limite = 20 } = req.query;
+    const { estado, usuarioId, buscar, fechaInicio, fechaFin, pagina = 1, limite = 25 } = req.query;
     
     // Construye filtros dinámicamente según lo que se envíe
     const where = {};
-    if (estado) where.estado = estado;           // Filtro por estado
-    if (usuarioId) where.usuarioId = usuarioId;  // Filtro por usuario específico
+    if (estado && estado !== 'todos') where.estado = estado; // Filtro por estado
+    if (usuarioId) where.usuarioId = usuarioId; // Filtro por usuario específico
     
-    const offset = (Number.parseInt(pagina, 10) - 1) * Number.parseInt(limite, 10);
+    // Filtro por rango de fechas
+    if (fechaInicio || fechaFin) {
+      where.createdAt = {};
+      if (fechaInicio) {
+        const dInicio = new Date(fechaInicio);
+        dInicio.setHours(0, 0, 0, 0);
+        where.createdAt[Op.gte] = dInicio;
+      }
+      if (fechaFin) {
+        const dFin = new Date(fechaFin);
+        dFin.setHours(23, 59, 59, 999);
+        where.createdAt[Op.lte] = dFin;
+      }
+    }
+
+    // Búsqueda por ID, nombre o email del usuario
+    if (buscar && typeof buscar === 'string' && buscar.trim()) {
+      const term = buscar.trim();
+      const numId = Number.parseInt(term, 10);
+      const orConditions = [
+        { '$usuario.nombre$': { [Op.like]: `%${term}%` } },
+        { '$usuario.email$': { [Op.like]: `%${term}%` } }
+      ];
+      if (!Number.isNaN(numId) && String(numId) === term) {
+        orConditions.push({ id: numId });
+      }
+      where[Op.or] = orConditions;
+    }
+
+    const paginaNumero = Math.max(1, Number.parseInt(pagina, 10) || 1);
+    const limiteNumero = Math.max(1, Math.min(1000, Number.parseInt(limite, 10) || 25));
+    const offset = (paginaNumero - 1) * limiteNumero;
     
     // Consulta todos los pedidos con datos del usuario y detalles
     const { count, rows: pedidos } = await Pedido.findAndCountAll({
@@ -488,7 +521,7 @@ const getAllPedidos = async (req, res) => {
         {
           model: Usuario,
           as: 'usuario',
-          attributes: ['id', 'nombre', 'email']    // Datos del usuario que hizo el pedido
+          attributes: ['id', 'nombre', 'email'] // Datos del usuario que hizo el pedido
         },
         {
           model: DetallePedido,
@@ -496,13 +529,14 @@ const getAllPedidos = async (req, res) => {
           include: [{
             model: Producto,
             as: 'producto',
-            attributes: ['id', 'nombre', 'imagen']
+            attributes: ['id', 'nombre'] // Proyección ligera sin transferir imagen en base64
           }]
         }
       ],
-      limit: Number.parseInt(limite, 10),
+      limit: limiteNumero,
       offset,
-      order: [['createdAt', 'DESC']]     // Más recientes primero
+      order: [['createdAt', 'DESC']], // Más recientes primero
+      distinct: true
     });
     
     // Responde con todos los pedidos y la paginación
@@ -512,9 +546,9 @@ const getAllPedidos = async (req, res) => {
         pedidos,
         paginacion: {
           total: count,
-          pagina: Number.parseInt(pagina),
-          limite: Number.parseInt(limite),
-          totalPaginas: Math.ceil(count / Number.parseInt(limite))
+          pagina: paginaNumero,
+          limite: limiteNumero,
+          totalPaginas: Math.ceil(count / limiteNumero)
         }
       }
     });
