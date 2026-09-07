@@ -16,6 +16,63 @@ const { DataTypes } = require('sequelize');
 // Importa la instancia 'sequelize' (conexión activa a MySQL) desde config/database.js
 const { sequelize } = require('../config/database');
 
+const IMAGE_URL_PREFIXES = ['http://', 'https://', '/uploads/', 'uploads/'];
+const IMAGE_EXTENSION_REGEX = /\.(jpg|jpeg|png|webp|svg|gif)$/i;
+
+/**
+ * Determina si un buffer contiene una ruta de texto plano o URL en lugar de bytes binarios.
+ */
+function extractTextPathOrUrl(buffer) {
+  if (buffer.length >= 300) {
+    return null;
+  }
+  const text = buffer.toString('utf8').trim();
+  const hasPrefix = IMAGE_URL_PREFIXES.some((prefix) => text.startsWith(prefix));
+  if (hasPrefix || IMAGE_EXTENSION_REGEX.test(text)) {
+    return text;
+  }
+  return null;
+}
+
+/**
+ * Detecta el tipo MIME de una imagen a partir de sus magic bytes o contenido SVG.
+ */
+function detectMimeType(buffer, fallbackMime = 'image/jpeg') {
+  if (buffer.length >= 4) {
+    if (buffer[0] === 0xff && buffer[1] === 0xd8) {
+      return 'image/jpeg';
+    }
+    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+      return 'image/png';
+    }
+    if (buffer.toString('utf8', 0, Math.min(buffer.length, 50)).includes('<svg')) {
+      return 'image/svg+xml';
+    }
+  }
+  return fallbackMime;
+}
+
+/**
+ * Convierte el valor de imagen (Buffer o string) en su representación para el frontend.
+ */
+function formatImageValue(value, fallbackMime = 'image/jpeg') {
+  if (!value) {
+    return null;
+  }
+  if (!Buffer.isBuffer(value)) {
+    return value;
+  }
+
+  const textPath = extractTextPathOrUrl(value);
+  if (textPath) {
+    return textPath;
+  }
+
+  const mimeType = detectMimeType(value, fallbackMime);
+  const base64 = value.toString('base64');
+  return `data:${mimeType};base64,${base64}`;
+}
+
 /**
  * sequelize.define() crea el modelo que mapea a la tabla 'productos'.
  * 'Producto' → nombre interno del modelo
@@ -94,39 +151,8 @@ const Producto = sequelize.define('Producto', {
     allowNull: true,                   // Opcional: un producto puede no tener imagen
     get() {
       const value = this.getDataValue('imagen');
-      if (!value) return null;
-      if (Buffer.isBuffer(value)) {
-        // Verificar si el buffer contiene un nombre de archivo de texto plano o URL
-        if (value.length < 300) {
-          const text = value.toString('utf8').trim();
-          if (
-            text.startsWith('http://') ||
-            text.startsWith('https://') ||
-            text.startsWith('/uploads/') ||
-            text.startsWith('uploads/') ||
-            /\.(jpg|jpeg|png|webp|svg|gif)$/i.test(text)
-          ) {
-            return text;
-          }
-        }
-        
-        let mimeType = this.getDataValue('mimeType') || 'image/jpeg';
-        
-        // Detección automática por magic bytes si no se especificó o es SVG
-        if (value.length >= 4) {
-          if (value[0] === 0xff && value[1] === 0xd8) {
-            mimeType = 'image/jpeg';
-          } else if (value[0] === 0x89 && value[1] === 0x50 && value[2] === 0x4e && value[3] === 0x47) {
-            mimeType = 'image/png';
-          } else if (value.toString('utf8', 0, Math.min(value.length, 50)).includes('<svg')) {
-            mimeType = 'image/svg+xml';
-          }
-        }
-
-        const base64 = value.toString('base64');
-        return `data:${mimeType};base64,${base64}`;
-      }
-      return value;
+      const mimeType = this.getDataValue('mimeType') || 'image/jpeg';
+      return formatImageValue(value, mimeType);
     }
   },
 
