@@ -54,8 +54,8 @@ function buildProductListQuery(query = {}, opts = {}) {
   };
 
   const applyPriceFilter = () => {
-    const min = precioMin !== undefined && precioMin !== '' ? Number.parseFloat(precioMin) : NaN;
-    const max = precioMax !== undefined && precioMax !== '' ? Number.parseFloat(precioMax) : NaN;
+    const min = precioMin !== undefined && precioMin !== '' ? Number.parseFloat(precioMin) : Number.NaN;
+    const max = precioMax !== undefined && precioMax !== '' ? Number.parseFloat(precioMax) : Number.NaN;
     if (Number.isNaN(min) && Number.isNaN(max)) return;
     where.precio = {};
     if (!Number.isNaN(min)) where.precio[Op.gte] = min;

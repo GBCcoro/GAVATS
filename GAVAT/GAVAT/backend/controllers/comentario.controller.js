@@ -539,7 +539,7 @@ const obtenerTodosComentarios = async (req, res) => {
       }
     }
 
-    if (req.query.buscar && req.query.buscar.trim()) {
+    if (req.query.buscar?.trim()) {
       const termino = `%${req.query.buscar.trim()}%`;
       where[Op.or] = [
         { comentario: { [Op.like]: termino } },

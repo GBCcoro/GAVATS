@@ -71,7 +71,7 @@ const crearPedido = async (req, res) => {
     
     // VALIDACIÓN 1b: El teléfono es obligatorio y debe tener 10 dígitos numéricos
     const telLimpio = telefono ? String(telefono).replace(/\D/g, '').slice(0, 10) : '';
-    if (!telLimpio || telLimpio.length !== 10) {
+    if (telLimpio?.length !== 10) {
       await t.rollback();
       return res.status(400).json({
         success: false,

@@ -233,6 +233,127 @@ const getMe = async (req, res) => {
 };
 
 /**
+ * Valida la autorización por contraseña si el usuario es administrador.
+ * Devuelve un objeto con { status, message } si falla, o null si la autorización es válida o no aplica.
+ */
+const validateAdminPassword = async (usuario, passwordActual) => {
+  if (usuario.rol !== "administrador") {
+    return null;
+  }
+  if (!passwordActual) {
+    return {
+      status: 400,
+      message: "Se requiere ingresar tu contraseña actual para autorizar los cambios en la cuenta de Administrador",
+    };
+  }
+  const esPasswordValida = await usuario.compararPassword(passwordActual);
+  if (!esPasswordValida) {
+    return {
+      status: 400,
+      message: "Contraseña incorrecta. No se pudieron aplicar los cambios",
+    };
+  }
+  return null;
+};
+
+/**
+ * Valida formato y restricciones de cambio de email, y verifica unicidad.
+ * Devuelve { error, tokenActualizado }.
+ */
+const handleEmailUpdate = async (usuario, email) => {
+  if (email === undefined || email === null) {
+    return { error: null, tokenActualizado: null };
+  }
+
+  const emailNormalizado = String(email).trim().toLowerCase();
+  if (!emailNormalizado) {
+    return {
+      error: { status: 400, message: "El correo electrónico no puede estar vacío" },
+      tokenActualizado: null,
+    };
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
+  if (!emailRegex.test(emailNormalizado)) {
+    return {
+      error: { status: 400, message: "Formato de correo electrónico inválido" },
+      tokenActualizado: null,
+    };
+  }
+
+  if (emailNormalizado === usuario.email.toLowerCase()) {
+    return { error: null, tokenActualizado: null };
+  }
+
+  if (usuario.rol === "auxiliar") {
+    return {
+      error: {
+        status: 403,
+        message: "Las cuentas con rol Auxiliar no tienen permitido modificar su correo electrónico",
+      },
+      tokenActualizado: null,
+    };
+  }
+
+  const usuarioExistente = await Usuario.findOne({
+    where: {
+      email: emailNormalizado,
+      id: { [Op.ne]: usuario.id },
+    },
+  });
+
+  if (usuarioExistente) {
+    return {
+      error: {
+        status: 400,
+        message: "El correo electrónico ya está registrado por otro usuario",
+      },
+      tokenActualizado: null,
+    };
+  }
+
+  usuario.email = emailNormalizado;
+  const tokenActualizado = generateToken({
+    id: usuario.id,
+    email: usuario.email,
+    rol: usuario.rol,
+  });
+
+  return { error: null, tokenActualizado };
+};
+
+/**
+ * Aplica los campos de perfil permitidos que vengan definidos en la petición.
+ */
+const applyProfileUpdates = (usuario, fields) => {
+  const allowedFields = ["nombre", "apellido", "telefono", "direccion"];
+  for (const field of allowedFields) {
+    if (fields[field] !== undefined) {
+      usuario[field] = fields[field];
+    }
+  }
+};
+
+/**
+ * Maneja errores específicos al actualizar perfil (unicidad, validación Sequelize o error del servidor).
+ */
+const handleUpdateMeError = (res, error) => {
+  if (error.name === "SequelizeUniqueConstraintError") {
+    return res.status(400).json({
+      success: false,
+      message: "El correo electrónico ya está registrado por otro usuario",
+    });
+  }
+  if (error.name === "SequelizeValidationError") {
+    return res.status(400).json({
+      success: false,
+      message: error.errors?.[0]?.message || "Datos de perfil inválidos",
+    });
+  }
+  return handleServerError(res, error, "Error al actualizar perfil");
+};
+
+/**
  * Actualizar perfil del usuario autenticado
  *
  * Permite al usuario actualizar su información personal.
@@ -240,7 +361,7 @@ const getMe = async (req, res) => {
  *
  * Ruta: PUT /api/auth/me
  * Headers: { Authorization: 'Bearer TOKEN' }
- * Body: { nombre, apellido, telefono, direccion }
+ * Body: { nombre, apellido, email, telefono, direccion, passwordActual }
  */
 
 const updateMe = async (req, res) => {
@@ -258,86 +379,29 @@ const updateMe = async (req, res) => {
     }
 
     // Regla de seguridad: Para hacer cambios en la cuenta de Administrador, es OBLIGATORIO ingresar la contraseña
-    if (usuario.rol === "administrador") {
-      if (!passwordActual) {
-        return res.status(400).json({
-          success: false,
-          message: "Se requiere ingresar tu contraseña actual para autorizar los cambios en la cuenta de Administrador",
-        });
-      }
-      const bcrypt = require("bcryptjs");
-      const esPasswordValida = await bcrypt.compare(passwordActual, usuario.password);
-      if (!esPasswordValida) {
-        return res.status(400).json({
-          success: false,
-          message: "Contraseña incorrecta. No se pudieron aplicar los cambios",
-        });
-      }
+    const adminAuthError = await validateAdminPassword(usuario, passwordActual);
+    if (adminAuthError) {
+      return res.status(adminAuthError.status).json({
+        success: false,
+        message: adminAuthError.message,
+      });
     }
 
-    let tokenActualizado = null;
-
-    // Si viene email y es diferente al actual, validar formato y unicidad
-    if (email !== undefined && email !== null) {
-      const emailNormalizado = String(email).trim().toLowerCase();
-      if (!emailNormalizado) {
-        return res.status(400).json({
-          success: false,
-          message: "El correo electrónico no puede estar vacío",
-        });
-      }
-
-      const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
-      if (!emailRegex.test(emailNormalizado)) {
-        return res.status(400).json({
-          success: false,
-          message: "Formato de correo electrónico inválido",
-        });
-      }
-
-      if (emailNormalizado !== usuario.email.toLowerCase()) {
-        // Regla: El auxiliar no tiene permitido modificar su correo electrónico
-        if (usuario.rol === "auxiliar") {
-          return res.status(403).json({
-            success: false,
-            message: "Las cuentas con rol Auxiliar no tienen permitido modificar su correo electrónico",
-          });
-        }
-
-        const usuarioExistente = await Usuario.findOne({
-          where: {
-            email: emailNormalizado,
-            id: { [Op.ne]: usuario.id },
-          },
-        });
-
-        if (usuarioExistente) {
-          return res.status(400).json({
-            success: false,
-            message: "El correo electrónico ya está registrado por otro usuario",
-          });
-        }
-
-        usuario.email = emailNormalizado;
-        tokenActualizado = generateToken({
-          id: usuario.id,
-          email: usuario.email,
-          rol: usuario.rol,
-        });
-      }
+    // Validar formato, rol y unicidad si se actualiza el email
+    const { error: emailError, tokenActualizado } = await handleEmailUpdate(usuario, email);
+    if (emailError) {
+      return res.status(emailError.status).json({
+        success: false,
+        message: emailError.message,
+      });
     }
 
-    // ACTUALIZAR CAMPOS: solo actualiza si el campo viene definido en el body.
-    if (nombre !== undefined) usuario.nombre = nombre;
-    if (apellido !== undefined) usuario.apellido = apellido;
-    if (telefono !== undefined) usuario.telefono = telefono;
-    if (direccion !== undefined) usuario.direccion = direccion;
-
-    // .save() persiste los cambios en la base de datos.
+    // Actualizar campos de texto permitidos y persistir
+    applyProfileUpdates(usuario, { nombre, apellido, telefono, direccion });
     await usuario.save();
 
-    // Responde con los datos actualizados.
-    res.json({
+    // Responde con los datos actualizados
+    return res.json({
       success: true,
       message: "Perfil actualizado exitosamente",
       data: {
@@ -346,19 +410,7 @@ const updateMe = async (req, res) => {
       },
     });
   } catch (error) {
-    if (error.name === 'SequelizeUniqueConstraintError') {
-      return res.status(400).json({
-        success: false,
-        message: "El correo electrónico ya está registrado por otro usuario",
-      });
-    }
-    if (error.name === 'SequelizeValidationError') {
-      return res.status(400).json({
-        success: false,
-        message: error.errors?.[0]?.message || "Datos de perfil inválidos",
-      });
-    }
-    return handleServerError(res, error, "Error al actualizar perfil");
+    return handleUpdateMeError(res, error);
   }
 };
 

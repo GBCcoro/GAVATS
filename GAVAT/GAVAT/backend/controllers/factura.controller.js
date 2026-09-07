@@ -378,7 +378,7 @@ exports.listarFacturasAdmin = async (req, res) => {
     if (req.query.pedidoId) {
       where.pedidoId = req.query.pedidoId;
     }
-    if (req.query.buscar && req.query.buscar.trim()) {
+    if (req.query.buscar?.trim()) {
       const termino = `%${req.query.buscar.trim()}%`;
       where[Op.or] = [
         { numeroFactura: { [Op.like]: termino } },
