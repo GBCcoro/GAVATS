@@ -358,6 +358,9 @@ const Footer = memo(() => {
           font-family: var(--font-roboto, "Roboto Condensed", sans-serif);
           overflow: hidden;
           border-top: 1px solid rgba(197, 151, 74, 0.28);
+          content-visibility: auto;
+          contain-intrinsic-size: 1px 380px;
+          transform: translateZ(0);
         }
 
         .gavat-footer::before {
@@ -388,21 +391,20 @@ const Footer = memo(() => {
           background: radial-gradient(ellipse, rgba(197, 151, 74, 0.05) 0%, transparent 70%);
           pointer-events: none;
           z-index: 0;
+          contain: strict;
         }
 
         .footer-trust-strip {
           position: relative;
           z-index: 1;
-          background: rgba(13, 23, 42, 0.45);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-          backdrop-filter: blur(6px);
-          -webkit-backdrop-filter: blur(6px);
+          background: rgba(13, 23, 42, 0.75);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .trust-card {
           background: rgba(255, 255, 255, 0.025);
           border: 1px solid rgba(255, 255, 255, 0.06);
-          transition: all 0.25s ease;
+          transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
         }
 
         .trust-card:hover {
@@ -422,7 +424,7 @@ const Footer = memo(() => {
           justify-content: center;
           flex-shrink: 0;
           font-size: 0.95rem;
-          transition: all 0.25s ease;
+          transition: background 0.2s ease;
         }
 
         .trust-card:hover .trust-icon-box {
@@ -582,7 +584,7 @@ const Footer = memo(() => {
           justify-content: center;
           font-size: 0.85rem;
           text-decoration: none;
-          transition: all 0.2s ease;
+          transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
         }
 
         .social-btn-pill:hover {
@@ -620,7 +622,7 @@ const Footer = memo(() => {
           font-size: 0.75rem;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
         }
 
         .btn-scroll-top:hover {

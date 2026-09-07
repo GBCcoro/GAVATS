@@ -257,27 +257,25 @@ const HomePage = () => {
           position: absolute;
           border-radius: 50%;
           pointer-events: none;
-          filter: blur(80px);
-          opacity: 0.35;
+          contain: strict;
         }
         .hero-glow-1 {
           width: 450px;
           height: 450px;
           top: -100px;
           right: 5%;
-          background: radial-gradient(circle, rgba(245, 194, 113, 0.4) 0%, transparent 70%);
+          background: radial-gradient(circle, rgba(245, 194, 113, 0.22) 0%, rgba(245, 194, 113, 0.08) 40%, transparent 70%);
         }
         .hero-glow-2 {
           width: 380px;
           height: 380px;
           bottom: -80px;
           left: 5%;
-          background: radial-gradient(circle, rgba(199, 152, 78, 0.3) 0%, transparent 70%);
+          background: radial-gradient(circle, rgba(199, 152, 78, 0.18) 0%, rgba(199, 152, 78, 0.06) 40%, transparent 70%);
         }
         .hero-badge {
-          background: rgba(255, 255, 255, 0.08);
+          background: rgba(25, 40, 71, 0.75);
           border: 1px solid rgba(197, 151, 74, 0.35);
-          backdrop-filter: blur(8px);
         }
         .hero-title {
           line-height: 1.15;
@@ -295,7 +293,7 @@ const HomePage = () => {
           border: none;
           border-radius: 0.75rem;
           font-weight: 700;
-          transition: all 0.25s ease;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
           box-shadow: 0 8px 24px rgba(199, 152, 78, 0.28);
         }
         .btn-hero-gold:hover {
@@ -310,7 +308,7 @@ const HomePage = () => {
           border: 1.5px solid rgba(255, 255, 255, 0.4);
           border-radius: 0.75rem;
           font-weight: 600;
-          transition: all 0.25s ease;
+          transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
         }
         .btn-hero-outline:hover {
           background: rgba(255, 255, 255, 0.12);
@@ -319,9 +317,8 @@ const HomePage = () => {
           transform: translateY(-2px);
         }
         .hero-metric-card {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(6px);
+          background: rgba(25, 40, 71, 0.65);
+          border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         /* Hero Logo Halo */
@@ -336,11 +333,13 @@ const HomePage = () => {
           border-radius: 50%;
           background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(25, 40, 71, 0.4) 70%);
           border: 2px solid rgba(197, 151, 74, 0.3);
-          box-shadow: 0 0 60px rgba(197, 151, 74, 0.2);
+          box-shadow: 0 0 40px rgba(197, 151, 74, 0.2);
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 2.5rem;
+          will-change: transform;
+          transform: translateZ(0);
           animation: floatHalo 5s ease-in-out infinite;
         }
         .hero-logo-img {
@@ -350,8 +349,8 @@ const HomePage = () => {
           user-select: none;
         }
         @keyframes floatHalo {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
+          0%, 100% { transform: translateY(0) translateZ(0); }
+          50% { transform: translateY(-10px) translateZ(0); }
         }
 
         /* Enlace catálogo */

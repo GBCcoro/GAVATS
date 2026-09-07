@@ -30,8 +30,10 @@ const NavigationBar = memo(() => {
     setExpanded(false);
   }, [location.pathname]);
 
-  // Cerrar menú al hacer clic fuera del navbar
+  // Cerrar menú al hacer clic fuera del navbar (solo activo cuando el menú está abierto)
   useEffect(() => {
+    if (!expanded) return;
+
     const handleClickOutside = (event) => {
       if (navbarRef.current && !navbarRef.current.contains(event.target)) {
         setExpanded(false);
@@ -39,13 +41,13 @@ const NavigationBar = memo(() => {
     };
 
     document.addEventListener('click', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
 
     return () => {
       document.removeEventListener('click', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, []);
+  }, [expanded]);
 
   const handleLogout = useCallback(() => {
     setExpanded(false);
@@ -321,12 +323,12 @@ const NavigationBar = memo(() => {
       {/* Estilos personalizados integrados y optimizados */}
       <style>{`
         .custom-navbar {
-          background-color: rgba(25, 40, 71, 0.95);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          background-color: rgba(25, 40, 71, 0.98);
           border-bottom: 1px solid rgba(255, 255, 255, 0.12);
           padding: 0.6rem 0;
-          transition: all 0.3s ease;
+          transition: background-color 0.2s ease, border-color 0.2s ease;
+          will-change: transform;
+          transform: translateZ(0);
         }
         .navbar-icon-svg {
           vertical-align: middle;

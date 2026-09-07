@@ -261,7 +261,7 @@ const getMisPedidos = async (req, res) => {
           include: [{
             model: Producto,
             as: 'producto',
-            attributes: ['id', 'nombre', 'imagen']   // Solo datos básicos del producto
+            attributes: ['id', 'nombre']   // Solo datos esenciales para listado (sin transferir imagen en base64)
           }]
         }
       ],
@@ -529,7 +529,7 @@ const getAllPedidos = async (req, res) => {
           include: [{
             model: Producto,
             as: 'producto',
-            attributes: ['id', 'nombre', 'imagen']
+            attributes: ['id', 'nombre'] // Proyección ligera sin transferir imagen en base64
           }]
         }
       ],
