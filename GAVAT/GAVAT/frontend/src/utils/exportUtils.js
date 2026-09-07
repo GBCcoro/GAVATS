@@ -54,12 +54,12 @@ const exportToPDF = ({
     head: head ? [head] : undefined,
     body,
     styles: { fontSize: options.fontSize || 9, cellPadding: options.cellPadding || 3 },
-    headStyles: Object.assign({ fillColor: options.headStylesColor || [41, 128, 185], textColor: 255, fontStyle: 'bold' }, options.headStyles || {}),
+    headStyles: {fillColor: options.headStylesColor || [41, 128, 185], textColor: 255, fontStyle: 'bold', ...options.headStyles},
     alternateRowStyles: { fillColor: [245, 245, 245] },
     margin: { top: 10 },
   });
 
-  if (footerLines && footerLines.length) {
+  if (footerLines?.length) {
     const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : startY + 10;
     doc.setFontSize(11);
     doc.setTextColor(40);
@@ -88,7 +88,7 @@ const exportToExcel = async ({ sheetName, title, headers, rows, summaryLines = [
   });
 
   // Título
-  const lastCol = String.fromCharCode(65 + Math.max(headers.length - 1, 0));
+  const lastCol = String.fromCodePoint(65 + Math.max(headers.length - 1, 0));
   worksheet.mergeCells(`A1:${lastCol}1`);
   const tituloCell = worksheet.getCell('A1');
   tituloCell.value = title;
@@ -135,7 +135,7 @@ const exportToExcel = async ({ sheetName, title, headers, rows, summaryLines = [
   });
 
   // Resumen
-  if (summaryLines && summaryLines.length) {
+  if (summaryLines?.length) {
     rowIndex++;
     const resumenRow = worksheet.getRow(rowIndex);
     resumenRow.getCell(1).value = '📊 RESUMEN';
@@ -152,7 +152,7 @@ const exportToExcel = async ({ sheetName, title, headers, rows, summaryLines = [
   }
 
   // Column widths
-  if (columnWidths && columnWidths.length) {
+  if (columnWidths?.length) {
     worksheet.columns = columnWidths.map(w => ({ width: w }));
   }
 

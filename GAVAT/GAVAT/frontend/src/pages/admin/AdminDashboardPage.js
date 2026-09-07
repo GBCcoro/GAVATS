@@ -70,8 +70,8 @@ const AdminDashboardPage = () => {
         if (Array.isArray(data.data)) return data.data;
 
         const target = data.data || data;
-        const keys = ['categorias', 'subcategorias', 'productos', 'usuarios', 'pedidos', 'facturas', 'comentarios'];
-        const foundKey = Object.keys(target || {}).find(k => keys.includes(k) && Array.isArray(target[k]));
+        const keys = new Set(['categorias', 'subcategorias', 'productos', 'usuarios', 'pedidos', 'facturas', 'comentarios']);
+        const foundKey = Object.keys(target || {}).find(k => keys.has(k) && Array.isArray(target[k]));
         return foundKey ? target[foundKey] : [];
       };
 
