@@ -5,7 +5,7 @@
  * Página del carrito de compras con estilos personalizados (dorados, fondos)
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { Container, Row, Col, Card, Button, Table, Alert, Badge, Modal } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import carritoService from '../services/carritoService';
@@ -13,7 +13,238 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import SvgIcon from '../components/SvgIcon';
 import FloatingToast from '../components/FloatingToast';
-import { getImageUrl } from '../utils/helpers';
+import { getImageUrl, formatCurrency } from '../utils/helpers';
+
+const BG_MODAL_CONFIRMACION = Object.freeze({
+  danger: 'danger-subtle',
+  warning: 'warning-subtle',
+  primary: 'primary-subtle',
+  info: 'primary-subtle',
+  success: 'success-subtle'
+});
+
+/**
+ * Componente modal de confirmación compacto reutilizable
+ */
+const ModalConfirmacionCarrito = memo(({ modalConfirmacion, onHide }) => {
+  const bgClase = BG_MODAL_CONFIRMACION[modalConfirmacion.tipo] || 'danger-subtle';
+  const tipoClase = modalConfirmacion.tipo || 'danger';
+  const icono = modalConfirmacion.icono || 'trash3-fill';
+
+  return (
+    <Modal
+      show={modalConfirmacion.show}
+      onHide={onHide}
+      centered
+      backdrop="static"
+      dialogClassName="modal-confirmacion-compacto"
+    >
+      <Modal.Body className="text-center p-3 p-sm-4">
+        <div className={`confirm-icon-wrapper mb-3 mx-auto bg-${bgClase} text-${tipoClase}`}>
+          <span className={`bi bi-${icono} confirm-icon`} aria-hidden="true" />
+        </div>
+
+        <h5 className="fw-bold text-navy mb-2 fs-5">
+          {modalConfirmacion.titulo}
+        </h5>
+
+        <p className="text-muted small mb-3 mb-sm-4 px-1 modal-confirm-msg">
+          {modalConfirmacion.mensaje}
+        </p>
+
+        <div className="d-flex gap-2 justify-content-center w-100 mt-2">
+          <Button
+            type="button"
+            variant="outline-secondary"
+            className="px-3 py-2 fw-semibold flex-fill"
+            onClick={() => {
+              onHide();
+              if (modalConfirmacion.onCancel) modalConfirmacion.onCancel();
+            }}
+          >
+            {modalConfirmacion.textoCancelar || 'Cancelar'}
+          </Button>
+          <Button
+            type="button"
+            variant={tipoClase}
+            className="px-3 py-2 fw-semibold flex-fill shadow-sm"
+            onClick={() => {
+              const action = modalConfirmacion.onConfirm;
+              onHide();
+              if (action) action();
+            }}
+          >
+            {modalConfirmacion.textoConfirmar || 'Borrar'}
+          </Button>
+        </div>
+      </Modal.Body>
+    </Modal>
+  );
+});
+
+ModalConfirmacionCarrito.displayName = 'ModalConfirmacionCarrito';
+
+/**
+ * Componente de visualización de carrito vacío
+ */
+const CarritoVacio = memo(() => (
+  <Card className="carrito-empty-card text-center py-5">
+    <Card.Body>
+      <span className="bi bi-cart-x display-1 text-muted d-block mb-3" aria-hidden="true"></span>
+      <h3 className="mt-3">Tu carrito está vacío</h3>
+      <p className="text-muted">Agrega productos para comenzar tu compra</p>
+      <Link to="/catalogo" className="btn btn-ir-catalogo">
+        <span className="bi bi-shop me-2" aria-hidden="true"></span>
+        <span>Ir al Catálogo</span>
+      </Link>
+    </Card.Body>
+  </Card>
+));
+
+CarritoVacio.displayName = 'CarritoVacio';
+
+/**
+ * Fila individual de producto en la tabla del carrito
+ */
+const ItemFilaCarrito = memo(({ item, onAumentar, onDisminuir, onInputChange, onInputBlur, onEliminar }) => {
+  const nombre = item.producto?.nombre || item.nombre;
+  const imagen = getImageUrl(item.producto?.imagen || item.imagen);
+  const categoriaNombre = item.producto?.categoria?.nombre;
+  const precio = item.precioUnitario || item.precio;
+  const cantidadNum = Number.parseInt(item.cantidad, 10) || 0;
+  const subtotal = precio * cantidadNum;
+  const maxStock = item.producto?.stock ?? item.stock ?? 99;
+
+  return (
+    <tr>
+      <td>
+        <div className="d-flex align-items-center">
+          <img
+            src={imagen}
+            alt={nombre}
+            className="rounded me-3 carrito-item-img"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/producto-default.jpg';
+            }}
+          />
+          <div>
+            <div className="fw-bold">{nombre}</div>
+            {categoriaNombre && (
+              <small className="text-muted">{categoriaNombre}</small>
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="text-center align-middle">
+        {formatCurrency(precio)}
+      </td>
+      <td className="text-center align-middle">
+        <div className="d-flex justify-content-center align-items-center">
+          <Button
+            type="button"
+            className="btn-cantidad"
+            size="sm"
+            onClick={() => onDisminuir(item)}
+            disabled={Number(item.cantidad) <= 1}
+            title="Disminuir cantidad"
+            aria-label="Disminuir cantidad"
+          >
+            <span className="bi bi-dash" aria-hidden="true" />
+          </Button>
+          <input
+            type="number"
+            className="cantidad-input mx-2"
+            value={item.cantidad}
+            min="1"
+            max={maxStock}
+            onChange={(e) => onInputChange(item, e.target.value)}
+            onBlur={() => onInputBlur(item)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.currentTarget.blur();
+              }
+            }}
+            aria-label={`Cantidad para ${nombre}`}
+          />
+          <Button
+            type="button"
+            className="btn-cantidad"
+            size="sm"
+            onClick={() => onAumentar(item)}
+            title="Aumentar cantidad"
+            aria-label="Aumentar cantidad"
+          >
+            <span className="bi bi-plus" aria-hidden="true" />
+          </Button>
+        </div>
+      </td>
+      <td className="text-center align-middle fw-bold">
+        {formatCurrency(subtotal)}
+      </td>
+      <td className="text-center align-middle">
+        <Button
+          type="button"
+          className="btn-eliminar d-inline-flex align-items-center justify-content-center"
+          size="sm"
+          onClick={() => onEliminar(item)}
+          title="Eliminar item"
+          aria-label={`Eliminar ${nombre} del carrito`}
+        >
+          <SvgIcon name="trash" />
+        </Button>
+      </td>
+    </tr>
+  );
+});
+
+ItemFilaCarrito.displayName = 'ItemFilaCarrito';
+
+/**
+ * Tarjeta de resumen de pedido y acción de pago
+ */
+const ResumenPedido = memo(({ total, isAuthenticated, onProcederPago }) => (
+  <Card className="resumen-card">
+    <Card.Header className="resumen-card-header">
+      <h5 className="mb-0">Resumen del Pedido</h5>
+    </Card.Header>
+    <Card.Body>
+      <div className="d-flex justify-content-between mb-2">
+        <span>Subtotal:</span>
+        <span>{formatCurrency(total)}</span>
+      </div>
+      <div className="d-flex justify-content-between mb-2">
+        <span>Envío:</span>
+        <span className="text-muted">A calcular</span>
+      </div>
+      <hr className="resumen-hr" />
+      <div className="d-flex justify-content-between mb-3">
+        <strong>Total:</strong>
+        <strong className="resumen-total fs-4">{formatCurrency(total)}</strong>
+      </div>
+
+      <Button
+        type="button"
+        className="btn-proceder-pago w-100 mb-2 d-inline-flex align-items-center justify-content-center gap-2"
+        size="lg"
+        onClick={onProcederPago}
+      >
+        <SvgIcon name="cash" />
+        <span>{isAuthenticated ? 'Proceder al Pago' : 'Iniciar Sesión para Pagar'}</span>
+      </Button>
+
+      <Link
+        to="/catalogo"
+        className="btn btn-seguir-comprando w-100 d-inline-flex align-items-center justify-content-center gap-2"
+      >
+        <span className="bi bi-arrow-left" aria-hidden="true" />
+        <span>Seguir Comprando</span>
+      </Link>
+    </Card.Body>
+  </Card>
+));
+
+ResumenPedido.displayName = 'ResumenPedido';
 
 const CarritoPage = () => {
   const [carrito, setCarrito] = useState(null);
@@ -35,15 +266,10 @@ const CarritoPage = () => {
     onCancel: null
   });
 
-  useEffect(() => {
-    loadCarrito();
-  }, []);
-
-  const loadCarrito = async (silent = false) => {
+  const loadCarrito = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
       const response = await carritoService.getCarrito();
-      console.log('📥 Respuesta del carrito:', response);
       setCarrito(response.data || response.carrito);
     } catch (error) {
       console.error('Error al cargar carrito:', error);
@@ -51,7 +277,11 @@ const CarritoPage = () => {
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadCarrito();
+  }, [loadCarrito]);
 
   // Limpiar mensaje automáticamente (estilo gestores admin)
   useEffect(() => {
@@ -63,7 +293,7 @@ const CarritoPage = () => {
     }
   }, [mensaje]);
 
-  const handleCantidadChange = async (itemId, nuevaCantidad, mensajePersonalizado = null) => {
+  const handleCantidadChange = useCallback(async (itemId, nuevaCantidad, mensajePersonalizado = null) => {
     const cantNum = Number.parseInt(nuevaCantidad, 10);
     if (Number.isNaN(cantNum) || cantNum < 1) return;
 
@@ -82,7 +312,7 @@ const CarritoPage = () => {
         items,
         total: nuevoTotal,
         resumen: {
-          ...(prev.resumen || {}),
+          ...prev.resumen,
           total: nuevoTotal.toFixed(2),
           cantidadTotal: items.reduce((acc, i) => acc + (Number(i.cantidad) || 0), 0)
         }
@@ -100,9 +330,9 @@ const CarritoPage = () => {
       setMensaje({ tipo: 'danger', texto: error.message || 'Error al actualizar cantidad' });
       await loadCarrito(true);
     }
-  };
+  }, [loadCarrito]);
 
-  const handleInputChange = (item, nuevoValor) => {
+  const handleInputChange = useCallback((item, nuevoValor) => {
     if (nuevoValor === '') {
       setCarrito(prev => {
         if (!prev) return prev;
@@ -151,9 +381,9 @@ const CarritoPage = () => {
       });
       return { ...prev, items };
     });
-  };
+  }, []);
 
-  const handleInputBlur = async (item) => {
+  const handleInputBlur = useCallback(async (item) => {
     const cantOriginal = Number.parseInt(item.cantidad, 10);
     const maxStock = Number(item.producto?.stock ?? item.stock) || 99;
     const nombreItem = item.producto?.nombre || item.nombre || 'este producto';
@@ -176,9 +406,9 @@ const CarritoPage = () => {
     }
 
     await handleCantidadChange(item.id, cantOriginal);
-  };
+  }, [handleCantidadChange]);
 
-  const handleAumentarCantidad = (item) => {
+  const handleAumentarCantidad = useCallback((item) => {
     const cantActual = Number.parseInt(item.cantidad, 10) || 1;
     const maxStock = Number(item.producto?.stock ?? item.stock) || 99;
     const nombreItem = item.producto?.nombre || item.nombre || 'este producto';
@@ -192,15 +422,15 @@ const CarritoPage = () => {
     }
 
     handleCantidadChange(item.id, cantActual + 1);
-  };
+  }, [handleCantidadChange]);
 
-  const handleDisminuirCantidad = (item) => {
+  const handleDisminuirCantidad = useCallback((item) => {
     const cantActual = Number.parseInt(item.cantidad, 10) || 1;
     if (cantActual <= 1) return;
     handleCantidadChange(item.id, cantActual - 1);
-  };
+  }, [handleCantidadChange]);
 
-  const handleEliminar = (item) => {
+  const handleEliminar = useCallback((item) => {
     const nombreItem = item.producto?.nombre || item.nombre || 'este item';
     setModalConfirmacion({
       show: true,
@@ -227,9 +457,9 @@ const CarritoPage = () => {
         }
       }
     });
-  };
+  }, [loadCarrito]);
 
-  const handleVaciarCarrito = () => {
+  const handleVaciarCarrito = useCallback(() => {
     setModalConfirmacion({
       show: true,
       titulo: '¿Vaciar carrito?',
@@ -249,9 +479,9 @@ const CarritoPage = () => {
         }
       }
     });
-  };
+  }, [loadCarrito]);
 
-  const handleProcederPago = () => {
+  const handleProcederPago = useCallback(() => {
     if (!isAuthenticated) {
       setMensaje({
         tipo: 'warning',
@@ -262,34 +492,30 @@ const CarritoPage = () => {
     }
 
     navigate('/checkout');
-  };
+  }, [isAuthenticated, navigate]);
 
-  const formatearPrecio = (precio) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-    }).format(precio);
-  };
+  const items = useMemo(() => carrito?.items || [], [carrito?.items]);
+  const total = useMemo(() => Number.parseFloat(carrito?.resumen?.total || carrito?.total || 0), [carrito?.resumen?.total, carrito?.total]);
+
+  const cerrarModal = useCallback(() => {
+    setModalConfirmacion(prev => ({ ...prev, show: false }));
+  }, []);
 
   if (loading) {
     return <LoadingSpinner message="Cargando carrito..." />;
   }
 
-  const items = carrito?.items || [];
-  const total = Number.parseFloat(carrito?.resumen?.total || carrito?.total || 0);
-
   return (
     <Container className="py-4">
       <h1 className="carrito-title mb-4">
-        <i className="bi bi-cart me-2"></i>{' '}
-        Mi Carrito
+        <span className="bi bi-cart me-2" aria-hidden="true"></span>
+        <span>Mi Carrito</span>
       </h1>
 
       {!isAuthenticated && (
         <Alert variant="info" className="carrito-alert-info mb-4">
-          <i className="bi bi-info-circle me-2"></i>{' '}
-          Puedes agregar productos sin iniciar sesión. Al momento de pagar deberás crear una cuenta o iniciar sesión.
+          <span className="bi bi-info-circle me-2" aria-hidden="true"></span>
+          <span>Puedes agregar productos sin iniciar sesión. Al momento de pagar deberás crear una cuenta o iniciar sesión.</span>
         </Alert>
       )}
 
@@ -300,17 +526,7 @@ const CarritoPage = () => {
       />
 
       {items.length === 0 ? (
-        <Card className="carrito-empty-card text-center py-5">
-          <Card.Body>
-            <i className="bi bi-cart-x display-1 text-muted"></i>
-            <h3 className="mt-3">Tu carrito está vacío</h3>
-            <p className="text-muted">Agrega productos para comenzar tu compra</p>
-            <Button as={Link} to="/catalogo" className="btn-ir-catalogo">
-              <i className="bi bi-shop me-2"></i>{' '}
-              Ir al Catálogo
-            </Button>
-          </Card.Body>
-        </Card>
+        <CarritoVacio />
       ) : (
         <Row>
           <Col lg={8}>
@@ -322,6 +538,7 @@ const CarritoPage = () => {
                     <Badge className="carrito-badge ms-2">{items.length}</Badge>
                   </h5>
                   <Button
+                    type="button"
                     variant="outline-danger"
                     className="btn-vaciar-carrito d-inline-flex align-items-center gap-1"
                     size="sm"
@@ -336,95 +553,24 @@ const CarritoPage = () => {
                 <Table responsive hover className="carrito-table mb-0">
                   <thead className="carrito-table-header">
                     <tr>
-                      <th>Producto</th>
-                      <th className="text-center">Precio</th>
-                      <th className="text-center">Cantidad</th>
-                      <th className="text-center">Subtotal</th>
-                      <th></th>
+                      <th scope="col">Producto</th>
+                      <th scope="col" className="text-center">Precio</th>
+                      <th scope="col" className="text-center">Cantidad</th>
+                      <th scope="col" className="text-center">Subtotal</th>
+                      <th scope="col" className="text-center">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {items.map((item) => (
-                      <tr key={item.id}>
-                        <td>
-                          <div className="d-flex align-items-center">
-                            <img
-                              src={getImageUrl(item.producto?.imagen || item.imagen)}
-                              alt={item.producto?.nombre || item.nombre}
-                              style={{ width: '60px', height: '60px', objectFit: 'cover' }}
-                              className="rounded me-3"
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = '/producto-default.jpg';
-                              }}
-                            />
-                            <div>
-                              <div className="fw-bold">
-                                {item.producto?.nombre || item.nombre}
-                              </div>
-                              {item.producto?.categoria && (
-                                <small className="text-muted">
-                                  {item.producto.categoria.nombre}
-                                </small>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="text-center align-middle">
-                          {formatearPrecio(item.precioUnitario || item.precio)}
-                        </td>
-                        <td className="text-center align-middle">
-                          <div className="d-flex justify-content-center align-items-center">
-                            <Button
-                              className="btn-cantidad"
-                              size="sm"
-                              onClick={() => handleDisminuirCantidad(item)}
-                              disabled={Number(item.cantidad) <= 1}
-                              title="Disminuir cantidad"
-                              aria-label="Disminuir cantidad"
-                            >
-                              <i className="bi bi-dash"></i>
-                            </Button>
-                            <input
-                              type="number"
-                              className="cantidad-input mx-2"
-                              value={item.cantidad}
-                              min="1"
-                              max={item.producto?.stock ?? item.stock ?? 99}
-                              onChange={(e) => handleInputChange(item, e.target.value)}
-                              onBlur={() => handleInputBlur(item)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.currentTarget.blur();
-                                }
-                              }}
-                              aria-label={`Cantidad para ${item.producto?.nombre || item.nombre}`}
-                            />
-                            <Button
-                              className="btn-cantidad"
-                              size="sm"
-                              onClick={() => handleAumentarCantidad(item)}
-                              title="Aumentar cantidad"
-                              aria-label="Aumentar cantidad"
-                            >
-                              <i className="bi bi-plus"></i>
-                            </Button>
-                          </div>
-                        </td>
-                        <td className="text-center align-middle fw-bold">
-                          {formatearPrecio((item.precioUnitario || item.precio) * (Number.parseInt(item.cantidad, 10) || 0))}
-                        </td>
-                        <td className="text-center align-middle">
-                          <Button
-                            className="btn-eliminar d-inline-flex align-items-center justify-content-center"
-                            size="sm"
-                            onClick={() => handleEliminar(item)}
-                            title="Eliminar item"
-                          >
-                            <SvgIcon name="trash" />
-                          </Button>
-                        </td>
-                      </tr>
+                      <ItemFilaCarrito
+                        key={item.id}
+                        item={item}
+                        onAumentar={handleAumentarCantidad}
+                        onDisminuir={handleDisminuirCantidad}
+                        onInputChange={handleInputChange}
+                        onInputBlur={handleInputBlur}
+                        onEliminar={handleEliminar}
+                      />
                     ))}
                   </tbody>
                 </Table>
@@ -433,40 +579,11 @@ const CarritoPage = () => {
           </Col>
 
           <Col lg={4}>
-            <Card className="resumen-card">
-              <Card.Header className="resumen-card-header">
-                <h5 className="mb-0">Resumen del Pedido</h5>
-              </Card.Header>
-              <Card.Body>
-                <div className="d-flex justify-content-between mb-2">
-                  <span>Subtotal:</span>
-                  <span>{formatearPrecio(total)}</span>
-                </div>
-                <div className="d-flex justify-content-between mb-2">
-                  <span>Envío:</span>
-                  <span className="text-muted">A calcular</span>
-                </div>
-                <hr className="resumen-hr" />
-                <div className="d-flex justify-content-between mb-3">
-                  <strong>Total:</strong>
-                  <strong className="resumen-total fs-4">{formatearPrecio(total)}</strong>
-                </div>
-
-                <Button
-                  className="btn-proceder-pago w-100 mb-2 d-inline-flex align-items-center justify-content-center gap-2"
-                  size="lg"
-                  onClick={handleProcederPago}
-                >
-                  <SvgIcon name="cash" />
-                  <span>{isAuthenticated ? 'Proceder al Pago' : 'Iniciar Sesión para Pagar'}</span>
-                </Button>
-
-                <Button as={Link} to="/catalogo" className="btn-seguir-comprando w-100 d-inline-flex align-items-center justify-content-center gap-2">
-                  <i className="bi bi-arrow-left"></i>
-                  <span>Seguir Comprando</span>
-                </Button>
-              </Card.Body>
-            </Card>
+            <ResumenPedido
+              total={total}
+              isAuthenticated={isAuthenticated}
+              onProcederPago={handleProcederPago}
+            />
           </Col>
         </Row>
       )}
@@ -644,59 +761,21 @@ const CarritoPage = () => {
           background: linear-gradient(135deg, var(--bs-gold-dark, #c7984e), var(--bs-oldGold-bg, #916934));
           transform: translateY(-2px);
         }
+        .carrito-item-img {
+          width: 60px;
+          height: 60px;
+          object-fit: cover;
+        }
+        .modal-confirm-msg {
+          max-width: 300px;
+          margin: 0 auto;
+        }
       `}</style>
       {/* Modal de Confirmación Compacto Estilo Gestor de Productos */}
-      <Modal
-        show={modalConfirmacion.show}
-        onHide={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
-        centered
-        backdrop="static"
-        dialogClassName="modal-confirmacion-compacto"
-      >
-        <Modal.Body className="text-center p-3 p-sm-4">
-          <div
-            className={`confirm-icon-wrapper mb-3 mx-auto bg-${modalConfirmacion.tipo === 'danger' ? 'danger-subtle' :
-                modalConfirmacion.tipo === 'warning' ? 'warning-subtle' :
-                  modalConfirmacion.tipo === 'primary' || modalConfirmacion.tipo === 'info' ? 'primary-subtle' :
-                    'success-subtle'
-              } text-${modalConfirmacion.tipo || 'primary'}`}
-          >
-            <i className={`bi bi-${modalConfirmacion.icono || 'trash3-fill'} confirm-icon`} />
-          </div>
-
-          <h5 className="fw-bold text-navy mb-2 fs-5">
-            {modalConfirmacion.titulo}
-          </h5>
-
-          <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
-            {modalConfirmacion.mensaje}
-          </p>
-
-          <div className="d-flex gap-2 justify-content-center w-100 mt-2">
-            <Button
-              variant="outline-secondary"
-              className="px-3 py-2 fw-semibold flex-fill"
-              onClick={() => {
-                setModalConfirmacion(prev => ({ ...prev, show: false }));
-                if (modalConfirmacion.onCancel) modalConfirmacion.onCancel();
-              }}
-            >
-              {modalConfirmacion.textoCancelar || 'Cancelar'}
-            </Button>
-            <Button
-              variant={modalConfirmacion.tipo || 'danger'}
-              className="px-3 py-2 fw-semibold flex-fill shadow-sm"
-              onClick={async () => {
-                const action = modalConfirmacion.onConfirm;
-                setModalConfirmacion(prev => ({ ...prev, show: false }));
-                if (action) await action();
-              }}
-            >
-              {modalConfirmacion.textoConfirmar || 'Borrar'}
-            </Button>
-          </div>
-        </Modal.Body>
-      </Modal>
+      <ModalConfirmacionCarrito
+        modalConfirmacion={modalConfirmacion}
+        onHide={cerrarModal}
+      />
     </Container>
   );
 };

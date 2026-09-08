@@ -5,18 +5,20 @@
  * Página para finalizar la compra con estilos personalizados (dorados, fondos)
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert, ListGroup } from 'react-bootstrap';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { Container, Row, Col, Card, Form, Button, ListGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import authService from '../services/authService';
 import carritoService from '../services/carritoService';
 import pedidoService from '../services/pedidoService';
 import LoadingSpinner from '../components/LoadingSpinner';
+import FloatingToast from '../components/FloatingToast';
+import { formatCurrency } from '../utils/helpers';
 
-const OrderSummary = ({ items, total, formatearPrecio }) => (
+const OrderSummary = memo(({ items, total }) => (
   <Card className="resumen-card">
-    <Card.Header className="resumen-card-header">
+    <Card.Header className="checkout-card-header">
       <h5 className="mb-0">Resumen del Pedido</h5>
     </Card.Header>
     <Card.Body>
@@ -27,11 +29,11 @@ const OrderSummary = ({ items, total, formatearPrecio }) => (
               <div className="flex-grow-1">
                 <div className="fw-bold">{item.producto?.nombre || item.nombre}</div>
                 <small className="text-muted">
-                  Cantidad: {item.cantidad} x {formatearPrecio(item.precioUnitario || item.precio)}
+                  Cantidad: {item.cantidad} x {formatCurrency(item.precioUnitario || item.precio)}
                 </small>
               </div>
               <div className="fw-bold">
-                {formatearPrecio((item.precioUnitario || item.precio) * item.cantidad)}
+                {formatCurrency((item.precioUnitario || item.precio) * item.cantidad)}
               </div>
             </div>
           </ListGroup.Item>
@@ -42,7 +44,7 @@ const OrderSummary = ({ items, total, formatearPrecio }) => (
 
       <div className="d-flex justify-content-between mb-2">
         <span>Subtotal:</span>
-        <span>{formatearPrecio(total)}</span>
+        <span>{formatCurrency(total)}</span>
       </div>
       <div className="d-flex justify-content-between mb-2">
         <span>Envío:</span>
@@ -51,11 +53,13 @@ const OrderSummary = ({ items, total, formatearPrecio }) => (
       <hr className="resumen-hr" />
       <div className="d-flex justify-content-between mb-0">
         <strong className="fs-5">Total:</strong>
-        <strong className="resumen-total fs-4">{formatearPrecio(total)}</strong>
+        <strong className="resumen-total fs-4">{formatCurrency(total)}</strong>
       </div>
     </Card.Body>
   </Card>
-);
+));
+
+OrderSummary.displayName = 'OrderSummary';
 
 const CheckoutPage = () => {
   const [carrito, setCarrito] = useState(null);
@@ -176,7 +180,7 @@ const CheckoutPage = () => {
     }
     
     const telLimpio = formData.telefono.replace(/\D/g, '');
-    if (!telLimpio || telLimpio.length !== 10) {
+    if (telLimpio?.length !== 10) {
       setMensaje({ tipo: 'danger', texto: 'El teléfono de contacto debe tener exactamente 10 dígitos numéricos' });
       return;
     }
@@ -219,49 +223,25 @@ const CheckoutPage = () => {
     }
   };
 
-  const formatearPrecio = (precio) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-    }).format(precio);
-  };
+  const items = useMemo(() => carrito?.items || [], [carrito?.items]);
+  const total = useMemo(() => Number.parseFloat(carrito?.resumen?.total || 0), [carrito?.resumen?.total]);
 
   if (loading) {
     return <LoadingSpinner message="Cargando información..." />;
   }
 
-  const items = carrito?.items || [];
-  const total = Number.parseFloat(carrito?.resumen?.total || 0);
-
   return (
     <Container className="py-4">
       <h1 className="checkout-title mb-4">
-        <i className="bi bi-credit-card me-2" aria-hidden="true" />{' '}
-        Finalizar Compra
+        <span className="bi bi-credit-card me-2 text-gold" aria-hidden="true"></span>
+        <span>Finalizar Compra</span>
       </h1>
 
-      {/* Notificación flotante inferior izquierda (estilo Gestores Admin) */}
-      {mensaje.texto && (
-        <div className="toast-floating-container-bottom-left">
-          <Alert 
-            variant={mensaje.tipo} 
-            dismissible 
-            onClose={() => setMensaje({ tipo: '', texto: '' })}
-            className={`toast-floating-alert alert-${mensaje.tipo} mb-0`}
-          >
-            <i className={`bi bi-${
-              mensaje.tipo === 'success' ? 'check-circle-fill text-success' :
-              mensaje.tipo === 'danger' ? 'exclamation-octagon-fill text-danger' :
-              mensaje.tipo === 'warning' ? 'exclamation-triangle-fill text-warning' :
-              'info-circle-fill text-info'
-            } fs-5 flex-shrink-0`} />
-            <div className="flex-grow-1 fw-medium text-start">
-              {mensaje.texto}
-            </div>
-          </Alert>
-        </div>
-      )}
+      {/* Notificación flotante fija en esquina inferior izquierda */}
+      <FloatingToast
+        mensaje={mensaje}
+        onClose={() => setMensaje({ tipo: '', texto: '' })}
+      />
 
       <Row>
         <Col lg={8}>
@@ -302,7 +282,8 @@ const CheckoutPage = () => {
                     </Form.Label>
                     {user?.direccion && formData.direccionEnvio === user.direccion && (
                       <span className="badge bg-light text-dark border small fw-normal">
-                        <i className="bi bi-geo-alt-fill text-gold me-1" /> Obtenida de tu perfil
+                        <span className="bi bi-geo-alt-fill text-gold me-1" aria-hidden="true"></span>
+                        <span>Obtenida de tu perfil</span>
                       </span>
                     )}
                   </div>
@@ -325,7 +306,8 @@ const CheckoutPage = () => {
                     </Form.Label>
                     {user?.telefono && formData.telefono === user.telefono && (
                       <span className="badge bg-light text-dark border small fw-normal">
-                        <i className="bi bi-telephone-fill text-gold me-1" /> Obtenido de tu perfil
+                        <span className="bi bi-telephone-fill text-gold me-1" aria-hidden="true"></span>
+                        <span>Obtenido de tu perfil</span>
                       </span>
                     )}
                   </div>
@@ -335,12 +317,12 @@ const CheckoutPage = () => {
                     name="telefono"
                     value={formData.telefono}
                     onChange={handleChange}
-                    maxLength="10"
+                    maxLength={10}
                     placeholder="Ej: 3001234567"
                     required
                     className="checkout-input"
                   />
-                  <Form.Text className="text-muted" style={{ fontSize: '0.75rem' }}>
+                  <Form.Text className="text-muted checkout-help-text">
                     10 dígitos numéricos para contacto y confirmación
                   </Form.Text>
                 </Form.Group>
@@ -381,20 +363,24 @@ const CheckoutPage = () => {
                   >
                     {procesando ? (
                       <>
-                        <span className="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Procesando...
+                        <span className="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                        <span>Procesando...</span>
                       </>
                     ) : (
                       <>
-                        <i className="bi bi-check-circle me-2" aria-hidden="true"></i>Confirmar Pedido
+                        <span className="bi bi-check-circle me-2" aria-hidden="true"></span>
+                        <span>Confirmar Pedido</span>
                       </>
                     )}
                   </Button>
                   <Button
+                    type="button"
                     className="btn-volver-carrito"
                     onClick={() => navigate('/carrito')}
                     disabled={procesando}
                   >
-                    <i className="bi bi-arrow-left me-2" aria-hidden="true"></i>Volver al Carrito
+                    <span className="bi bi-arrow-left me-2" aria-hidden="true"></span>
+                    <span>Volver al Carrito</span>
                   </Button>
                 </div>
               </Form>
@@ -403,7 +389,7 @@ const CheckoutPage = () => {
         </Col>
 
         <Col lg={4}>
-          <OrderSummary items={items} total={total} formatearPrecio={formatearPrecio} />
+          <OrderSummary items={items} total={total} />
         </Col>
       </Row>
 
@@ -444,6 +430,9 @@ const CheckoutPage = () => {
         .checkout-input:focus, .checkout-select:focus {
           border-color: var(--bs-gold, #f5c271);
           box-shadow: 0 0 0 3px rgba(145, 105, 52, 0.1);
+        }
+        .checkout-help-text {
+          font-size: 0.75rem;
         }
         .btn-confirmar-pedido {
           background: linear-gradient(135deg, var(--bs-gold, #f5c271), var(--bs-gold-dark, #c7984e));
