@@ -12,6 +12,776 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import FloatingToast from '../components/FloatingToast';
 
+const BG_MODAL_CONFIRMACION = {
+  danger: 'danger-subtle',
+  warning: 'warning-subtle',
+  primary: 'primary-subtle',
+  info: 'primary-subtle',
+  success: 'success-subtle'
+};
+
+const getBgModalConfirmacion = (tipo) => BG_MODAL_CONFIRMACION[tipo] || 'primary-subtle';
+
+const getRolLabel = (isAdmin, isAuxiliar) => {
+  if (isAdmin) return 'Administrador';
+  if (isAuxiliar) return 'Auxiliar';
+  return 'Cliente';
+};
+
+const getRolBadgeClass = (isAdmin, isAuxiliar) => {
+  if (isAdmin) return 'badge-admin';
+  if (isAuxiliar) return 'badge-aux';
+  return 'badge-cliente';
+};
+
+const getRolIcon = (isAdmin, isAuxiliar) => {
+  if (isAdmin) return 'bi-shield-lock-fill';
+  if (isAuxiliar) return 'bi-person-gear';
+  return 'bi-person-check-fill';
+};
+
+const getInitials = (nombre) => {
+  if (!nombre) return 'U';
+  const parts = nombre.trim().split(' ');
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return nombre.slice(0, 2).toUpperCase();
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'No disponible';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
+const verificarHayCambios = ({ user, formData, isAuxiliar, isCliente, isAdmin }) => {
+  const nombreOriginal = (user?.nombre || '').trim();
+  const nombreNuevo = (formData.nombre || '').trim();
+
+  const emailOriginal = (user?.email || '').trim().toLowerCase();
+  const emailNuevo = (formData.email || '').trim().toLowerCase();
+
+  const telefonoOriginal = (user?.telefono || '').trim();
+  const telefonoNuevo = (formData.telefono || '').trim();
+
+  const direccionOriginal = (user?.direccion || '').trim();
+  const direccionNuevo = (formData.direccion || '').trim();
+
+  if (nombreOriginal !== nombreNuevo) return true;
+  if (!isAuxiliar && emailOriginal !== emailNuevo) return true;
+  if (telefonoOriginal !== telefonoNuevo) return true;
+  if ((isCliente || isAdmin) && direccionOriginal !== direccionNuevo) return true;
+
+  return false;
+};
+
+const validarFormularioPerfil = (formData, isAuxiliar) => {
+  if (!isAuxiliar && formData.email) {
+    const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      return 'Por favor ingresa un correo electrónico válido';
+    }
+  }
+  if (formData.telefono && formData.telefono.length !== 10) {
+    return 'El teléfono debe tener exactamente 10 dígitos numéricos';
+  }
+  return null;
+};
+
+const prepararDatosActualizacion = (formData, isAuxiliar, isAdmin, passwordAuth, passwordAdmin) => {
+  const datos = { ...formData };
+  if (isAuxiliar) {
+    delete datos.email;
+  }
+  if (isAdmin) {
+    datos.passwordActual = passwordAuth || passwordAdmin;
+  }
+  return datos;
+};
+
+// ============================================
+// SUBCOMPONENTES MODULARES
+// ============================================
+
+function BannerPerfil({
+  user,
+  rolLabel,
+  rolBadgeClass,
+  rolIcon,
+  isEditing,
+  loading,
+  onIniciarEdicion,
+  onCancelarEdicion,
+  onGuardar
+}) {
+  return (
+    <div className="perfil-banner mb-4 p-4 p-md-5 rounded-4 shadow-sm">
+      <Row className="align-items-center g-4">
+        <Col xs={12} md="auto" className="text-center text-md-start">
+          <div className="perfil-avatar-outer mx-auto mx-md-0">
+            <div className="perfil-avatar-inner">
+              {getInitials(user?.nombre || user?.email)}
+            </div>
+          </div>
+        </Col>
+        <Col xs={12} md className="text-center text-md-start">
+          <div className="d-flex flex-wrap align-items-center justify-content-center justify-content-md-start gap-2 mb-2">
+            <h1 className="perfil-hero-nombre mb-0">
+              {user?.nombre || 'Usuario'}
+            </h1>
+            <Badge className={`perfil-badge-rol ${rolBadgeClass}`}>
+              <span className={`bi ${rolIcon} me-1`} aria-hidden="true" />
+              <span>{rolLabel}</span>
+            </Badge>
+          </div>
+          <p className="perfil-hero-email mb-2 text-muted">
+            <span className="bi bi-envelope-at me-2" aria-hidden="true" />
+            <span>{user?.email}</span>
+          </p>
+          <div className="d-flex flex-wrap align-items-center justify-content-center justify-content-md-start gap-3 small text-muted">
+            <span>
+              <span className="bi bi-calendar3 me-1 text-gold" aria-hidden="true" />
+              <span>Miembro desde: </span><strong>{formatDate(user?.createdAt)}</strong>
+            </span>
+            <span>
+              <span className="bi bi-check-circle-fill me-1 text-success" aria-hidden="true" />
+              <span>Estado: </span><strong>Activo</strong>
+            </span>
+          </div>
+        </Col>
+        <Col xs={12} md="auto" className="text-center text-md-end">
+          {!isEditing ? (
+            <Button
+              type="button"
+              variant="primary"
+              className="btn-editar-perfil d-inline-flex align-items-center gap-2 px-4 py-2"
+              onClick={onIniciarEdicion}
+            >
+              <span className="bi bi-pencil-square" aria-hidden="true" />
+              <span>Editar Información</span>
+            </Button>
+          ) : (
+            <div className="d-flex gap-2 justify-content-center justify-content-md-end">
+              <Button
+                type="button"
+                variant="outline-secondary"
+                className="px-3 py-2 fw-semibold"
+                onClick={onCancelarEdicion}
+                disabled={loading}
+              >
+                <span className="bi bi-x-lg me-1" aria-hidden="true" />
+                <span>Cancelar</span>
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                className="btn-guardar-perfil px-4 py-2 fw-semibold"
+                onClick={onGuardar}
+                disabled={loading}
+              >
+                <span className="bi bi-check2-circle me-1" aria-hidden="true" />
+                <span>{loading ? 'Guardando...' : 'Guardar'}</span>
+              </Button>
+            </div>
+          )}
+        </Col>
+      </Row>
+    </div>
+  );
+}
+
+function ResumenCuenta({ user, rolLabel, isAdmin, isCliente }) {
+  return (
+    <Card className="perfil-sidebar-card shadow-sm mb-4">
+      <Card.Header className="perfil-card-header d-flex align-items-center gap-2">
+        <span className="bi bi-person-lines-fill text-gold fs-5" aria-hidden="true" />
+        <span className="fw-bold">Resumen de Cuenta</span>
+      </Card.Header>
+      <Card.Body className="p-3 p-md-4">
+        <div className="resumen-item mb-3 pb-3 border-bottom">
+          <span className="resumen-label text-muted small d-block">Tipo de Acceso</span>
+          <span className="resumen-value fw-bold text-navy">{rolLabel}</span>
+        </div>
+        <div className="resumen-item mb-3 pb-3 border-bottom">
+          <span className="resumen-label text-muted small d-block">Identificador de Usuario</span>
+          <span className="resumen-value font-monospace small text-muted">ID #{user?.id || '—'}</span>
+        </div>
+        <div className="resumen-item mb-3 pb-3 border-bottom">
+          <span className="resumen-label text-muted small d-block">Teléfono registrado</span>
+          <span className="resumen-value fw-semibold text-navy">
+            {user?.telefono ? (
+              <>
+                <span className="bi bi-telephone-fill me-1 text-gold small" aria-hidden="true" />
+                <span>{user.telefono}</span>
+              </>
+            ) : (
+              <span className="text-muted fst-italic">No especificado</span>
+            )}
+          </span>
+        </div>
+        {(isCliente || isAdmin) && (
+          <div className="resumen-item mb-2">
+            <span className="resumen-label text-muted small d-block">
+              {isAdmin ? 'Dirección registrada / contacto' : 'Dirección de entrega'}
+            </span>
+            <span className="resumen-value fw-semibold text-navy">
+              {user?.direccion ? (
+                <>
+                  <span className="bi bi-geo-alt-fill me-1 text-gold small" aria-hidden="true" />
+                  <span>{user.direccion}</span>
+                </>
+              ) : (
+                <span className="text-muted fst-italic">No especificada</span>
+              )}
+            </span>
+          </div>
+        )}
+      </Card.Body>
+    </Card>
+  );
+}
+
+function FormularioDatosPerfil({
+  formData,
+  isEditing,
+  isAuxiliar,
+  isAdmin,
+  isCliente,
+  rolLabel,
+  onInputChange,
+  onSubmit
+}) {
+  return (
+    <Card className="perfil-main-card shadow-sm mb-4">
+      <Card.Header className="perfil-card-header d-flex align-items-center justify-content-between">
+        <div className="d-flex align-items-center gap-2">
+          <span className="bi bi-shield-check text-gold fs-5" aria-hidden="true" />
+          <span className="fw-bold">Detalles de la Cuenta</span>
+        </div>
+        {isEditing && (
+          <Badge bg="warning" text="dark" className="px-2 py-1">
+            Modo Edición
+          </Badge>
+        )}
+      </Card.Header>
+      <Card.Body className="p-4">
+        <Form onSubmit={onSubmit}>
+          <Row className="g-3">
+            {/* Correo Electrónico */}
+            <Col xs={12} md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold text-navy small">
+                  Correo Electrónico
+                  {!isAuxiliar ? (
+                    isEditing && (
+                      <Badge bg="info" text="dark" className="ms-2 small" style={{ fontSize: '0.65rem' }}>
+                        Modificable
+                      </Badge>
+                    )
+                  ) : (
+                    <Badge bg="secondary" className="ms-2 small" style={{ fontSize: '0.65rem' }}>
+                      No modificable
+                    </Badge>
+                  )}
+                </Form.Label>
+                <div className="input-group">
+                  <span className={`input-group-text ${isEditing && !isAuxiliar ? 'bg-white' : 'bg-light'} border-end-0`}>
+                    <span className={`bi bi-envelope ${isEditing && !isAuxiliar ? 'text-gold' : 'text-muted'}`} aria-hidden="true" />
+                  </span>
+                  <Form.Control
+                    type="email"
+                    name="email"
+                    id="perfil-email"
+                    value={formData.email}
+                    onChange={onInputChange}
+                    disabled={!isEditing || isAuxiliar}
+                    placeholder="tu@correo.com"
+                    className={isEditing && !isAuxiliar ? 'border-start-0 perfil-input-edit' : 'border-start-0 bg-light text-muted'}
+                    required
+                  />
+                </div>
+                {isAuxiliar && isEditing && (
+                  <Form.Text className="text-muted small">
+                    Las cuentas con rol Auxiliar no tienen permitido cambiar su correo electrónico.
+                  </Form.Text>
+                )}
+                {isAdmin && isEditing && (
+                  <Form.Text className="text-muted small">
+                    Como Administrador puedes cambiar tu correo electrónico. Se solicitará tu contraseña para autorizar los cambios.
+                  </Form.Text>
+                )}
+              </Form.Group>
+            </Col>
+
+            {/* Nombre Completo */}
+            <Col xs={12} md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold text-navy small">
+                  Nombre Completo
+                </Form.Label>
+                <div className="input-group">
+                  <span className="input-group-text bg-white border-end-0">
+                    <span className="bi bi-person text-gold" aria-hidden="true" />
+                  </span>
+                  <Form.Control
+                    type="text"
+                    name="nombre"
+                    id="perfil-nombre"
+                    value={formData.nombre}
+                    onChange={onInputChange}
+                    disabled={!isEditing}
+                    placeholder="Tu nombre completo"
+                    className={isEditing ? 'border-start-0 perfil-input-edit' : 'border-start-0 bg-white'}
+                  />
+                </div>
+              </Form.Group>
+            </Col>
+
+            {/* Teléfono */}
+            <Col xs={12} md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold text-navy small">
+                  Teléfono Móvil
+                </Form.Label>
+                <div className="input-group">
+                  <span className="input-group-text bg-white border-end-0">
+                    <span className="bi bi-telephone text-gold" aria-hidden="true" />
+                  </span>
+                  <Form.Control
+                    type="tel"
+                    name="telefono"
+                    id="perfil-telefono"
+                    inputMode="numeric"
+                    maxLength="10"
+                    value={formData.telefono}
+                    onChange={onInputChange}
+                    disabled={!isEditing}
+                    placeholder="Ej: 3001234567"
+                    className={isEditing ? 'border-start-0 perfil-input-edit' : 'border-start-0 bg-white'}
+                  />
+                </div>
+                {isEditing && (
+                  <Form.Text className="text-muted small">
+                    Debe contener exactamente 10 dígitos numéricos.
+                  </Form.Text>
+                )}
+              </Form.Group>
+            </Col>
+
+            {/* Rol en la plataforma */}
+            <Col xs={12} md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold text-navy small">
+                  Rol asignado
+                </Form.Label>
+                <div className="input-group">
+                  <span className="input-group-text bg-light border-end-0">
+                    <span className="bi bi-award text-muted" aria-hidden="true" />
+                  </span>
+                  <Form.Control
+                    type="text"
+                    value={rolLabel}
+                    disabled
+                    className="bg-light border-start-0 text-muted"
+                  />
+                </div>
+              </Form.Group>
+            </Col>
+
+            {/* Dirección de Envío / Ubicación (Clientes y Administradores) */}
+            {(isCliente || isAdmin) && (
+              <Col xs={12}>
+                <Form.Group className="mb-3">
+                  <Form.Label className="fw-semibold text-navy small">
+                    {isAdmin ? 'Dirección de Contacto / Ubicación' : 'Dirección de Envío Principal'}
+                  </Form.Label>
+                  <div className="input-group">
+                    <span className="input-group-text bg-white border-end-0 align-items-start pt-2">
+                      <span className="bi bi-geo-alt text-gold" aria-hidden="true" />
+                    </span>
+                    <Form.Control
+                      as="textarea"
+                      rows={2}
+                      name="direccion"
+                      id="perfil-direccion"
+                      value={formData.direccion}
+                      onChange={onInputChange}
+                      disabled={!isEditing}
+                      placeholder={isAdmin ? "Ej: Calle 123 #45-67, Oficina 802, Bogotá" : "Ej: Calle 123 #45-67, Apto 802, Bogotá"}
+                      className={isEditing ? 'border-start-0 perfil-input-edit' : 'border-start-0 bg-white'}
+                    />
+                  </div>
+                </Form.Group>
+              </Col>
+            )}
+          </Row>
+        </Form>
+      </Card.Body>
+    </Card>
+  );
+}
+
+function ModalEliminarCuenta({ show, eliminando, modalData, onCerrar, onChangeField, onSubmit }) {
+  return (
+    <Modal
+      show={show}
+      onHide={onCerrar}
+      centered
+      backdrop="static"
+      dialogClassName="modal-confirmacion-compacto"
+    >
+      <Modal.Body className="p-3 p-sm-4">
+        <div className="text-center mb-3">
+          <div className="confirm-icon-wrapper mb-2 mx-auto bg-danger-subtle text-danger">
+            <span className="bi bi-shield-lock-fill confirm-icon" aria-hidden="true" />
+          </div>
+          <h5 className="fw-bold text-navy mb-1 fs-5">
+            ¿Eliminar cuenta permanentemente?
+          </h5>
+          <p className="text-muted small mb-0 px-2" style={{ maxWidth: '340px', margin: '0 auto' }}>
+            Esta acción es irreversible. Para verificar tu identidad, por favor ingresa tu correo electrónico y tu contraseña actual.
+          </p>
+        </div>
+
+        {modalData.error && (
+          <div className="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-3">
+            <span className="bi bi-exclamation-triangle-fill flex-shrink-0" aria-hidden="true" />
+            <span>{modalData.error}</span>
+          </div>
+        )}
+
+        <Form onSubmit={onSubmit}>
+          <Form.Group className="mb-3 text-start">
+            <Form.Label htmlFor="modal-eliminar-email" className="small fw-semibold text-navy">
+              Correo Electrónico Actual
+            </Form.Label>
+            <div className="input-group">
+              <span className="input-group-text bg-light border-end-0">
+                <span className="bi bi-envelope text-muted" aria-hidden="true" />
+              </span>
+              <Form.Control
+                id="modal-eliminar-email"
+                type="email"
+                placeholder="ejemplo@correo.com"
+                value={modalData.email}
+                onChange={(e) => onChangeField('email', e.target.value)}
+                disabled={eliminando}
+                className="border-start-0"
+                required
+              />
+            </div>
+          </Form.Group>
+
+          <Form.Group className="mb-4 text-start">
+            <Form.Label htmlFor="modal-eliminar-password" className="small fw-semibold text-navy">
+              Contraseña Actual
+            </Form.Label>
+            <div className="input-group">
+              <span className="input-group-text bg-light border-end-0">
+                <span className="bi bi-lock text-muted" aria-hidden="true" />
+              </span>
+              <Form.Control
+                id="modal-eliminar-password"
+                type="password"
+                placeholder="Tu contraseña actual"
+                value={modalData.password}
+                onChange={(e) => onChangeField('password', e.target.value)}
+                disabled={eliminando}
+                className="border-start-0"
+                required
+              />
+            </div>
+          </Form.Group>
+
+          <div className="d-flex gap-2 justify-content-center w-100">
+            <Button
+              type="button"
+              variant="outline-secondary"
+              className="px-3 py-2 fw-semibold flex-fill"
+              onClick={onCerrar}
+              disabled={eliminando}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="danger"
+              type="submit"
+              className="px-3 py-2 fw-semibold flex-fill shadow-sm"
+              disabled={eliminando || !modalData.email.trim() || !modalData.password}
+            >
+              {eliminando ? 'Eliminando...' : 'Eliminar cuenta'}
+            </Button>
+          </div>
+        </Form>
+      </Modal.Body>
+    </Modal>
+  );
+}
+
+function ModalConfirmacionPerfil({ modal, passwordAdmin, setPasswordAdmin, onCerrar }) {
+  const bgClass = getBgModalConfirmacion(modal.tipo);
+
+  const handleCancelar = () => {
+    onCerrar();
+    setPasswordAdmin('');
+    if (modal.onCancel) modal.onCancel();
+  };
+
+  const handleConfirmar = async () => {
+    const action = modal.onConfirm;
+    const pwd = passwordAdmin;
+    onCerrar();
+    if (action) await action(pwd);
+  };
+
+  return (
+    <Modal
+      show={modal.show}
+      onHide={handleCancelar}
+      centered
+      backdrop="static"
+      dialogClassName="modal-confirmacion-compacto"
+    >
+      <Modal.Body className="text-center p-3 p-sm-4">
+        <div
+          className={`confirm-icon-wrapper mb-3 mx-auto bg-${bgClass} text-${modal.tipo || 'primary'}`}
+        >
+          <span className={`bi bi-${modal.icono || 'trash3-fill'} confirm-icon`} aria-hidden="true" />
+        </div>
+
+        <h5 className="fw-bold text-navy mb-2 fs-5">
+          {modal.titulo}
+        </h5>
+
+        <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '340px', margin: '0 auto' }}>
+          {modal.mensaje}
+        </p>
+
+        {modal.requierePassword && (
+          <div className="mb-3 text-start px-2" style={{ maxWidth: '340px', margin: '0 auto' }}>
+            <label htmlFor="input-password-admin" className="small fw-semibold text-navy mb-1">
+              Contraseña actual de Administrador
+            </label>
+            <div className="input-group">
+              <span className="input-group-text bg-light border-end-0">
+                <span className="bi bi-lock text-muted" aria-hidden="true" />
+              </span>
+              <input
+                id="input-password-admin"
+                type="password"
+                className="form-control border-start-0"
+                placeholder="Ingresa tu contraseña"
+                value={passwordAdmin}
+                onChange={(e) => setPasswordAdmin(e.target.value)}
+                autoFocus
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="d-flex gap-2 justify-content-center w-100 mt-2">
+          <Button
+            type="button"
+            variant="outline-secondary"
+            className="px-3 py-2 fw-semibold flex-fill"
+            onClick={handleCancelar}
+          >
+            {modal.textoCancelar || 'Cancelar'}
+          </Button>
+          <Button
+            type="button"
+            variant={modal.tipo || 'danger'}
+            className="px-3 py-2 fw-semibold flex-fill shadow-sm"
+            disabled={modal.requierePassword && !passwordAdmin}
+            onClick={handleConfirmar}
+          >
+            {modal.textoConfirmar || 'Borrar'}
+          </Button>
+        </div>
+      </Modal.Body>
+    </Modal>
+  );
+}
+
+function AccesosRapidos({ isCliente, isAdmin, isAuxiliar }) {
+  if (isCliente) {
+    return (
+      <Card className="perfil-sidebar-card shadow-sm">
+        <Card.Header className="perfil-card-header d-flex align-items-center gap-2">
+          <span className="bi bi-compass-fill text-gold fs-5" aria-hidden="true" />
+          <span className="fw-bold">Accesos Rápidos</span>
+        </Card.Header>
+        <Card.Body className="p-3 d-flex flex-column gap-2">
+          <Link
+            to="/mis-pedidos"
+            className="btn btn-outline-primary btn-acceso-rapido text-start d-flex align-items-center justify-content-between p-2 px-3"
+          >
+            <span><span className="bi bi-box-seam me-2 text-gold" aria-hidden="true" /> Mis Pedidos</span>
+            <span className="bi bi-chevron-right small" aria-hidden="true" />
+          </Link>
+          <Link
+            to="/carrito"
+            className="btn btn-outline-primary btn-acceso-rapido text-start d-flex align-items-center justify-content-between p-2 px-3"
+          >
+            <span><span className="bi bi-cart3 me-2 text-gold" aria-hidden="true" /> Mi Carrito</span>
+            <span className="bi bi-chevron-right small" aria-hidden="true" />
+          </Link>
+          <Link
+            to="/catalogo"
+            className="btn btn-outline-primary btn-acceso-rapido text-start d-flex align-items-center justify-content-between p-2 px-3"
+          >
+            <span><span className="bi bi-grid me-2 text-gold" aria-hidden="true" /> Explorar Catálogo</span>
+            <span className="bi bi-chevron-right small" aria-hidden="true" />
+          </Link>
+        </Card.Body>
+      </Card>
+    );
+  }
+
+  if (isAdmin || isAuxiliar) {
+    return (
+      <Card className="perfil-sidebar-card shadow-sm">
+        <Card.Header className="perfil-card-header d-flex align-items-center gap-2">
+          <span className="bi bi-compass-fill text-gold fs-5" aria-hidden="true" />
+          <span className="fw-bold">Accesos Rápidos</span>
+        </Card.Header>
+        <Card.Body className="p-3 d-flex flex-column gap-2">
+          <Link
+            to="/admin/dashboard"
+            className="btn btn-outline-primary btn-acceso-rapido text-start d-flex align-items-center justify-content-between p-2 px-3"
+          >
+            <span><span className="bi bi-speedometer2 me-2 text-gold" aria-hidden="true" /> Panel de Control</span>
+            <span className="bi bi-chevron-right small" aria-hidden="true" />
+          </Link>
+          <Link
+            to="/admin/productos"
+            className="btn btn-outline-primary btn-acceso-rapido text-start d-flex align-items-center justify-content-between p-2 px-3"
+          >
+            <span><span className="bi bi-boxes me-2 text-gold" aria-hidden="true" /> Gestor de Productos</span>
+            <span className="bi bi-chevron-right small" aria-hidden="true" />
+          </Link>
+          <Link
+            to="/admin/facturas"
+            className="btn btn-outline-primary btn-acceso-rapido text-start d-flex align-items-center justify-content-between p-2 px-3"
+          >
+            <span><span className="bi bi-receipt me-2 text-gold" aria-hidden="true" /> Facturas</span>
+            <span className="bi bi-chevron-right small" aria-hidden="true" />
+          </Link>
+        </Card.Body>
+      </Card>
+    );
+  }
+
+  return null;
+}
+
+function PermisosRol({ isAdmin, isAuxiliar, isCliente }) {
+  let titulo = 'Beneficios de tu Cuenta';
+  if (isAdmin) titulo = 'Privilegios de Administrador';
+  else if (isAuxiliar) titulo = 'Privilegios de Auxiliar';
+
+  return (
+    <Card className="perfil-main-card shadow-sm mb-4">
+      <Card.Header className="perfil-card-header d-flex align-items-center gap-2">
+        <span className="bi bi-stars text-gold fs-5" aria-hidden="true" />
+        <span className="fw-bold">{titulo}</span>
+      </Card.Header>
+      <Card.Body className="p-4">
+        <ul className="perfil-permissions-list mb-0">
+          {isAdmin && (
+            <>
+              <li><span className="bi bi-check-circle-fill text-success me-2" aria-hidden="true" /> Acceso total al panel de administración y métricas ejecutivas</li>
+              <li><span className="bi bi-check-circle-fill text-success me-2" aria-hidden="true" /> Gestión completa de catálogo, categorías, productos y stock</li>
+              <li><span className="bi bi-check-circle-fill text-success me-2" aria-hidden="true" /> Administración de usuarios, generación de facturas y reportes contables</li>
+            </>
+          )}
+          {isAuxiliar && (
+            <>
+              <li><span className="bi bi-check-circle-fill text-success me-2" aria-hidden="true" /> Gestión de productos, catálogo y existencias de almacén</li>
+              <li><span className="bi bi-check-circle-fill text-success me-2" aria-hidden="true" /> Monitoreo y actualización del estado de pedidos de clientes</li>
+              <li><span className="bi bi-check-circle-fill text-success me-2" aria-hidden="true" /> Visualización de comprobantes y facturas electrónicas</li>
+            </>
+          )}
+          {isCliente && (
+            <>
+              <li><span className="bi bi-check-circle-fill text-success me-2" aria-hidden="true" /> Acceso a compras directas de ventanería y productos en aluminio</li>
+              <li><span className="bi bi-check-circle-fill text-success me-2" aria-hidden="true" /> Seguimiento en tiempo real de órdenes de pedido y facturación</li>
+              <li><span className="bi bi-check-circle-fill text-success me-2" aria-hidden="true" /> Comentarios y valoraciones verificadas de productos</li>
+            </>
+          )}
+        </ul>
+      </Card.Body>
+    </Card>
+  );
+}
+
+function GestionCuentaCliente({ desactivando, eliminando, onSolicitarDesactivar, onSolicitarEliminar }) {
+  return (
+    <Card className="perfil-status-card shadow-sm">
+      <Card.Header className="perfil-card-header d-flex align-items-center gap-2">
+        <span className="bi bi-shield-slash text-gold fs-5" aria-hidden="true" />
+        <span className="fw-bold">Gestión de la Cuenta</span>
+      </Card.Header>
+      <Card.Body className="p-4 d-flex flex-column gap-4">
+        {/* Opción 1: Desactivar Cuenta */}
+        <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 pb-3 border-bottom">
+          <div>
+            <h6 className="text-navy fw-bold d-flex align-items-center gap-2 mb-1">
+              <span className="bi bi-pause-circle-fill text-warning" aria-hidden="true" />
+              <span>Desactivar Cuenta</span>
+            </h6>
+            <p className="text-muted small mb-0" style={{ maxWidth: '520px' }}>
+              Tu cuenta pasará a estado Inactivo temporalmente y se cerrará tu sesión. Podrás reactivarla contactando al soporte.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline-warning"
+            className="btn-desactivar-cuenta text-dark flex-shrink-0 d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold"
+            onClick={onSolicitarDesactivar}
+            disabled={desactivando || eliminando}
+          >
+            <span className="bi bi-pause-circle text-warning" aria-hidden="true" />
+            <span>{desactivando ? 'Desactivando...' : 'Desactivar cuenta'}</span>
+          </Button>
+        </div>
+
+        {/* Opción 2: Eliminar Cuenta */}
+        <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+          <div>
+            <h6 className="text-danger fw-bold d-flex align-items-center gap-2 mb-1">
+              <span className="bi bi-trash3-fill" aria-hidden="true" />
+              <span>Eliminar Cuenta Permanentemente</span>
+            </h6>
+            <p className="text-muted small mb-0" style={{ maxWidth: '520px' }}>
+              Se darán de baja definitivamente tus datos en la plataforma. Por seguridad, te solicitaremos tu correo y contraseña para confirmar.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline-danger"
+            className="btn-eliminar-cuenta flex-shrink-0 d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold"
+            onClick={onSolicitarEliminar}
+            disabled={desactivando || eliminando}
+          >
+            <span className="bi bi-trash3-fill" aria-hidden="true" />
+            <span>{eliminando ? 'Eliminando...' : 'Eliminar cuenta'}</span>
+          </Button>
+        </div>
+      </Card.Body>
+    </Card>
+  );
+}
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
+
 const PerfilPage = () => {
   const { user, isAdmin, isAuxiliar, isCliente, updateProfile, deleteAccount, desactivarCuenta, eliminarCuenta } = useAuth();
   const navigate = useNavigate();
@@ -23,7 +793,6 @@ const PerfilPage = () => {
   const [passwordAdmin, setPasswordAdmin] = useState('');
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
 
-  // Modal de seguridad para eliminar cuenta con verificación de credenciales
   const [modalEliminar, setModalEliminar] = useState({
     show: false,
     email: '',
@@ -38,7 +807,6 @@ const PerfilPage = () => {
     direccion: user?.direccion || '',
   });
 
-  // Modal de confirmación estilo Gestor de Usuarios
   const [modalConfirmacion, setModalConfirmacion] = useState({
     show: false,
     titulo: '',
@@ -50,7 +818,6 @@ const PerfilPage = () => {
     onConfirm: null
   });
 
-  // Sincronizar datos si el usuario en contexto cambia
   useEffect(() => {
     if (user) {
       setFormData({
@@ -62,7 +829,6 @@ const PerfilPage = () => {
     }
   }, [user]);
 
-  // Limpiar mensaje automáticamente estilo gestores admin
   useEffect(() => {
     if (mensaje.texto) {
       const timer = setTimeout(() => {
@@ -82,30 +848,47 @@ const PerfilPage = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const hayCambios = () => {
-    const nombreOriginal = (user?.nombre || '').trim();
-    const nombreNuevo = (formData.nombre || '').trim();
+  const handleCancelarEdicion = () => {
+    setIsEditing(false);
+    setFormData({
+      nombre: user?.nombre || '',
+      email: user?.email || '',
+      telefono: user?.telefono || '',
+      direccion: user?.direccion || '',
+    });
+  };
 
-    const emailOriginal = (user?.email || '').trim().toLowerCase();
-    const emailNuevo = (formData.email || '').trim().toLowerCase();
-
-    const telefonoOriginal = (user?.telefono || '').trim();
-    const telefonoNuevo = (formData.telefono || '').trim();
-
-    const direccionOriginal = (user?.direccion || '').trim();
-    const direccionNuevo = (formData.direccion || '').trim();
-
-    if (nombreOriginal !== nombreNuevo) return true;
-    if (!isAuxiliar && emailOriginal !== emailNuevo) return true;
-    if (telefonoOriginal !== telefonoNuevo) return true;
-    if ((isCliente || isAdmin) && direccionOriginal !== direccionNuevo) return true;
-
-    return false;
+  const ejecutarGuardado = async (passwordAuth) => {
+    setLoading(true);
+    try {
+      const datosAEnviar = prepararDatosActualizacion(formData, isAuxiliar, isAdmin, passwordAuth, passwordAdmin);
+      await updateProfile(datosAEnviar);
+      setMensaje({
+        tipo: 'success',
+        texto: `Usuario "${formData.nombre || user?.nombre}" actualizado exitosamente`
+      });
+      setIsEditing(false);
+      setPasswordAdmin('');
+    } catch (err) {
+      console.error('Error al actualizar perfil:', err);
+      const textoError =
+        err.message ||
+        err.mensaje ||
+        err.error ||
+        err.response?.data?.message ||
+        err.response?.data?.mensaje ||
+        'Error al actualizar el perfil';
+      setMensaje({
+        tipo: 'danger',
+        texto: textoError
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const solicitarGuardar = () => {
-    // Si los datos actuales coinciden con los de la base de datos, no mostrar confirmación
-    if (!hayCambios()) {
+    if (!verificarHayCambios({ user, formData, isAuxiliar, isCliente, isAdmin })) {
       setIsEditing(false);
       setMensaje({
         tipo: 'info',
@@ -114,21 +897,11 @@ const PerfilPage = () => {
       return;
     }
 
-    if (!isAuxiliar && formData.email) {
-      const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email.trim())) {
-        setMensaje({
-          tipo: 'danger',
-          texto: 'Por favor ingresa un correo electrónico válido'
-        });
-        return;
-      }
-    }
-
-    if (formData.telefono && formData.telefono.length !== 10) {
+    const errorValidacion = validarFormularioPerfil(formData, isAuxiliar);
+    if (errorValidacion) {
       setMensaje({
         tipo: 'danger',
-        texto: 'El teléfono debe tener exactamente 10 dígitos numéricos'
+        texto: errorValidacion
       });
       return;
     }
@@ -172,41 +945,6 @@ const PerfilPage = () => {
     });
   };
 
-  const ejecutarGuardado = async (passwordAuth) => {
-    setLoading(true);
-    try {
-      const datosAEnviar = { ...formData };
-      if (isAuxiliar) {
-        delete datosAEnviar.email;
-      }
-      if (isAdmin) {
-        datosAEnviar.passwordActual = passwordAuth || passwordAdmin;
-      }
-      await updateProfile(datosAEnviar);
-      setMensaje({
-        tipo: 'success',
-        texto: `Usuario "${formData.nombre || user?.nombre}" actualizado exitosamente`
-      });
-      setIsEditing(false);
-      setPasswordAdmin('');
-    } catch (err) {
-      console.error('Error al actualizar perfil:', err);
-      const textoError =
-        err.message ||
-        err.mensaje ||
-        err.error ||
-        err.response?.data?.message ||
-        err.response?.data?.mensaje ||
-        'Error al actualizar el perfil';
-      setMensaje({
-        tipo: 'danger',
-        texto: textoError
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Solicitar auto-desactivación de cuenta (solo clientes - confirmación sencilla)
   const solicitarDesactivarCuenta = () => {
     const nombreUsuario = user?.nombre || 'tu cuenta';
@@ -242,16 +980,6 @@ const PerfilPage = () => {
     });
   };
 
-  // Solicitar eliminación permanente de cuenta (solo clientes - pide correo y contraseña)
-  const solicitarEliminarCuenta = () => {
-    setModalEliminar({
-      show: true,
-      email: '',
-      password: '',
-      error: '',
-    });
-  };
-
   const ejecutarEliminacionCuenta = async (e) => {
     if (e) e.preventDefault();
     if (!modalEliminar.email.trim() || !modalEliminar.password) {
@@ -284,30 +1012,9 @@ const PerfilPage = () => {
     }
   };
 
-  const getRolLabel = () => {
-    if (isAdmin) return 'Administrador';
-    if (isAuxiliar) return 'Auxiliar';
-    return 'Cliente';
-  };
-
-  const getInitials = (nombre) => {
-    if (!nombre) return 'U';
-    const parts = nombre.trim().split(' ');
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    }
-    return nombre.slice(0, 2).toUpperCase();
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'No disponible';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  const rolLabel = getRolLabel(isAdmin, isAuxiliar);
+  const rolBadgeClass = getRolBadgeClass(isAdmin, isAuxiliar);
+  const rolIcon = getRolIcon(isAdmin, isAuxiliar);
 
   return (
     <Container className="perfil-page-container py-4 py-lg-5">
@@ -318,639 +1025,82 @@ const PerfilPage = () => {
       />
 
       {/* Encabezado Principal */}
-      <div className="perfil-banner mb-4 p-4 p-md-5 rounded-4 shadow-sm">
-        <Row className="align-items-center g-4">
-          <Col xs={12} md="auto" className="text-center text-md-start">
-            <div className="perfil-avatar-outer mx-auto mx-md-0">
-              <div className="perfil-avatar-inner">
-                {getInitials(user?.nombre || user?.email)}
-              </div>
-            </div>
-          </Col>
-          <Col xs={12} md className="text-center text-md-start">
-            <div className="d-flex flex-wrap align-items-center justify-content-center justify-content-md-start gap-2 mb-2">
-              <h1 className="perfil-hero-nombre mb-0">
-                {user?.nombre || 'Usuario'}
-              </h1>
-              <Badge className={`perfil-badge-rol ${isAdmin ? 'badge-admin' : isAuxiliar ? 'badge-aux' : 'badge-cliente'}`}>
-                <i className={`bi ${isAdmin ? 'bi-shield-lock-fill' : isAuxiliar ? 'bi-person-gear' : 'bi-person-check-fill'} me-1`} />
-                {getRolLabel()}
-              </Badge>
-            </div>
-            <p className="perfil-hero-email mb-2 text-muted">
-              <i className="bi bi-envelope-at me-2" />
-              {user?.email}
-            </p>
-            <div className="d-flex flex-wrap align-items-center justify-content-center justify-content-md-start gap-3 small text-muted">
-              <span>
-                <i className="bi bi-calendar3 me-1 text-gold" />
-                Miembro desde: <strong>{formatDate(user?.createdAt)}</strong>
-              </span>
-              <span>
-                <i className="bi bi-check-circle-fill me-1 text-success" />
-                Estado: <strong>Activo</strong>
-              </span>
-            </div>
-          </Col>
-          <Col xs={12} md="auto" className="text-center text-md-end">
-            {!isEditing ? (
-              <Button
-                variant="primary"
-                className="btn-editar-perfil d-inline-flex align-items-center gap-2 px-4 py-2"
-                onClick={() => setIsEditing(true)}
-              >
-                <i className="bi bi-pencil-square" />
-                <span>Editar Información</span>
-              </Button>
-            ) : (
-              <div className="d-flex gap-2 justify-content-center justify-content-md-end">
-                <Button
-                  variant="outline-secondary"
-                  className="px-3 py-2 fw-semibold"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setFormData({
-                      nombre: user?.nombre || '',
-                      email: user?.email || '',
-                      telefono: user?.telefono || '',
-                      direccion: user?.direccion || '',
-                    });
-                  }}
-                  disabled={loading}
-                >
-                  <i className="bi bi-x-lg me-1" />
-                  Cancelar
-                </Button>
-                <Button
-                  variant="primary"
-                  className="btn-guardar-perfil px-4 py-2 fw-semibold"
-                  onClick={solicitarGuardar}
-                  disabled={loading}
-                >
-                  <i className="bi bi-check2-circle me-1" />
-                  {loading ? 'Guardando...' : 'Guardar'}
-                </Button>
-              </div>
-            )}
-          </Col>
-        </Row>
-      </div>
+      <BannerPerfil
+        user={user}
+        rolLabel={rolLabel}
+        rolBadgeClass={rolBadgeClass}
+        rolIcon={rolIcon}
+        isEditing={isEditing}
+        loading={loading}
+        onIniciarEdicion={() => setIsEditing(true)}
+        onCancelarEdicion={handleCancelarEdicion}
+        onGuardar={solicitarGuardar}
+      />
 
       <Row className="g-4">
         {/* Columna Izquierda: Información Rápida y Enlaces */}
         <Col xs={12} lg={4}>
-          <Card className="perfil-sidebar-card shadow-sm mb-4">
-            <Card.Header className="perfil-card-header d-flex align-items-center gap-2">
-              <i className="bi bi-person-lines-fill text-gold fs-5" />
-              <span className="fw-bold">Resumen de Cuenta</span>
-            </Card.Header>
-            <Card.Body className="p-3 p-md-4">
-              <div className="resumen-item mb-3 pb-3 border-bottom">
-                <span className="resumen-label text-muted small d-block">Tipo de Acceso</span>
-                <span className="resumen-value fw-bold text-navy">{getRolLabel()}</span>
-              </div>
-              <div className="resumen-item mb-3 pb-3 border-bottom">
-                <span className="resumen-label text-muted small d-block">Identificador de Usuario</span>
-                <span className="resumen-value font-monospace small text-muted">ID #{user?.id || '—'}</span>
-              </div>
-              <div className="resumen-item mb-3 pb-3 border-bottom">
-                <span className="resumen-label text-muted small d-block">Teléfono registrado</span>
-                <span className="resumen-value fw-semibold text-navy">
-                  {user?.telefono ? (
-                    <><i className="bi bi-telephone-fill me-1 text-gold small" />{user.telefono}</>
-                  ) : (
-                    <span className="text-muted fst-italic">No especificado</span>
-                  )}
-                </span>
-              </div>
-              {(isCliente || isAdmin) && (
-                <div className="resumen-item mb-2">
-                  <span className="resumen-label text-muted small d-block">
-                    {isAdmin ? 'Dirección registrada / contacto' : 'Dirección de entrega'}
-                  </span>
-                  <span className="resumen-value fw-semibold text-navy">
-                    {user?.direccion ? (
-                      <><i className="bi bi-geo-alt-fill me-1 text-gold small" />{user.direccion}</>
-                    ) : (
-                      <span className="text-muted fst-italic">No especificada</span>
-                    )}
-                  </span>
-                </div>
-              )}
-            </Card.Body>
-          </Card>
-
-          {/* Accesos rápidos según rol */}
-          <Card className="perfil-sidebar-card shadow-sm">
-            <Card.Header className="perfil-card-header d-flex align-items-center gap-2">
-              <i className="bi bi-compass-fill text-gold fs-5" />
-              <span className="fw-bold">Accesos Rápidos</span>
-            </Card.Header>
-            <Card.Body className="p-3 d-flex flex-column gap-2">
-              {isCliente && (
-                <>
-                  <Button
-                    as={Link}
-                    to="/mis-pedidos"
-                    variant="outline-primary"
-                    className="btn-acceso-rapido text-start d-flex align-items-center justify-content-between p-2 px-3"
-                  >
-                    <span><i className="bi bi-box-seam me-2 text-gold" /> Mis Pedidos</span>
-                    <i className="bi bi-chevron-right small" />
-                  </Button>
-                  <Button
-                    as={Link}
-                    to="/carrito"
-                    variant="outline-primary"
-                    className="btn-acceso-rapido text-start d-flex align-items-center justify-content-between p-2 px-3"
-                  >
-                    <span><i className="bi bi-cart3 me-2 text-gold" /> Mi Carrito</span>
-                    <i className="bi bi-chevron-right small" />
-                  </Button>
-                  <Button
-                    as={Link}
-                    to="/catalogo"
-                    variant="outline-primary"
-                    className="btn-acceso-rapido text-start d-flex align-items-center justify-content-between p-2 px-3"
-                  >
-                    <span><i className="bi bi-grid me-2 text-gold" /> Explorar Catálogo</span>
-                    <i className="bi bi-chevron-right small" />
-                  </Button>
-                </>
-              )}
-              {(isAdmin || isAuxiliar) && (
-                <>
-                  <Button
-                    as={Link}
-                    to="/admin/dashboard"
-                    variant="outline-primary"
-                    className="btn-acceso-rapido text-start d-flex align-items-center justify-content-between p-2 px-3"
-                  >
-                    <span><i className="bi bi-speedometer2 me-2 text-gold" /> Panel de Control</span>
-                    <i className="bi bi-chevron-right small" />
-                  </Button>
-                  <Button
-                    as={Link}
-                    to="/admin/productos"
-                    variant="outline-primary"
-                    className="btn-acceso-rapido text-start d-flex align-items-center justify-content-between p-2 px-3"
-                  >
-                    <span><i className="bi bi-boxes me-2 text-gold" /> Gestor de Productos</span>
-                    <i className="bi bi-chevron-right small" />
-                  </Button>
-                  <Button
-                    as={Link}
-                    to="/admin/facturas"
-                    variant="outline-primary"
-                    className="btn-acceso-rapido text-start d-flex align-items-center justify-content-between p-2 px-3"
-                  >
-                    <span><i className="bi bi-receipt me-2 text-gold" /> Facturas</span>
-                    <i className="bi bi-chevron-right small" />
-                  </Button>
-                </>
-              )}
-            </Card.Body>
-          </Card>
+          <ResumenCuenta
+            user={user}
+            rolLabel={rolLabel}
+            isAdmin={isAdmin}
+            isCliente={isCliente}
+          />
+          <AccesosRapidos
+            isCliente={isCliente}
+            isAdmin={isAdmin}
+            isAuxiliar={isAuxiliar}
+          />
         </Col>
 
         {/* Columna Derecha: Formulario de Datos y Zona de Peligro */}
         <Col xs={12} lg={8}>
-          {/* Tarjeta de Datos Personales */}
-          <Card className="perfil-main-card shadow-sm mb-4">
-            <Card.Header className="perfil-card-header d-flex align-items-center justify-content-between">
-              <div className="d-flex align-items-center gap-2">
-                <i className="bi bi-shield-check text-gold fs-5" />
-                <span className="fw-bold">Detalles de la Cuenta</span>
-              </div>
-              {isEditing && (
-                <Badge bg="warning" text="dark" className="px-2 py-1">
-                  Modo Edición
-                </Badge>
-              )}
-            </Card.Header>
-            <Card.Body className="p-4">
-              <Form onSubmit={(e) => { e.preventDefault(); if (isEditing) solicitarGuardar(); }}>
-                <Row className="g-3">
-                  {/* Correo Electrónico */}
-                  <Col xs={12} md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold text-navy small">
-                        Correo Electrónico
-                        {!isAuxiliar ? (
-                          isEditing && (
-                            <Badge bg="info" text="dark" className="ms-2 small" style={{ fontSize: '0.65rem' }}>
-                              Modificable
-                            </Badge>
-                          )
-                        ) : (
-                          <Badge bg="secondary" className="ms-2 small" style={{ fontSize: '0.65rem' }}>
-                            No modificable
-                          </Badge>
-                        )}
-                      </Form.Label>
-                      <div className="input-group">
-                        <span className={`input-group-text ${isEditing && !isAuxiliar ? 'bg-white' : 'bg-light'} border-end-0`}>
-                          <i className={`bi bi-envelope ${isEditing && !isAuxiliar ? 'text-gold' : 'text-muted'}`} />
-                        </span>
-                        <Form.Control
-                          type="email"
-                          name="email"
-                          id="perfil-email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          disabled={!isEditing || isAuxiliar}
-                          placeholder="tu@correo.com"
-                          className={isEditing && !isAuxiliar ? 'border-start-0 perfil-input-edit' : 'border-start-0 bg-light text-muted'}
-                          required
-                        />
-                      </div>
-                      {isAuxiliar && isEditing && (
-                        <Form.Text className="text-muted small">
-                          Las cuentas con rol Auxiliar no tienen permitido cambiar su correo electrónico.
-                        </Form.Text>
-                      )}
-                      {isAdmin && isEditing && (
-                        <Form.Text className="text-muted small">
-                          Como Administrador puedes cambiar tu correo electrónico. Se solicitará tu contraseña para autorizar los cambios.
-                        </Form.Text>
-                      )}
-                    </Form.Group>
-                  </Col>
+          <FormularioDatosPerfil
+            formData={formData}
+            isEditing={isEditing}
+            isAuxiliar={isAuxiliar}
+            isAdmin={isAdmin}
+            isCliente={isCliente}
+            rolLabel={rolLabel}
+            onInputChange={handleInputChange}
+            onSubmit={(e) => { e.preventDefault(); if (isEditing) solicitarGuardar(); }}
+          />
 
-                  {/* Nombre Completo */}
-                  <Col xs={12} md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold text-navy small">
-                        Nombre Completo
-                      </Form.Label>
-                      <div className="input-group">
-                        <span className="input-group-text bg-white border-end-0">
-                          <i className="bi bi-person text-gold" />
-                        </span>
-                        <Form.Control
-                          type="text"
-                          name="nombre"
-                          id="perfil-nombre"
-                          value={formData.nombre}
-                          onChange={handleInputChange}
-                          disabled={!isEditing}
-                          placeholder="Tu nombre completo"
-                          className={isEditing ? 'border-start-0 perfil-input-edit' : 'border-start-0 bg-white'}
-                        />
-                      </div>
-                    </Form.Group>
-                  </Col>
+          <PermisosRol
+            isAdmin={isAdmin}
+            isAuxiliar={isAuxiliar}
+            isCliente={isCliente}
+          />
 
-                  {/* Teléfono */}
-                  <Col xs={12} md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold text-navy small">
-                        Teléfono Móvil
-                      </Form.Label>
-                      <div className="input-group">
-                        <span className="input-group-text bg-white border-end-0">
-                          <i className="bi bi-telephone text-gold" />
-                        </span>
-                        <Form.Control
-                          type="tel"
-                          name="telefono"
-                          id="perfil-telefono"
-                          inputMode="numeric"
-                          maxLength="10"
-                          value={formData.telefono}
-                          onChange={handleInputChange}
-                          disabled={!isEditing}
-                          placeholder="Ej: 3001234567"
-                          className={isEditing ? 'border-start-0 perfil-input-edit' : 'border-start-0 bg-white'}
-                        />
-                      </div>
-                      {isEditing && (
-                        <Form.Text className="text-muted small">
-                          Debe contener exactamente 10 dígitos numéricos.
-                        </Form.Text>
-                      )}
-                    </Form.Group>
-                  </Col>
-
-                  {/* Rol en la plataforma */}
-                  <Col xs={12} md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold text-navy small">
-                        Rol asignado
-                      </Form.Label>
-                      <div className="input-group">
-                        <span className="input-group-text bg-light border-end-0">
-                          <i className="bi bi-award text-muted" />
-                        </span>
-                        <Form.Control
-                          type="text"
-                          value={getRolLabel()}
-                          disabled
-                          className="bg-light border-start-0 text-muted"
-                        />
-                      </div>
-                    </Form.Group>
-                  </Col>
-
-                  {/* Dirección de Envío / Ubicación (Clientes y Administradores) */}
-                  {(isCliente || isAdmin) && (
-                    <Col xs={12}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="fw-semibold text-navy small">
-                          {isAdmin ? 'Dirección de Contacto / Ubicación' : 'Dirección de Envío Principal'}
-                        </Form.Label>
-                        <div className="input-group">
-                          <span className="input-group-text bg-white border-end-0 align-items-start pt-2">
-                            <i className="bi bi-geo-alt text-gold" />
-                          </span>
-                          <Form.Control
-                            as="textarea"
-                            rows={2}
-                            name="direccion"
-                            id="perfil-direccion"
-                            value={formData.direccion}
-                            onChange={handleInputChange}
-                            disabled={!isEditing}
-                            placeholder={isAdmin ? "Ej: Calle 123 #45-67, Oficina 802, Bogotá" : "Ej: Calle 123 #45-67, Apto 802, Bogotá"}
-                            className={isEditing ? 'border-start-0 perfil-input-edit' : 'border-start-0 bg-white'}
-                          />
-                        </div>
-                      </Form.Group>
-                    </Col>
-                  )}
-                </Row>
-              </Form>
-            </Card.Body>
-          </Card>
-
-          {/* Tarjeta de Permisos o Beneficios */}
-          <Card className="perfil-main-card shadow-sm mb-4">
-            <Card.Header className="perfil-card-header d-flex align-items-center gap-2">
-              <i className="bi bi-stars text-gold fs-5" />
-              <span className="fw-bold">
-                {isAdmin ? 'Privilegios de Administrador' : isAuxiliar ? 'Privilegios de Auxiliar' : 'Beneficios de tu Cuenta'}
-              </span>
-            </Card.Header>
-            <Card.Body className="p-4">
-              <ul className="perfil-permissions-list mb-0">
-                {isAdmin && (
-                  <>
-                    <li><i className="bi bi-check-circle-fill text-success me-2" /> Acceso total al panel de administración y métricas ejecutivas</li>
-                    <li><i className="bi bi-check-circle-fill text-success me-2" /> Gestión completa de catálogo, categorías, productos y stock</li>
-                    <li><i className="bi bi-check-circle-fill text-success me-2" /> Administración de usuarios, generación de facturas y reportes contables</li>
-                  </>
-                )}
-                {isAuxiliar && (
-                  <>
-                    <li><i className="bi bi-check-circle-fill text-success me-2" /> Gestión de productos, catálogo y existencias de almacén</li>
-                    <li><i className="bi bi-check-circle-fill text-success me-2" /> Monitoreo y actualización del estado de pedidos de clientes</li>
-                    <li><i className="bi bi-check-circle-fill text-success me-2" /> Visualización de comprobantes y facturas electrónicas</li>
-                  </>
-                )}
-                {isCliente && (
-                  <>
-                    <li><i className="bi bi-check-circle-fill text-success me-2" /> Acceso a compras directas de ventanería y productos en aluminio</li>
-                    <li><i className="bi bi-check-circle-fill text-success me-2" /> Seguimiento en tiempo real de órdenes de pedido y facturación</li>
-                    <li><i className="bi bi-check-circle-fill text-success me-2" /> Comentarios y valoraciones verificadas de productos</li>
-                  </>
-                )}
-              </ul>
-            </Card.Body>
-          </Card>
-
-          {/* ========================================================================= */}
-          {/* GESTIÓN DE CUENTA: Desactivar (sencillo) o Eliminar (correo y contraseña) */}
-          {/* ========================================================================= */}
           {isCliente && (
-            <Card className="perfil-status-card shadow-sm">
-              <Card.Header className="perfil-card-header d-flex align-items-center gap-2">
-                <i className="bi bi-shield-slash text-gold fs-5" />
-                <span className="fw-bold">Gestión de la Cuenta</span>
-              </Card.Header>
-              <Card.Body className="p-4 d-flex flex-column gap-4">
-                {/* Opción 1: Desactivar Cuenta (Confirmación sencilla) */}
-                <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 pb-3 border-bottom">
-                  <div>
-                    <h6 className="text-navy fw-bold d-flex align-items-center gap-2 mb-1">
-                      <i className="bi bi-pause-circle-fill text-warning" />
-                      Desactivar Cuenta
-                    </h6>
-                    <p className="text-muted small mb-0" style={{ maxWidth: '520px' }}>
-                      Tu cuenta pasará a estado Inactivo temporalmente y se cerrará tu sesión. Podrás reactivarla contactando al soporte.
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline-warning"
-                    className="btn-desactivar-cuenta text-dark flex-shrink-0 d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold"
-                    onClick={solicitarDesactivarCuenta}
-                    disabled={desactivando || eliminando}
-                  >
-                    <i className="bi bi-pause-circle text-warning" />
-                    <span>{desactivando ? 'Desactivando...' : 'Desactivar cuenta'}</span>
-                  </Button>
-                </div>
-
-                {/* Opción 2: Eliminar Cuenta (Requiere correo y contraseña) */}
-                <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
-                  <div>
-                    <h6 className="text-danger fw-bold d-flex align-items-center gap-2 mb-1">
-                      <i className="bi bi-trash3-fill" />
-                      Eliminar Cuenta Permanentemente
-                    </h6>
-                    <p className="text-muted small mb-0" style={{ maxWidth: '520px' }}>
-                      Se darán de baja definitivamente tus datos en la plataforma. Por seguridad, te solicitaremos tu correo y contraseña para confirmar.
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline-danger"
-                    className="btn-eliminar-cuenta flex-shrink-0 d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold"
-                    onClick={solicitarEliminarCuenta}
-                    disabled={desactivando || eliminando}
-                  >
-                    <i className="bi bi-trash3-fill" />
-                    <span>{eliminando ? 'Eliminando...' : 'Eliminar cuenta'}</span>
-                  </Button>
-                </div>
-              </Card.Body>
-            </Card>
+            <GestionCuentaCliente
+              desactivando={desactivando}
+              eliminando={eliminando}
+              onSolicitarDesactivar={solicitarDesactivarCuenta}
+              onSolicitarEliminar={() => setModalEliminar({ show: true, email: '', password: '', error: '' })}
+            />
           )}
         </Col>
       </Row>
 
-      {/* ========================================================================= */}
-      {/* MODAL DE SEGURIDAD PARA ELIMINAR CUENTA (PIDE CORREO Y CONTRASEÑA)        */}
-      {/* ========================================================================= */}
-      <Modal
+      {/* Modales */}
+      <ModalEliminarCuenta
         show={modalEliminar.show}
-        onHide={() => !eliminando && setModalEliminar(prev => ({ ...prev, show: false }))}
-        centered
-        backdrop="static"
-        dialogClassName="modal-confirmacion-compacto"
-      >
-        <Modal.Body className="p-3 p-sm-4">
-          <div className="text-center mb-3">
-            <div className="confirm-icon-wrapper mb-2 mx-auto bg-danger-subtle text-danger">
-              <i className="bi bi-shield-lock-fill confirm-icon" />
-            </div>
-            <h5 className="fw-bold text-navy mb-1 fs-5">
-              ¿Eliminar cuenta permanentemente?
-            </h5>
-            <p className="text-muted small mb-0 px-2" style={{ maxWidth: '340px', margin: '0 auto' }}>
-              Esta acción es irreversible. Para verificar tu identidad, por favor ingresa tu correo electrónico y tu contraseña actual.
-            </p>
-          </div>
+        eliminando={eliminando}
+        modalData={modalEliminar}
+        onCerrar={() => !eliminando && setModalEliminar(prev => ({ ...prev, show: false }))}
+        onChangeField={(campo, valor) => setModalEliminar(prev => ({ ...prev, [campo]: valor, error: '' }))}
+        onSubmit={ejecutarEliminacionCuenta}
+      />
 
-          {modalEliminar.error && (
-            <div className="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-3">
-              <i className="bi bi-exclamation-triangle-fill flex-shrink-0" />
-              <span>{modalEliminar.error}</span>
-            </div>
-          )}
+      <ModalConfirmacionPerfil
+        modal={modalConfirmacion}
+        passwordAdmin={passwordAdmin}
+        setPasswordAdmin={setPasswordAdmin}
+        onCerrar={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
+      />
 
-          <Form onSubmit={ejecutarEliminacionCuenta}>
-            <Form.Group className="mb-3 text-start">
-              <Form.Label className="small fw-semibold text-navy">
-                Correo Electrónico Actual
-              </Form.Label>
-              <div className="input-group">
-                <span className="input-group-text bg-light border-end-0">
-                  <i className="bi bi-envelope text-muted" />
-                </span>
-                <Form.Control
-                  type="email"
-                  placeholder="ejemplo@correo.com"
-                  value={modalEliminar.email}
-                  onChange={(e) => setModalEliminar(prev => ({ ...prev, email: e.target.value, error: '' }))}
-                  disabled={eliminando}
-                  className="border-start-0"
-                  required
-                />
-              </div>
-            </Form.Group>
-
-            <Form.Group className="mb-4 text-start">
-              <Form.Label className="small fw-semibold text-navy">
-                Contraseña Actual
-              </Form.Label>
-              <div className="input-group">
-                <span className="input-group-text bg-light border-end-0">
-                  <i className="bi bi-lock text-muted" />
-                </span>
-                <Form.Control
-                  type="password"
-                  placeholder="Tu contraseña actual"
-                  value={modalEliminar.password}
-                  onChange={(e) => setModalEliminar(prev => ({ ...prev, password: e.target.value, error: '' }))}
-                  disabled={eliminando}
-                  className="border-start-0"
-                  required
-                />
-              </div>
-            </Form.Group>
-
-            <div className="d-flex gap-2 justify-content-center w-100">
-              <Button
-                variant="outline-secondary"
-                className="px-3 py-2 fw-semibold flex-fill"
-                onClick={() => setModalEliminar(prev => ({ ...prev, show: false }))}
-                disabled={eliminando}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="danger"
-                type="submit"
-                className="px-3 py-2 fw-semibold flex-fill shadow-sm"
-                disabled={eliminando || !modalEliminar.email.trim() || !modalEliminar.password}
-              >
-                {eliminando ? 'Eliminando...' : 'Eliminar cuenta'}
-              </Button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
-
-      {/* ========================================================================= */}
-      {/* MODAL DE CONFIRMACIÓN COMPACTO ESTILO GESTOR DE PRODUCTOS/USUARIOS        */}
-      {/* ========================================================================= */}
-      <Modal
-        show={modalConfirmacion.show}
-        onHide={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
-        centered
-        backdrop="static"
-        dialogClassName="modal-confirmacion-compacto"
-      >
-        <Modal.Body className="text-center p-3 p-sm-4">
-          <div
-            className={`confirm-icon-wrapper mb-3 mx-auto bg-${modalConfirmacion.tipo === 'danger' ? 'danger-subtle' :
-              modalConfirmacion.tipo === 'warning' ? 'warning-subtle' :
-                'primary-subtle'
-              } text-${modalConfirmacion.tipo || 'primary'}`}
-          >
-            <i className={`bi bi-${modalConfirmacion.icono || 'trash3-fill'} confirm-icon`} />
-          </div>
-
-          <h5 className="fw-bold text-navy mb-2 fs-5">
-            {modalConfirmacion.titulo}
-          </h5>
-
-          <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '340px', margin: '0 auto' }}>
-            {modalConfirmacion.mensaje}
-          </p>
-
-          {modalConfirmacion.requierePassword && (
-            <div className="mb-3 text-start px-2" style={{ maxWidth: '340px', margin: '0 auto' }}>
-              <label className="small fw-semibold text-navy mb-1">
-                Contraseña actual de Administrador
-              </label>
-              <div className="input-group">
-                <span className="input-group-text bg-light border-end-0">
-                  <i className="bi bi-lock text-muted" />
-                </span>
-                <input
-                  type="password"
-                  className="form-control border-start-0"
-                  placeholder="Ingresa tu contraseña"
-                  value={passwordAdmin}
-                  onChange={(e) => setPasswordAdmin(e.target.value)}
-                  autoFocus
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="d-flex gap-2 justify-content-center w-100 mt-2">
-            <Button
-              variant="outline-secondary"
-              className="px-3 py-2 fw-semibold flex-fill"
-              onClick={() => {
-                setModalConfirmacion(prev => ({ ...prev, show: false }));
-                setPasswordAdmin('');
-                if (modalConfirmacion.onCancel) modalConfirmacion.onCancel();
-              }}
-            >
-              {modalConfirmacion.textoCancelar || 'Cancelar'}
-            </Button>
-            <Button
-              variant={modalConfirmacion.tipo || 'danger'}
-              className="px-3 py-2 fw-semibold flex-fill shadow-sm"
-              disabled={modalConfirmacion.requierePassword && !passwordAdmin}
-              onClick={async () => {
-                const action = modalConfirmacion.onConfirm;
-                const pwd = passwordAdmin;
-                setModalConfirmacion(prev => ({ ...prev, show: false }));
-                if (action) await action(pwd);
-              }}
-            >
-              {modalConfirmacion.textoConfirmar || 'Borrar'}
-            </Button>
-          </div>
-        </Modal.Body>
-      </Modal>
-
-      {/* ========================================================================= */}
-      {/* ESTILOS DE LA PÁGINA (Consistentes con la paleta de toda la plataforma)   */}
-      {/* ========================================================================= */}
+      {/* ESTILOS DE LA PÁGINA */}
       <style>{`
         .perfil-page-container {
           min-height: calc(100vh - 180px);

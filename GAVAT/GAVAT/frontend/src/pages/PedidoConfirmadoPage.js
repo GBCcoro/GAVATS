@@ -17,6 +17,50 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import FloatingToast from '../components/FloatingToast';
 import { getImageUrl, formatCurrency, formatDateTime } from '../utils/helpers';
 
+const BADGES_ESTADO = {
+  'pendiente': 'badge-estado-pendiente',
+  'pagado': 'badge-estado-pagado',
+  'confirmado': 'badge-estado-confirmado',
+  'en_proceso': 'badge-estado-proceso',
+  'enviado': 'badge-estado-enviado',
+  'entregado': 'badge-estado-entregado',
+  'cancelado': 'badge-estado-cancelado'
+};
+
+const ICONS_ESTADO = {
+  'pendiente': 'clock-history',
+  'pagado': 'cash-stack',
+  'confirmado': 'check2-all',
+  'en_proceso': 'gear-wide-connected',
+  'enviado': 'truck',
+  'entregado': 'box2-heart-fill',
+  'cancelado': 'x-circle-fill'
+};
+
+const TEXTOS_ESTADO = {
+  'pendiente': 'Pendiente de Pago',
+  'pagado': 'Pagado',
+  'confirmado': 'Confirmado',
+  'en_proceso': 'En Proceso',
+  'enviado': 'Enviado',
+  'entregado': 'Entregado con Éxito',
+  'cancelado': 'Cancelado'
+};
+
+const MENSAJES_ESTADO = {
+  'pagado': 'Tu pago ha sido confirmado. Estamos preparando tus productos para el despacho.',
+  'en_proceso': 'Tu orden se encuentra en fase de ensamblaje y preparación en bodega.',
+  'enviado': 'Tu pedido ha sido despachado y se encuentra en ruta hacia tu dirección.',
+  'entregado': 'Tu pedido ha sido entregado exitosamente. ¡Gracias por confiar en GAVAT!',
+  'cancelado': 'Este pedido ha sido cancelado.',
+  'pendiente': 'Tu pedido ha sido registrado exitosamente y está listo para ser procesado.'
+};
+
+const getEstadoBadgeClass = (estado) => BADGES_ESTADO[estado] || 'badge-estado-default';
+const getEstadoIcon = (estado) => ICONS_ESTADO[estado] || 'info-circle';
+const getEstadoTexto = (estado) => TEXTOS_ESTADO[estado] || estado;
+const getEstadoMensaje = (estado) => MENSAJES_ESTADO[estado] || MENSAJES_ESTADO.pendiente;
+
 const PedidoConfirmadoPage = () => {
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -51,63 +95,6 @@ const PedidoConfirmadoPage = () => {
     }
     loadPedido();
   }, [isAuthenticated, navigate, loadPedido]);
-
-  const getEstadoBadgeClass = (estado) => {
-    const badges = {
-      'pendiente': 'badge-estado-pendiente',
-      'pagado': 'badge-estado-pagado',
-      'confirmado': 'badge-estado-confirmado',
-      'en_proceso': 'badge-estado-proceso',
-      'enviado': 'badge-estado-enviado',
-      'entregado': 'badge-estado-entregado',
-      'cancelado': 'badge-estado-cancelado'
-    };
-    return badges[estado] || 'badge-estado-default';
-  };
-
-  const getEstadoIcon = (estado) => {
-    const icons = {
-      'pendiente': 'clock-history',
-      'pagado': 'cash-stack',
-      'confirmado': 'check2-all',
-      'en_proceso': 'gear-wide-connected',
-      'enviado': 'truck',
-      'entregado': 'box2-heart-fill',
-      'cancelado': 'x-circle-fill'
-    };
-    return icons[estado] || 'info-circle';
-  };
-
-  const getEstadoTexto = (estado) => {
-    const textos = {
-      'pendiente': 'Pendiente de Pago',
-      'pagado': 'Pagado',
-      'confirmado': 'Confirmado',
-      'en_proceso': 'En Proceso',
-      'enviado': 'Enviado',
-      'entregado': 'Entregado con Éxito',
-      'cancelado': 'Cancelado'
-    };
-    return textos[estado] || estado;
-  };
-
-  const getEstadoMensaje = (estado) => {
-    switch (estado) {
-      case 'pagado':
-        return 'Tu pago ha sido confirmado. Estamos preparando tus productos para el despacho.';
-      case 'en_proceso':
-        return 'Tu orden se encuentra en fase de ensamblaje y preparación en bodega.';
-      case 'enviado':
-        return 'Tu pedido ha sido despachado y se encuentra en ruta hacia tu dirección.';
-      case 'entregado':
-        return 'Tu pedido ha sido entregado exitosamente. ¡Gracias por confiar en GAVAT!';
-      case 'cancelado':
-        return 'Este pedido ha sido cancelado.';
-      case 'pendiente':
-      default:
-        return 'Tu pedido ha sido registrado exitosamente y está listo para ser procesado.';
-    }
-  };
 
   const handleImprimir = () => {
     window.print();
@@ -156,14 +143,14 @@ const PedidoConfirmadoPage = () => {
     return (
       <Container className="py-5 text-center">
         <div className="p-5 bg-white rounded-4 border shadow-sm" style={{ maxWidth: '500px', margin: '0 auto' }}>
-          <i className="bi bi-exclamation-triangle-fill text-warning fs-1 d-block mb-3" />
+          <span className="bi bi-exclamation-triangle-fill text-warning fs-1 d-block mb-3" aria-hidden="true" />
           <h4 className="fw-bold text-navy mb-2">No se encontró el pedido</h4>
           <p className="text-muted small mb-4">
             No se pudo localizar la información del pedido solicitado o no tienes permisos para visualizarlo.
           </p>
-          <Button className="btn-hero-gold px-4 py-2" onClick={() => navigate('/mis-pedidos')}>
-            <i className="bi bi-arrow-left me-2" />
-            Volver a Mis Pedidos
+          <Button type="button" className="btn-hero-gold px-4 py-2" onClick={() => navigate('/mis-pedidos')}>
+            <span className="bi bi-arrow-left me-2" aria-hidden="true" />
+            <span>Volver a Mis Pedidos</span>
           </Button>
         </div>
       </Container>
@@ -188,7 +175,7 @@ const PedidoConfirmadoPage = () => {
           <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 position-relative z-1">
             <div className="d-flex align-items-center gap-3">
               <div className="pedido-icon-circle flex-shrink-0">
-                <i className={`bi bi-${getEstadoIcon(pedido.estado)}`} />
+                <span className={`bi bi-${getEstadoIcon(pedido.estado)}`} aria-hidden="true" />
               </div>
               <div>
                 <div className="d-flex align-items-center gap-2 flex-wrap mb-1">
@@ -196,7 +183,7 @@ const PedidoConfirmadoPage = () => {
                     Pedido #{pedido.id}
                   </h1>
                   <span className={`badge-estado-custom ${getEstadoBadgeClass(pedido.estado)}`}>
-                    <i className={`bi bi-${getEstadoIcon(pedido.estado)} me-1`} />
+                    <span className={`bi bi-${getEstadoIcon(pedido.estado)} me-1`} aria-hidden="true" />
                     {getEstadoTexto(pedido.estado)}
                   </span>
                 </div>
@@ -222,7 +209,7 @@ const PedidoConfirmadoPage = () => {
             <Card className="pedido-card shadow-sm rounded-4 overflow-hidden mb-4">
               <Card.Header className="pedido-card-header d-flex align-items-center justify-content-between p-3 px-4">
                 <div className="d-flex align-items-center gap-2">
-                  <i className="bi bi-boxes text-gold fs-5" />
+                  <span className="bi bi-boxes text-gold fs-5" aria-hidden="true" />
                   <span className="fw-bold text-navy">Productos del Pedido ({detalles.length})</span>
                 </div>
               </Card.Header>
@@ -292,7 +279,7 @@ const PedidoConfirmadoPage = () => {
             {/* Tarjeta de Información de Envío y Contacto */}
             <Card className="pedido-card shadow-sm rounded-4 overflow-hidden mb-4">
               <Card.Header className="pedido-card-header d-flex align-items-center gap-2 p-3 px-4">
-                <i className="bi bi-truck text-gold fs-5" />
+                <span className="bi bi-truck text-gold fs-5" aria-hidden="true" />
                 <span className="fw-bold text-navy">Información de Envío y Entrega</span>
               </Card.Header>
               <Card.Body className="p-4 bg-white">
@@ -300,7 +287,7 @@ const PedidoConfirmadoPage = () => {
                   <Col md={6}>
                     <div className="d-flex gap-3">
                       <div className="info-icon-badge">
-                        <i className="bi bi-geo-alt-fill text-gold" />
+                        <span className="bi bi-geo-alt-fill text-gold" aria-hidden="true" />
                       </div>
                       <div>
                         <small className="text-muted fw-semibold d-block mb-1 text-uppercase">
@@ -316,7 +303,7 @@ const PedidoConfirmadoPage = () => {
                   <Col md={6}>
                     <div className="d-flex gap-3">
                       <div className="info-icon-badge">
-                        <i className="bi bi-telephone-fill text-gold" />
+                        <span className="bi bi-telephone-fill text-gold" aria-hidden="true" />
                       </div>
                       <div>
                         <small className="text-muted fw-semibold d-block mb-1 text-uppercase">
@@ -333,7 +320,7 @@ const PedidoConfirmadoPage = () => {
                     <Col xs={12}>
                       <div className="p-3 rounded-3 bg-light border">
                         <small className="text-muted fw-bold d-block mb-1">
-                          <i className="bi bi-chat-left-text me-1 text-gold" /> Notas o Instrucciones:
+                          <span className="bi bi-chat-left-text me-1 text-gold" aria-hidden="true" /> Notas o Instrucciones:
                         </small>
                         <p className="small text-secondary mb-0">
                           {pedido.notas}
@@ -352,7 +339,7 @@ const PedidoConfirmadoPage = () => {
           <Col lg={4}>
             <Card className="pedido-card shadow-sm rounded-4 overflow-hidden mb-4">
               <Card.Header className="pedido-card-header d-flex align-items-center gap-2 p-3 px-4">
-                <i className="bi bi-receipt text-gold fs-5" />
+                <span className="bi bi-receipt text-gold fs-5" aria-hidden="true" />
                 <span className="fw-bold text-navy">Resumen de Compra</span>
               </Card.Header>
               <Card.Body className="p-4 bg-white">
@@ -379,38 +366,42 @@ const PedidoConfirmadoPage = () => {
                 <div className="d-grid gap-2">
                   {(pedido.estado === 'pagado' || pedido.estado === 'entregado') && (
                     <Button
+                      type="button"
                       variant="outline-success"
                       className="btn-accion-pedido btn-factura d-flex align-items-center justify-content-center gap-2 py-2 fw-semibold"
                       onClick={handleDescargarFactura}
                       disabled={descargandoFactura}
                     >
-                      <i className="bi bi-file-earmark-pdf-fill" />
+                      <span className="bi bi-file-earmark-pdf-fill" aria-hidden="true" />
                       <span>{descargandoFactura ? 'Descargando...' : 'Descargar Factura PDF'}</span>
                     </Button>
                   )}
 
                   <Button
+                    type="button"
                     variant="outline-secondary"
                     className="btn-accion-pedido d-flex align-items-center justify-content-center gap-2 py-2 fw-semibold"
                     onClick={handleImprimir}
                   >
-                    <i className="bi bi-printer" />
+                    <span className="bi bi-printer" aria-hidden="true" />
                     <span>Imprimir Comprobante</span>
                   </Button>
 
                   <Button
+                    type="button"
                     className="btn-accion-pedido btn-mis-pedidos d-flex align-items-center justify-content-center gap-2 py-2 fw-semibold"
                     onClick={() => navigate('/mis-pedidos')}
                   >
-                    <i className="bi bi-list-ul" />
+                    <span className="bi bi-list-ul" aria-hidden="true" />
                     <span>Ver Mis Pedidos</span>
                   </Button>
 
                   <Button
+                    type="button"
                     className="btn-hero-gold d-flex align-items-center justify-content-center gap-2 py-2 fw-bold"
                     onClick={() => navigate('/catalogo')}
                   >
-                    <i className="bi bi-grid-fill" />
+                    <span className="bi bi-grid-fill" aria-hidden="true" />
                     <span>Seguir Comprando</span>
                   </Button>
                 </div>
@@ -419,7 +410,7 @@ const PedidoConfirmadoPage = () => {
 
             {/* Tarjeta de Soporte */}
             <div className="p-4 rounded-4 bg-white border shadow-sm text-center">
-              <i className="bi bi-headset text-gold fs-2 d-block mb-2" />
+              <span className="bi bi-headset text-gold fs-2 d-block mb-2" aria-hidden="true" />
               <h6 className="fw-bold text-navy mb-1">¿Tienes preguntas sobre tu pedido?</h6>
               <p className="text-muted small mb-0">
                 Comunícate con nuestro equipo de atención citando el <strong>Pedido #{pedido.id}</strong> para asistencia inmediata.

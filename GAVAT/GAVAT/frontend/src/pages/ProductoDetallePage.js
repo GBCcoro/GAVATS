@@ -35,51 +35,23 @@ const ProductoDetallePage = () => {
   const [posicionFoto, setPosicionFoto] = useState({ x: 0, y: 0 });
   const [arrastrandoFoto, setArrastrandoFoto] = useState(false);
   const inicioArrastreFoto = useRef({ x: 0, y: 0 });
+  const posicionFotoRef = useRef({ x: 0, y: 0 });
+  const arrastrandoRef = useRef(false);
+  const imageContainerRef = useRef(null);
+
+  useEffect(() => {
+    posicionFotoRef.current = posicionFoto;
+  }, [posicionFoto]);
+
+  useEffect(() => {
+    arrastrandoRef.current = arrastrandoFoto;
+  }, [arrastrandoFoto]);
 
   const handleZoomIn = () => setZoomNivel(prev => Math.min(Number((prev + 0.25).toFixed(2)), 3.5));
   const handleZoomOut = () => setZoomNivel(prev => Math.max(Number((prev - 0.25).toFixed(2)), 0.5));
   const handleResetZoom = () => {
     setZoomNivel(1);
     setPosicionFoto({ x: 0, y: 0 });
-  };
-
-  const handleMouseDownFoto = (e) => {
-    e.preventDefault();
-    setArrastrandoFoto(true);
-    inicioArrastreFoto.current = {
-      x: e.clientX - posicionFoto.x,
-      y: e.clientY - posicionFoto.y
-    };
-  };
-
-  const handleMouseMoveFoto = (e) => {
-    if (!arrastrandoFoto) return;
-    setPosicionFoto({
-      x: e.clientX - inicioArrastreFoto.current.x,
-      y: e.clientY - inicioArrastreFoto.current.y
-    });
-  };
-
-  const handleMouseUpFoto = () => {
-    setArrastrandoFoto(false);
-  };
-
-  const handleTouchStartFoto = (e) => {
-    if (e.touches.length === 1) {
-      setArrastrandoFoto(true);
-      inicioArrastreFoto.current = {
-        x: e.touches[0].clientX - posicionFoto.x,
-        y: e.touches[0].clientY - posicionFoto.y
-      };
-    }
-  };
-
-  const handleTouchMoveFoto = (e) => {
-    if (!arrastrandoFoto || e.touches.length !== 1) return;
-    setPosicionFoto({
-      x: e.touches[0].clientX - inicioArrastreFoto.current.x,
-      y: e.touches[0].clientY - inicioArrastreFoto.current.y
-    });
   };
 
   const handleOpenPreview = () => {
@@ -95,6 +67,69 @@ const ProductoDetallePage = () => {
     setZoomNivel(1);
     setPosicionFoto({ x: 0, y: 0 });
   };
+
+  // Manejo de eventos de arrastre (drag-to-pan) mediante ref y listeners nativos
+  useEffect(() => {
+    const container = imageContainerRef.current;
+    if (!container || !modalPreviewFoto) return;
+
+    const onMouseDown = (e) => {
+      e.preventDefault();
+      setArrastrandoFoto(true);
+      inicioArrastreFoto.current = {
+        x: e.clientX - posicionFotoRef.current.x,
+        y: e.clientY - posicionFotoRef.current.y
+      };
+    };
+
+    const onMouseMove = (e) => {
+      if (!arrastrandoRef.current) return;
+      setPosicionFoto({
+        x: e.clientX - inicioArrastreFoto.current.x,
+        y: e.clientY - inicioArrastreFoto.current.y
+      });
+    };
+
+    const onMouseUp = () => {
+      if (arrastrandoRef.current) {
+        setArrastrandoFoto(false);
+      }
+    };
+
+    const onTouchStart = (e) => {
+      if (e.touches.length === 1) {
+        setArrastrandoFoto(true);
+        inicioArrastreFoto.current = {
+          x: e.touches[0].clientX - posicionFotoRef.current.x,
+          y: e.touches[0].clientY - posicionFotoRef.current.y
+        };
+      }
+    };
+
+    const onTouchMove = (e) => {
+      if (!arrastrandoRef.current || e.touches.length !== 1) return;
+      setPosicionFoto({
+        x: e.touches[0].clientX - inicioArrastreFoto.current.x,
+        y: e.touches[0].clientY - inicioArrastreFoto.current.y
+      });
+    };
+
+    container.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onMouseUp);
+
+    return () => {
+      container.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      container.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onMouseUp);
+    };
+  }, [modalPreviewFoto]);
 
   useEffect(() => {
     const cargarProducto = async () => {
@@ -215,14 +250,14 @@ const ProductoDetallePage = () => {
   if (!producto) {
     return (
       <Container className="py-5 text-center">
-        <Card className="p-5 shadow-sm border-0 rounded-4 mx-auto bg-white" style={{ maxWidth: '500px' }}>
-          <i className="bi bi-exclamation-triangle-fill text-warning fs-1 mb-3" />
+        <Card className="p-5 shadow-sm border-0 rounded-4 mx-auto bg-white not-found-card">
+          <span className="bi bi-exclamation-triangle-fill text-warning fs-1 mb-3" aria-hidden="true" />
           <h3 className="fw-bold text-navy mb-2">Producto no encontrado</h3>
           <p className="text-muted small mb-4">El producto que estás buscando no existe o ya no está disponible en catálogo.</p>
-          <Button as={Link} to="/catalogo" className="btn-hero-gold px-4 py-2">
-            <i className="bi bi-arrow-left me-2" />
-            Volver al catálogo
-          </Button>
+          <Link to="/catalogo" className="btn btn-hero-gold px-4 py-2">
+            <span className="bi bi-arrow-left me-2" aria-hidden="true" />
+            <span>Volver al catálogo</span>
+          </Link>
         </Card>
       </Container>
     );
@@ -234,7 +269,7 @@ const ProductoDetallePage = () => {
     if (stockDisponible > 10) {
       return (
         <span className="stock-status-pill in-stock d-inline-flex align-items-center gap-1">
-          <i className="bi bi-check-circle-fill text-success" />
+          <span className="bi bi-check-circle-fill text-success" aria-hidden="true" />
           <span>En stock ({stockDisponible} unidades disponibles)</span>
         </span>
       );
@@ -242,14 +277,14 @@ const ProductoDetallePage = () => {
     if (stockDisponible > 0) {
       return (
         <span className="stock-status-pill low-stock d-inline-flex align-items-center gap-1">
-          <i className="bi bi-lightning-fill text-warning" />
+          <span className="bi bi-lightning-fill text-warning" aria-hidden="true" />
           <span>¡Últimas unidades! ({stockDisponible} disponibles)</span>
         </span>
       );
     }
     return (
       <span className="stock-status-pill out-of-stock d-inline-flex align-items-center gap-1">
-        <i className="bi bi-slash-circle text-danger" />
+        <span className="bi bi-slash-circle text-danger" aria-hidden="true" />
         <span>Agotado temporalmente</span>
       </span>
     );
@@ -268,7 +303,8 @@ const ProductoDetallePage = () => {
         <div className="product-breadcrumb-card p-2 px-3 rounded-3 shadow-sm bg-white mb-4 border">
           <Breadcrumb className="mb-0">
             <Breadcrumb.Item linkAs={Link} linkProps={{ to: '/' }}>
-              <i className="bi bi-house-door me-1 text-gold" /> Inicio
+              <span className="bi bi-house-door me-1 text-gold" aria-hidden="true" />
+              <span>Inicio</span>
             </Breadcrumb.Item>
             <Breadcrumb.Item linkAs={Link} linkProps={{ to: '/catalogo' }}>
               Catálogo
@@ -290,12 +326,14 @@ const ProductoDetallePage = () => {
         <Card className="shadow-sm border-0 rounded-4 overflow-hidden mb-4 product-detail-card">
           <Card.Body className="p-4 p-lg-5">
             <Row className="g-4 g-lg-5 align-items-center">
-              {/* Columna de Imagen: Visor interactivo con Lupa y Zoom */}
+              {/* Columna de Imagen: Botón interactivo accesible con zoom */}
               <Col lg={6}>
-                <div
+                <button
+                  type="button"
                   className="product-image-stage"
                   onClick={handleOpenPreview}
                   title="Haz clic para ver la imagen ampliada"
+                  aria-label="Ver imagen ampliada del producto"
                 >
                   <div className="product-image-backdrop">
                     <img
@@ -303,8 +341,8 @@ const ProductoDetallePage = () => {
                       alt={producto.nombre}
                       className="product-hero-image"
                       onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = '/producto-default.jpg';
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/producto-default.jpg';
                       }}
                     />
                   </div>
@@ -318,25 +356,21 @@ const ProductoDetallePage = () => {
                     )}
                     {stockDisponible <= 5 && stockDisponible > 0 && (
                       <span className="badge-ultimas-unidades">
-                        <i className="bi bi-lightning-fill me-1" /> ¡Últimas {stockDisponible}!
+                        <span className="bi bi-lightning-fill me-1" aria-hidden="true" />
+                        <span>¡Últimas {stockDisponible}!</span>
                       </span>
                     )}
                   </div>
 
                   {/* Botón flotante para ver detalle con lupa */}
-                  <button
-                    type="button"
+                  <span
                     className="btn-zoom-trigger"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenPreview();
-                    }}
-                    title="Ampliar imagen con lupa"
+                    aria-hidden="true"
                   >
-                    <i className="bi bi-zoom-in" />
+                    <span className="bi bi-zoom-in" aria-hidden="true" />
                     <span>Ampliar</span>
-                  </button>
-                </div>
+                  </span>
+                </button>
               </Col>
 
               {/* Columna de Información */}
@@ -346,12 +380,14 @@ const ProductoDetallePage = () => {
                   <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
                     {producto.categoria && (
                       <span className="product-meta-pill">
-                        <i className="bi bi-collection text-gold me-1" /> {producto.categoria.nombre}
+                        <span className="bi bi-collection text-gold me-1" aria-hidden="true" />
+                        <span>{producto.categoria.nombre}</span>
                       </span>
                     )}
                     {producto.subcategoria && (
                       <span className="product-meta-pill">
-                        <i className="bi bi-tags text-gold me-1" /> {producto.subcategoria.nombre}
+                        <span className="bi bi-tags text-gold me-1" aria-hidden="true" />
+                        <span>{producto.subcategoria.nombre}</span>
                       </span>
                     )}
                     <span className="ms-auto text-muted small fw-semibold">
@@ -384,7 +420,8 @@ const ProductoDetallePage = () => {
                   {/* Descripción */}
                   <div className="product-description-box mb-4">
                     <h6 className="fw-bold text-navy mb-2 small text-uppercase">
-                      <i className="bi bi-text-paragraph text-gold me-1" /> Descripción
+                      <span className="bi bi-text-paragraph text-gold me-1" aria-hidden="true" />
+                      <span>Descripción</span>
                     </h6>
                     <p className="text-secondary mb-0 leading-relaxed small">
                       {producto.descripcion || 'Producto arquitectónico de alta calidad, elaborado bajo estrictos estándares y con garantía de durabilidad.'}
@@ -404,7 +441,7 @@ const ProductoDetallePage = () => {
                             title="Disminuir cantidad"
                             aria-label="Disminuir cantidad"
                           >
-                            <i className="bi bi-dash-lg" />
+                            <span className="bi bi-dash-lg" aria-hidden="true" />
                           </button>
                           <input
                             type="number"
@@ -414,7 +451,7 @@ const ProductoDetallePage = () => {
                             onBlur={handleCantidadBlur}
                             min="1"
                             max={stockDisponible}
-                            aria-label="Cantidad"
+                            aria-label="Cantidad de productos"
                           />
                           <button
                             type="button"
@@ -423,39 +460,39 @@ const ProductoDetallePage = () => {
                             title="Aumentar cantidad"
                             aria-label="Aumentar cantidad"
                           >
-                            <i className="bi bi-plus-lg" />
+                            <span className="bi bi-plus-lg" aria-hidden="true" />
                           </button>
                         </div>
 
                         {isAuthenticated ? (
                           <Button
+                            type="button"
                             className="btn-add-cart-gold flex-grow-1 py-3"
                             size="lg"
                             onClick={handleAddToCart}
                             disabled={agregando}
                           >
-                            <i className="bi bi-cart-plus-fill me-2 fs-5" />
+                            <span className="bi bi-cart-plus-fill me-2 fs-5" aria-hidden="true" />
                             <span>
                               {agregando ? 'Agregando...' : `Agregar (${cantidad}) al Carrito`}
                             </span>
                           </Button>
                         ) : (
-                          <Button
-                            as={Link}
+                          <Link
                             to="/login"
-                            className="btn-add-cart-gold flex-grow-1 py-3"
-                            size="lg"
+                            className="btn btn-add-cart-gold flex-grow-1 py-3"
                           >
-                            <i className="bi bi-box-arrow-in-right me-2 fs-5" />
+                            <span className="bi bi-box-arrow-in-right me-2 fs-5" aria-hidden="true" />
                             <span>Inicia Sesión para Comprar</span>
-                          </Button>
+                          </Link>
                         )}
                       </div>
                     </div>
                   ) : (
                     <div className="mb-4">
-                      <Button variant="secondary" size="lg" disabled className="w-100 py-3 rounded-3 fw-bold">
-                        <i className="bi bi-slash-circle me-2" /> Producto Agotado
+                      <Button type="button" variant="secondary" size="lg" disabled className="w-100 py-3 rounded-3 fw-bold">
+                        <span className="bi bi-slash-circle me-2" aria-hidden="true" />
+                        <span>Producto Agotado</span>
                       </Button>
                     </div>
                   )}
@@ -463,21 +500,21 @@ const ProductoDetallePage = () => {
                   {/* Beneficios de confianza */}
                   <div className="trust-badges-grid pt-3 border-top">
                     <div className="trust-badge-item">
-                      <i className="bi bi-shield-check text-gold fs-4" />
+                      <span className="bi bi-shield-check text-gold fs-4" aria-hidden="true" />
                       <div>
                         <span className="fw-bold d-block text-navy small">Garantía Directa</span>
                         <span className="text-muted extra-small">Calidad certificada</span>
                       </div>
                     </div>
                     <div className="trust-badge-item">
-                      <i className="bi bi-truck text-gold fs-4" />
+                      <span className="bi bi-truck text-gold fs-4" aria-hidden="true" />
                       <div>
                         <span className="fw-bold d-block text-navy small">Despacho Seguro</span>
                         <span className="text-muted extra-small">Envíos nacionales</span>
                       </div>
                     </div>
                     <div className="trust-badge-item">
-                      <i className="bi bi-award-fill text-gold fs-4" />
+                      <span className="bi bi-award-fill text-gold fs-4" aria-hidden="true" />
                       <div>
                         <span className="fw-bold d-block text-navy small">Aluminio & Vidrio</span>
                         <span className="text-muted extra-small">Acabados prémium</span>
@@ -495,7 +532,7 @@ const ProductoDetallePage = () => {
         {/* ========================================================================= */}
         <Card className="shadow-sm rounded-4 overflow-hidden mb-4 border-0">
           <Card.Header className="pedido-card-header d-flex align-items-center gap-2 p-3 px-4">
-            <i className="bi bi-chat-quote-fill text-gold fs-5" />
+            <span className="bi bi-chat-quote-fill text-gold fs-5" aria-hidden="true" />
             <span className="fw-bold text-navy">Opiniones y Reseñas del Producto</span>
           </Card.Header>
           <Card.Body className="p-4 p-lg-5 bg-white">
@@ -508,14 +545,13 @@ const ProductoDetallePage = () => {
 
         {/* Botón Volver al Catálogo */}
         <div className="text-center pt-2">
-          <Button
-            as={Link}
+          <Link
             to="/catalogo"
-            className="btn-volver-catalogo px-4 py-2"
+            className="btn btn-volver-catalogo px-4 py-2"
           >
-            <i className="bi bi-arrow-left me-2" />
-            Volver al Catálogo
-          </Button>
+            <span className="bi bi-arrow-left me-2" aria-hidden="true" />
+            <span>Volver al Catálogo</span>
+          </Link>
         </div>
 
         {/* ========================================================================= */}
@@ -529,7 +565,8 @@ const ProductoDetallePage = () => {
         >
           <div className="modal-preview-foto-header d-flex align-items-center justify-content-between p-3 border-bottom bg-white">
             <div className="fw-semibold text-navy small d-flex align-items-center gap-2">
-              <i className="bi bi-arrows-move text-gold" /> {producto.nombre}
+              <span className="bi bi-arrows-move text-gold" aria-hidden="true" />
+              <span>{producto.nombre}</span>
             </div>
 
             {/* Controles de Zoom */}
@@ -540,8 +577,9 @@ const ProductoDetallePage = () => {
                 onClick={handleZoomOut}
                 disabled={zoomNivel <= 0.5}
                 title="Reducir zoom (-)"
+                aria-label="Reducir zoom"
               >
-                <i className="bi bi-dash-lg" />
+                <span className="bi bi-dash-lg" aria-hidden="true" />
               </button>
               <span className="zoom-badge px-2 small fw-bold">
                 {Math.round(zoomNivel * 100)}%
@@ -552,16 +590,18 @@ const ProductoDetallePage = () => {
                 onClick={handleZoomIn}
                 disabled={zoomNivel >= 3.5}
                 title="Aumentar zoom (+)"
+                aria-label="Aumentar zoom"
               >
-                <i className="bi bi-plus-lg" />
+                <span className="bi bi-plus-lg" aria-hidden="true" />
               </button>
               <button
                 type="button"
                 className="btn-zoom-ctrl ms-1"
                 onClick={handleResetZoom}
                 title="Restablecer tamaño original y centrar"
+                aria-label="Restablecer tamaño original y centrar"
               >
-                <i className="bi bi-aspect-ratio" />
+                <span className="bi bi-aspect-ratio" aria-hidden="true" />
               </button>
             </div>
 
@@ -575,49 +615,40 @@ const ProductoDetallePage = () => {
 
           <Modal.Body className="p-3 p-md-4 text-center bg-light">
             <div 
-              className="modal-preview-foto-wrapper mb-3"
-              onMouseMove={handleMouseMoveFoto}
-              onMouseUp={handleMouseUpFoto}
-              onMouseLeave={handleMouseUpFoto}
-              onTouchMove={handleTouchMoveFoto}
-              onTouchEnd={handleMouseUpFoto}
-              style={{ cursor: arrastrandoFoto ? 'grabbing' : 'move', overflow: 'hidden' }}
+              ref={imageContainerRef}
+              className={`modal-preview-foto-wrapper mb-3 ${arrastrandoFoto ? 'is-dragging' : ''}`}
             >
               <img
                 src={getImageUrl(producto.imagen)}
                 alt={producto.nombre}
                 className="modal-preview-foto-img"
                 draggable={false}
-                onDragStart={(e) => e.preventDefault()}
-                onMouseDown={handleMouseDownFoto}
-                onTouchStart={handleTouchStartFoto}
                 style={{
-                  transform: `translate(${posicionFoto.x}px, ${posicionFoto.y}px) scale(${zoomNivel})`,
-                  transformOrigin: 'center center',
-                  cursor: arrastrandoFoto ? 'grabbing' : 'move',
-                  transition: arrastrandoFoto ? 'none' : 'transform 0.15s ease-out'
+                  transform: `translate(${posicionFoto.x}px, ${posicionFoto.y}px) scale(${zoomNivel})`
                 }}
                 title="Arrastra para mover la imagen"
                 onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/producto-default.jpg';
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/producto-default.jpg';
                 }}
               />
             </div>
 
             <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-1">
-              <small className="text-muted text-start" style={{ fontSize: '0.78rem' }}>
-                <i className="bi bi-arrows-move me-1" />
-                Arrastra con el ratón para mover la imagen o usa los botones para ajustar el tamaño
+              <small className="text-muted text-start modal-drag-help">
+                <span className="bi bi-arrows-move me-1" aria-hidden="true" />
+                <span>Arrastra con el ratón para mover la imagen o usa los botones para ajustar el tamaño</span>
               </small>
 
               <Button
+                type="button"
                 variant="outline-secondary"
                 size="sm"
                 className="d-flex align-items-center gap-1 px-3 py-1 rounded-3"
                 onClick={handleClosePreview}
               >
-                <i className="bi bi-x-lg" /> Cerrar
+                <span className="bi bi-x-lg me-1" aria-hidden="true" />
+                <span>Cerrar</span>
               </Button>
             </div>
           </Modal.Body>
@@ -631,6 +662,10 @@ const ProductoDetallePage = () => {
         .producto-detalle-wrapper {
           background-color: #f8fafc;
           min-height: calc(100vh - 180px);
+        }
+
+        .not-found-card {
+          max-width: 500px;
         }
 
         .product-breadcrumb-card .breadcrumb-item a {
@@ -653,7 +688,7 @@ const ProductoDetallePage = () => {
           border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         }
 
-        /* Escenario de Imagen adaptativo */
+        /* Escenario de Imagen adaptativo como botón nativo accesible */
         .product-image-stage {
           position: relative;
           width: 100%;
@@ -669,7 +704,15 @@ const ProductoDetallePage = () => {
           border: 1.5px solid rgba(245, 194, 113, 0.25);
           overflow: hidden;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: border-color 0.3s ease, box-shadow 0.3s ease;
+          font-family: inherit;
+          color: inherit;
+          text-align: inherit;
+        }
+
+        .product-image-stage:focus-visible {
+          outline: 2px solid #c7984e;
+          outline-offset: 2px;
         }
 
         .product-image-stage:hover {
@@ -709,6 +752,7 @@ const ProductoDetallePage = () => {
 
         .badge-category-tag {
           background: rgba(25, 40, 71, 0.88);
+          -webkit-backdrop-filter: blur(8px);
           backdrop-filter: blur(8px);
           color: #f5c271;
           font-weight: 600;
@@ -733,6 +777,7 @@ const ProductoDetallePage = () => {
           bottom: 1rem;
           right: 1rem;
           background: rgba(25, 40, 71, 0.88);
+          -webkit-backdrop-filter: blur(8px);
           backdrop-filter: blur(8px);
           color: #f5c271;
           border: 1px solid rgba(245, 194, 113, 0.4);
@@ -745,11 +790,11 @@ const ProductoDetallePage = () => {
           gap: 0.35rem;
           z-index: 3;
           cursor: pointer;
-          transition: all 0.25s ease;
+          transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
-        .btn-zoom-trigger:hover {
+        .product-image-stage:hover .btn-zoom-trigger {
           background: linear-gradient(135deg, #f5c271, #c7984e);
           color: #192847;
           border-color: #f5c271;
@@ -834,7 +879,7 @@ const ProductoDetallePage = () => {
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: background-color 0.2s ease, color 0.2s ease;
           padding: 0;
         }
 
@@ -879,7 +924,8 @@ const ProductoDetallePage = () => {
           display: inline-flex !important;
           align-items: center !important;
           justify-content: center !important;
-          transition: all 0.25s ease !important;
+          text-decoration: none !important;
+          transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease !important;
           box-shadow: 0 6px 18px rgba(199, 152, 78, 0.28) !important;
         }
 
@@ -896,7 +942,10 @@ const ProductoDetallePage = () => {
           color: #192847 !important;
           border-radius: 9999px !important;
           font-weight: 600 !important;
-          transition: all 0.2s ease !important;
+          text-decoration: none !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease !important;
         }
         .btn-volver-catalogo:hover {
           background: #192847 !important;
@@ -932,7 +981,7 @@ const ProductoDetallePage = () => {
           align-items: center;
           justify-content: center;
           font-size: 0.85rem;
-          transition: all 0.2s ease;
+          transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
         }
         .btn-zoom-ctrl:hover:not(:disabled) {
           background: #f1f5f9;
@@ -950,12 +999,28 @@ const ProductoDetallePage = () => {
           display: flex;
           align-items: center;
           justify-content: center;
+          cursor: grab;
+        }
+        .modal-preview-foto-wrapper.is-dragging {
+          cursor: grabbing;
         }
         .modal-preview-foto-img {
           max-height: 60vh;
           max-width: 100%;
           object-fit: contain;
-          transition: transform 0.2s ease;
+          transform-origin: center center;
+          user-select: none;
+          pointer-events: none;
+        }
+        .modal-preview-foto-wrapper.is-dragging .modal-preview-foto-img {
+          transition: none;
+        }
+        .modal-preview-foto-wrapper:not(.is-dragging) .modal-preview-foto-img {
+          transition: transform 0.15s ease-out;
+        }
+
+        .modal-drag-help {
+          font-size: 0.78rem;
         }
       `}</style>
     </div>
