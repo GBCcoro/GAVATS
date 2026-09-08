@@ -6,12 +6,664 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
+import { Container, Card, Table, Button, Modal, Form, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import usuarioService from '../services/usuarioService';
 import { exportarUsuariosAPDF, exportarUsuariosAExcel } from '../utils/exportUtils';
 import LoadingSpinner from '../components/LoadingSpinner';
+import FloatingToast from '../components/FloatingToast';
 
+const BG_MODAL_CONFIRMACION = Object.freeze({
+  danger: 'danger-subtle',
+  warning: 'warning-subtle',
+  primary: 'primary-subtle',
+  info: 'primary-subtle',
+  success: 'success-subtle'
+});
+
+const getBgModalConfirmacion = (tipo) => BG_MODAL_CONFIRMACION[tipo] || 'primary-subtle';
+
+const ROL_BADGE_VARIANT = Object.freeze({
+  administrador: 'danger',
+  auxiliar: 'warning',
+  cliente: 'info'
+});
+
+const getRolBadgeVariant = (rol) => ROL_BADGE_VARIANT[rol] || 'info';
+
+const USUARIO_INICIAL = Object.freeze({
+  id: null,
+  nombre: '',
+  apellido: '',
+  email: '',
+  password: '',
+  telefono: '',
+  direccion: '',
+  rol: 'cliente',
+  activo: true
+});
+
+const MODAL_CONFIRMACION_INICIAL = Object.freeze({
+  show: false,
+  titulo: '',
+  mensaje: '',
+  tipo: 'danger',
+  icono: 'trash3-fill',
+  textoConfirmar: 'Borrar',
+  textoCancelar: 'Cancelar',
+  onConfirm: null,
+  onCancel: null
+});
+
+const REGISTROS_POR_PAGINA = 25;
+
+/** Subcomponente: Filtros de búsqueda */
+function BarraFiltrosUsuarios({ filtros, setFiltros }) {
+  return (
+    <Card className="shadow-sm border-0 mb-4 admin-card-table">
+      <Card.Body className="p-3 p-md-4">
+        <h6 className="fw-bold mb-3 d-flex align-items-center gap-2 text-navy">
+          <span className="bi bi-funnel text-gold" aria-hidden="true" /> Filtros de Búsqueda
+        </h6>
+        <Row className="g-3 align-items-end">
+          <Col md={5}>
+            <Form.Group>
+              <Form.Label className="small fw-semibold mb-1">Buscar Usuario</Form.Label>
+              <InputGroup>
+                <InputGroup.Text className="bg-light">
+                  <span className="bi bi-search" aria-hidden="true" />
+                </InputGroup.Text>
+                <Form.Control
+                  placeholder="Buscar por nombre o email..."
+                  value={filtros.busqueda}
+                  onChange={(e) => setFiltros(prev => ({ ...prev, busqueda: e.target.value }))}
+                />
+              </InputGroup>
+            </Form.Group>
+          </Col>
+          <Col md={3}>
+            <Form.Group>
+              <Form.Label className="small fw-semibold mb-1">Filtrar por Rol</Form.Label>
+              <Form.Select
+                value={filtros.rol}
+                onChange={(e) => setFiltros(prev => ({ ...prev, rol: e.target.value }))}
+              >
+                <option value="todos">Todos los roles</option>
+                <option value="administrador">Administradores</option>
+                <option value="auxiliar">Auxiliares</option>
+                <option value="cliente">Clientes</option>
+              </Form.Select>
+            </Form.Group>
+          </Col>
+          <Col md={2}>
+            <Form.Group>
+              <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
+              <Form.Select
+                value={filtros.estado}
+                onChange={(e) => setFiltros(prev => ({ ...prev, estado: e.target.value }))}
+              >
+                <option value="todos">Todos</option>
+                <option value="activo">Activos</option>
+                <option value="inactivo">Inactivos</option>
+              </Form.Select>
+            </Form.Group>
+          </Col>
+          <Col md={2}>
+            <Button
+              type="button"
+              variant="outline-secondary"
+              className="w-100"
+              onClick={() => setFiltros({ busqueda: '', rol: 'todos', estado: 'todos' })}
+            >
+              <span className="bi bi-arrow-clockwise me-1" aria-hidden="true" /> Limpiar
+            </Button>
+          </Col>
+        </Row>
+      </Card.Body>
+    </Card>
+  );
+}
+
+/** Subcomponente: Barra de selección masiva */
+function BarraAccionesSeleccion({
+  todosPaginaSeleccionados,
+  onToggleSeleccionarTodos,
+  totalPaginados,
+  seleccionados,
+  usuarios,
+  onEditarSeleccionado,
+  onCambioEstadoMasivo,
+  onEliminacionMasiva,
+  onLimpiarSeleccion
+}) {
+  const count = seleccionados.size;
+
+  return (
+    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 px-1">
+      <div className="d-flex align-items-center gap-2">
+        <Button
+          type="button"
+          variant={todosPaginaSeleccionados ? "secondary" : "outline-secondary"}
+          size="sm"
+          className="d-inline-flex align-items-center gap-1"
+          onClick={onToggleSeleccionarTodos}
+          title={todosPaginaSeleccionados ? "Deseleccionar todos en esta página" : "Seleccionar todos en esta página"}
+        >
+          <span
+            className={`bi bi-${todosPaginaSeleccionados ? 'check-square-fill text-primary' : 'square'}`}
+            aria-hidden="true"
+          />
+          <span>{todosPaginaSeleccionados ? 'Deseleccionar página' : `Seleccionar todo (${totalPaginados})`}</span>
+        </Button>
+        {count > 0 && (
+          <Badge bg="danger" className="p-2 d-flex align-items-center gap-1 fs-7">
+            <span className="bi bi-check-circle-fill" aria-hidden="true" /> {count} seleccionado{count !== 1 ? 's' : ''}
+          </Badge>
+        )}
+      </div>
+
+      {count > 0 && (
+        <div className="d-flex flex-wrap align-items-center gap-2">
+          {count === 1 && (
+            <Button
+              type="button"
+              variant="outline-primary"
+              size="sm"
+              className="d-inline-flex align-items-center gap-1 fw-semibold"
+              onClick={() => {
+                const idSel = Array.from(seleccionados)[0];
+                const usuSel = usuarios.find(u => u.id === idSel);
+                if (usuSel) onEditarSeleccionado(usuSel);
+              }}
+              title="Editar el usuario seleccionado"
+            >
+              <span className="bi bi-pencil-fill" aria-hidden="true" />
+              <span>Editar</span>
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="outline-warning"
+            size="sm"
+            className="d-inline-flex align-items-center gap-1 fw-semibold"
+            onClick={onCambioEstadoMasivo}
+            title="Activar o desactivar los usuarios seleccionados"
+          >
+            <span className="bi bi-arrow-repeat" aria-hidden="true" />
+            <span>Activar / Desactivar ({count})</span>
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            className="d-inline-flex align-items-center gap-1 fw-semibold"
+            onClick={onEliminacionMasiva}
+            title="Eliminar los usuarios seleccionados"
+          >
+            <span className="bi bi-trash-fill" aria-hidden="true" />
+            <span>Eliminar ({count})</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline-secondary"
+            size="sm"
+            onClick={onLimpiarSeleccion}
+            title="Limpiar selección"
+          >
+            <span className="bi bi-x-lg me-1" aria-hidden="true" /> Deseleccionar
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Subcomponente: Botones de acción por usuario */
+function AccionesUsuario({ usuario, onEditar, onCambiarEstado, onEliminar }) {
+  return (
+    <div className="action-btn-group">
+      <Button
+        type="button"
+        variant="outline-primary"
+        size="sm"
+        className="btn-action-table"
+        onClick={(e) => {
+          e.stopPropagation();
+          onEditar(usuario);
+        }}
+        title="Editar usuario"
+      >
+        <span className="bi bi-pencil" aria-hidden="true" />
+        <span className="btn-text">Editar</span>
+      </Button>
+      <Button
+        type="button"
+        variant={usuario.activo ? 'outline-warning' : 'outline-success'}
+        size="sm"
+        className="btn-action-table"
+        onClick={(e) => {
+          e.stopPropagation();
+          onCambiarEstado(usuario);
+        }}
+        title={usuario.activo ? 'Desactivar usuario' : 'Activar usuario'}
+      >
+        <span className={`bi bi-${usuario.activo ? 'x-circle' : 'check-circle'}`} aria-hidden="true" />
+        <span className="btn-text">{usuario.activo ? 'Desactivar' : 'Activar'}</span>
+      </Button>
+      <Button
+        type="button"
+        variant="outline-danger"
+        size="sm"
+        className="btn-action-table"
+        onClick={(e) => {
+          e.stopPropagation();
+          onEliminar(usuario);
+        }}
+        title="Eliminar usuario"
+      >
+        <span className="bi bi-trash" aria-hidden="true" />
+        <span className="btn-text">Eliminar</span>
+      </Button>
+    </div>
+  );
+}
+
+/** Subcomponente: Fila de la tabla */
+function FilaUsuario({ usuario, estaSeleccionado, onToggle, onEditar, onCambiarEstado, onEliminar }) {
+  return (
+    <tr 
+      onClick={() => onToggle(usuario.id)}
+      className={`fila-admin ${estaSeleccionado ? 'fila-admin-seleccionada' : ''}`}
+      title="Haz clic para seleccionar/deseleccionar este usuario"
+    >
+      <td className="align-middle fw-bold">
+        <div className="d-flex align-items-center gap-2">
+          <span 
+            className={`bi bi-${estaSeleccionado ? 'check-circle-fill text-danger' : 'circle text-muted'} fs-6 d-inline-block`}
+            style={{ cursor: 'pointer' }}
+            aria-hidden="true"
+          />
+          <span>{usuario.id}</span>
+        </div>
+      </td>
+      <td className="align-middle fw-bold">
+        <div>{usuario.nombre} {usuario.apellido || ''}</div>
+        <small className="d-lg-none text-muted d-block">{usuario.telefono || ''}</small>
+      </td>
+      <td className="align-middle">{usuario.email}</td>
+      <td className="align-middle d-none d-lg-table-cell">{usuario.telefono || '-'}</td>
+      <td className="align-middle">
+        <Badge bg={getRolBadgeVariant(usuario.rol)}>
+          {usuario.rol}
+        </Badge>
+      </td>
+      <td className="align-middle d-none d-sm-table-cell">
+        <Badge bg={usuario.activo ? 'success' : 'secondary'}>
+          {usuario.activo ? 'Activo' : 'Inactivo'}
+        </Badge>
+      </td>
+      <td className="align-middle text-center" onClick={(e) => e.stopPropagation()}>
+        <AccionesUsuario
+          usuario={usuario}
+          onEditar={onEditar}
+          onCambiarEstado={onCambiarEstado}
+          onEliminar={onEliminar}
+        />
+      </td>
+    </tr>
+  );
+}
+
+/** Subcomponente: Tabla responsiva de usuarios */
+function TablaUsuarios({ usuarios, seleccionados, onToggle, onEditar, onCambiarEstado, onEliminar }) {
+  return (
+    <Card className="shadow-sm border-0 admin-card-table">
+      <Card.Body className="p-0">
+        <Table responsive hover className="admin-table align-middle mb-0">
+          <thead>
+            <tr>
+              <th style={{ width: '50px' }}>ID</th>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th className="d-none d-lg-table-cell" style={{ width: '130px' }}>Teléfono</th>
+              <th style={{ width: '110px' }}>Rol</th>
+              <th className="d-none d-sm-table-cell" style={{ width: '100px' }}>Estado</th>
+              <th className="text-center" style={{ width: '130px', minWidth: '100px' }}>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {usuarios.length === 0 ? (
+              <tr>
+                <td colSpan="7" className="text-center py-4 text-muted">
+                  No hay usuarios registrados
+                </td>
+              </tr>
+            ) : (
+              usuarios.map((usuario) => (
+                <FilaUsuario
+                  key={usuario.id}
+                  usuario={usuario}
+                  estaSeleccionado={seleccionados.has(usuario.id)}
+                  onToggle={onToggle}
+                  onEditar={onEditar}
+                  onCambiarEstado={onCambiarEstado}
+                  onEliminar={onEliminar}
+                />
+              ))
+            )}
+          </tbody>
+        </Table>
+      </Card.Body>
+    </Card>
+  );
+}
+
+/** Subcomponente: Paginación */
+function PaginacionUsuarios({ paginaActual, totalPaginas, totalUsuarios, registrosPorPagina, setPaginaActual, loading }) {
+  const inicio = totalUsuarios === 0 ? 0 : (paginaActual - 1) * registrosPorPagina + 1;
+  const fin = Math.min(paginaActual * registrosPorPagina, totalUsuarios);
+
+  return (
+    <div className="d-flex justify-content-between align-items-center mt-3">
+      <small className="text-muted">
+        Página <strong>{paginaActual}</strong> de <strong>{totalPaginas || 1}</strong> — Mostrando <strong>{inicio}-{fin}</strong> de <strong>{totalUsuarios}</strong> registros
+      </small>
+      <ButtonGroup size="sm">
+        <Button 
+          type="button" 
+          variant="outline-primary" 
+          onClick={() => setPaginaActual(1)} 
+          disabled={paginaActual === 1 || loading}
+        >
+          ««
+        </Button>
+        <Button 
+          type="button" 
+          variant="outline-primary" 
+          onClick={() => setPaginaActual(p => Math.max(1, p - 1))} 
+          disabled={paginaActual === 1 || loading}
+        >
+          Anterior
+        </Button>
+        <Button type="button" variant="primary" disabled>
+          {paginaActual} / {totalPaginas || 1}
+        </Button>
+        <Button 
+          type="button" 
+          variant="outline-primary" 
+          onClick={() => setPaginaActual(p => p + 1)} 
+          disabled={paginaActual >= totalPaginas || loading}
+        >
+          Siguiente
+        </Button>
+        <Button 
+          type="button" 
+          variant="outline-primary" 
+          onClick={() => setPaginaActual(totalPaginas)} 
+          disabled={paginaActual >= totalPaginas || loading}
+        >
+          »»
+        </Button>
+      </ButtonGroup>
+    </div>
+  );
+}
+
+/** Subcomponente: Modal Crear / Editar Usuario */
+function ModalUsuarioForm({
+  show,
+  editando,
+  usuarioActual,
+  setUsuarioActual,
+  showPassword,
+  setShowPassword,
+  onClose,
+  onSubmit
+}) {
+  return (
+    <Modal 
+      show={show} 
+      onHide={onClose} 
+      centered
+      dialogClassName="modal-producto-form"
+      backdrop="static"
+    >
+      <div className="product-minimal-header">
+        <div>
+          <h6 className="fw-bold mb-0 text-navy fs-6">
+            {editando ? 'Editar Usuario' : 'Nuevo Usuario'}
+          </h6>
+          <small className="text-muted" style={{ fontSize: '0.8rem' }}>
+            {editando ? `ID #${usuarioActual.id} — ${usuarioActual.email}` : 'Ingresa los datos para registrar un usuario'}
+          </small>
+        </div>
+        <button 
+          type="button" 
+          className="btn-close" 
+          onClick={onClose}
+          aria-label="Cerrar"
+        />
+      </div>
+
+      <Form onSubmit={onSubmit}>
+        <Modal.Body className="p-3 p-sm-4">
+          <Row className="g-2 mb-3">
+            <Col sm={6}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold text-secondary mb-1">
+                  Nombre <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  value={usuarioActual.nombre}
+                  onChange={(e) => setUsuarioActual(prev => ({ ...prev, nombre: e.target.value }))}
+                  required
+                  placeholder="Ej: Carlos"
+                  className="product-minimal-input"
+                />
+              </Form.Group>
+            </Col>
+            <Col sm={6}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold text-secondary mb-1">
+                  Apellido
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  value={usuarioActual.apellido}
+                  onChange={(e) => setUsuarioActual(prev => ({ ...prev, apellido: e.target.value }))}
+                  placeholder="Ej: Gómez"
+                  className="product-minimal-input"
+                />
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Form.Group className="mb-3">
+            <Form.Label className="small fw-semibold text-secondary mb-1">
+              Correo Electrónico <span className="text-danger">*</span>
+            </Form.Label>
+            <Form.Control
+              type="email"
+              value={usuarioActual.email}
+              onChange={(e) => setUsuarioActual(prev => ({ ...prev, email: e.target.value }))}
+              required
+              placeholder="correo@ejemplo.com"
+              className="product-minimal-input"
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label className="small fw-semibold text-secondary mb-1">
+              Contraseña {editando ? <span className="text-muted">(dejar en blanco para mantener)</span> : <span className="text-danger">*</span>}
+            </Form.Label>
+            <InputGroup>
+              <Form.Control
+                type={showPassword ? 'text' : 'password'}
+                placeholder={editando ? '••••••••' : 'Mínimo 6 caracteres'}
+                value={usuarioActual.password}
+                onChange={(e) => setUsuarioActual(prev => ({ ...prev, password: e.target.value }))}
+                required={!editando}
+                className="product-minimal-input"
+              />
+              <Button
+                variant="outline-secondary"
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                style={{ border: '1px solid #e2e8f0', borderLeft: 'none' }}
+              >
+                <span className={`bi bi-eye${showPassword ? '-slash' : ''}`} aria-hidden="true" />
+              </Button>
+            </InputGroup>
+          </Form.Group>
+
+          <Row className="g-2 mb-3">
+            <Col sm={6}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold text-secondary mb-1">
+                  Teléfono
+                </Form.Label>
+                <Form.Control
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength="10"
+                  value={usuarioActual.telefono}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setUsuarioActual(prev => ({ ...prev, telefono: val }));
+                  }}
+                  placeholder="Ej: 3001234567"
+                  className="product-minimal-input"
+                />
+                <Form.Text className="text-muted" style={{ fontSize: '0.72rem' }}>
+                  10 dígitos numéricos
+                </Form.Text>
+              </Form.Group>
+            </Col>
+            <Col sm={6}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold text-secondary mb-1">
+                  Rol en el Sistema
+                </Form.Label>
+                <Form.Select
+                  value={usuarioActual.rol}
+                  onChange={(e) => setUsuarioActual(prev => ({ ...prev, rol: e.target.value }))}
+                  className="product-minimal-input"
+                >
+                  <option value="cliente">Cliente</option>
+                  <option value="auxiliar">Auxiliar</option>
+                  <option value="administrador">Administrador</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Form.Group className="mb-3">
+            <Form.Label className="small fw-semibold text-secondary mb-1">
+              Dirección
+            </Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={2}
+              value={usuarioActual.direccion}
+              onChange={(e) => setUsuarioActual(prev => ({ ...prev, direccion: e.target.value }))}
+              placeholder="Dirección de envío o residencia..."
+              className="product-minimal-input"
+            />
+          </Form.Group>
+
+          <div className="pt-1">
+            <Form.Check
+              type="switch"
+              id="usuario-switch-activo"
+              label="Usuario activo (habilitado para iniciar sesión)"
+              checked={usuarioActual.activo}
+              onChange={(e) => setUsuarioActual(prev => ({ ...prev, activo: e.target.checked }))}
+              className="small text-secondary fw-medium"
+            />
+          </div>
+        </Modal.Body>
+
+        <div className="product-minimal-footer">
+          <button 
+            type="button"
+            onClick={onClose}
+            className="btn-minimal-cancel"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="submit"
+            className="btn-minimal-submit"
+          >
+            <span className={`bi bi-${editando ? 'check2' : 'plus-lg'} me-1`} aria-hidden="true" />
+            {editando ? 'Actualizar Usuario' : 'Guardar Usuario'}
+          </button>
+        </div>
+      </Form>
+    </Modal>
+  );
+}
+
+/** Subcomponente: Modal de confirmación genérico */
+function ModalConfirmacionDialog({ modalConfirmacion, setModalConfirmacion }) {
+  const bgClass = getBgModalConfirmacion(modalConfirmacion.tipo);
+
+  return (
+    <Modal 
+      show={modalConfirmacion.show} 
+      onHide={() => setModalConfirmacion(prev => ({ ...prev, show: false }))} 
+      centered
+      backdrop="static"
+      dialogClassName="modal-confirmacion-compacto"
+    >
+      <Modal.Body className="text-center p-3 p-sm-4">
+        <div 
+          className={`confirm-icon-wrapper mb-3 mx-auto bg-${bgClass} text-${modalConfirmacion.tipo || 'primary'}`}
+        >
+          <span className={`bi bi-${modalConfirmacion.icono || 'exclamation-circle-fill'} confirm-icon`} aria-hidden="true" />
+        </div>
+        
+        <h5 className="fw-bold text-navy mb-2 fs-5">
+          {modalConfirmacion.titulo}
+        </h5>
+        
+        <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
+          {modalConfirmacion.mensaje}
+        </p>
+
+        <div className="d-flex gap-2 justify-content-center w-100 mt-2">
+          <Button 
+            type="button"
+            variant="outline-secondary" 
+            className="px-3 py-2 fw-semibold flex-fill"
+            onClick={() => {
+              setModalConfirmacion(prev => ({ ...prev, show: false }));
+              if (modalConfirmacion.onCancel) modalConfirmacion.onCancel();
+            }}
+          >
+            {modalConfirmacion.textoCancelar || 'Cancelar'}
+          </Button>
+          <Button 
+            type="button"
+            variant={modalConfirmacion.tipo || 'primary'} 
+            className="px-3 py-2 fw-semibold flex-fill shadow-sm"
+            onClick={async () => {
+              const action = modalConfirmacion.onConfirm;
+              setModalConfirmacion(prev => ({ ...prev, show: false }));
+              if (action) await action();
+            }}
+          >
+            {modalConfirmacion.textoConfirmar || 'Confirmar'}
+          </Button>
+        </div>
+      </Modal.Body>
+    </Modal>
+  );
+}
+
+/** Componente Principal: AdminUsuariosPage */
 function AdminUsuariosPage() {
   const navigate = useNavigate();
   const [usuarios, setUsuarios] = useState([]);
@@ -23,30 +675,8 @@ function AdminUsuariosPage() {
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [seleccionados, setSeleccionados] = useState(new Set());
   
-  // Modal de confirmación en pantalla
-  const [modalConfirmacion, setModalConfirmacion] = useState({
-    show: false,
-    titulo: '',
-    mensaje: '',
-    tipo: 'danger',
-    icono: 'trash3-fill',
-    textoConfirmar: 'Borrar',
-    textoCancelar: 'Cancelar',
-    onConfirm: null,
-    onCancel: null
-  });
-  
-  const [usuarioActual, setUsuarioActual] = useState({
-    id: null,
-    nombre: '',
-    apellido: '',
-    email: '',
-    password: '',
-    telefono: '',
-    direccion: '',
-    rol: 'cliente',
-    activo: true
-  });
+  const [modalConfirmacion, setModalConfirmacion] = useState(MODAL_CONFIRMACION_INICIAL);
+  const [usuarioActual, setUsuarioActual] = useState(USUARIO_INICIAL);
   
   const [filtros, setFiltros] = useState({
     busqueda: '',
@@ -59,7 +689,6 @@ function AdminUsuariosPage() {
   const [totalUsuarios, setTotalUsuarios] = useState(0);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
-  const registrosPorPagina = 25;
 
   // Debounce para búsqueda
   useEffect(() => {
@@ -82,18 +711,12 @@ function AdminUsuariosPage() {
     }
   }, [busquedaDebounced, filtros.rol, filtros.estado]);
 
-  const getRolBadgeVariant = (rol) => {
-    if (rol === 'administrador') return 'danger';
-    if (rol === 'auxiliar') return 'warning';
-    return 'info';
-  };
-
   const cargarUsuarios = useCallback(async () => {
     setLoading(true);
     try {
       const params = {
         pagina: paginaActual,
-        limite: registrosPorPagina
+        limite: REGISTROS_POR_PAGINA
       };
       if (busquedaDebounced.trim()) params.buscar = busquedaDebounced.trim();
       if (filtros.rol && filtros.rol !== 'todos') params.rol = filtros.rol;
@@ -107,7 +730,7 @@ function AdminUsuariosPage() {
 
       setUsuarios(Array.isArray(usus) ? usus : []);
       const total = paginacion.total !== undefined ? paginacion.total : usus.length;
-      const numPags = paginacion.totalPaginas || Math.max(1, Math.ceil(total / registrosPorPagina));
+      const numPags = paginacion.totalPaginas || Math.max(1, Math.ceil(total / REGISTROS_POR_PAGINA));
       setTotalUsuarios(total);
       setTotalPaginas(numPags);
     } catch (error) {
@@ -130,17 +753,7 @@ function AdminUsuariosPage() {
   }, []);
 
   const limpiarFormulario = () => {
-    setUsuarioActual({
-      id: null,
-      nombre: '',
-      apellido: '',
-      email: '',
-      password: '',
-      telefono: '',
-      direccion: '',
-      rol: 'cliente',
-      activo: true
-    });
+    setUsuarioActual(USUARIO_INICIAL);
     setEditando(false);
     setShowPassword(false);
   };
@@ -162,7 +775,6 @@ function AdminUsuariosPage() {
     limpiarFormulario();
   };
 
-  // Guardado real
   const ejecutarGuardado = async () => {
     try {
       if (usuarioActual.telefono && usuarioActual.telefono.length !== 10) {
@@ -211,11 +823,6 @@ function AdminUsuariosPage() {
     }
   };
 
-  // Los usuarios recibidos corresponden a la página actual consultada al backend
-  const usuariosPaginados = usuarios;
-  const usuariosFiltrados = usuarios;
-
-  // Exportar usuarios bajo demanda consultando el total filtrado
   const obtenerUsuariosParaExportar = async () => {
     try {
       const params = { limite: 1000 };
@@ -250,16 +857,16 @@ function AdminUsuariosPage() {
   };
 
   const todosPaginaSeleccionados = useMemo(() => {
-    return usuariosPaginados.length > 0 && usuariosPaginados.every(u => seleccionados.has(u.id));
-  }, [usuariosPaginados, seleccionados]);
+    return usuarios.length > 0 && usuarios.every(u => seleccionados.has(u.id));
+  }, [usuarios, seleccionados]);
 
   const handleToggleSeleccionarTodos = () => {
     setSeleccionados(prev => {
       const nuevo = new Set(prev);
       if (todosPaginaSeleccionados) {
-        usuariosPaginados.forEach(u => nuevo.delete(u.id));
+        usuarios.forEach(u => nuevo.delete(u.id));
       } else {
-        usuariosPaginados.forEach(u => nuevo.add(u.id));
+        usuarios.forEach(u => nuevo.add(u.id));
       }
       return nuevo;
     });
@@ -277,7 +884,6 @@ function AdminUsuariosPage() {
     });
   };
 
-  // Eliminar individual con modal
   const solicitarEliminar = (usuario) => {
     setModalConfirmacion({
       show: true,
@@ -308,7 +914,6 @@ function AdminUsuariosPage() {
     });
   };
 
-  // Toggle estado individual con modal
   const solicitarCambioEstado = (usuario) => {
     const nuevoEstado = !usuario.activo;
     setModalConfirmacion({
@@ -342,7 +947,6 @@ function AdminUsuariosPage() {
     });
   };
 
-  // Eliminación masiva con modal
   const solicitarEliminacionMasiva = () => {
     const count = seleccionados.size;
     if (count === 0) return;
@@ -381,7 +985,6 @@ function AdminUsuariosPage() {
     });
   };
 
-  // Toggle masivo con modal
   const solicitarCambioEstadoMasivo = () => {
     const count = seleccionados.size;
     if (count === 0) return;
@@ -421,13 +1024,16 @@ function AdminUsuariosPage() {
     return <LoadingSpinner message="Cargando usuarios..." />;
   }
 
+  const exportIconClass = tipoExportacion === 'pdf' ? 'bi bi-file-earmark-pdf me-1' : 'bi bi-file-earmark-excel me-1';
+  const exportText = tipoExportacion === 'pdf' ? 'Exportar a PDF' : 'Exportar a Excel';
+
   return (
     <Container className="py-4">
       {/* Header Toolbar Responsivo */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
         <div>
           <h1 className="h2 mb-1 fw-bold text-navy">
-            <span className="bi bi-people-fill me-2 text-gold" aria-hidden="true"></span> Gestión de Usuarios
+            <span className="bi bi-people-fill me-2 text-gold" aria-hidden="true" /> Gestión de Usuarios
           </h1>
           <p className="text-muted mb-0">
             Total: <strong>{totalUsuarios}</strong> usuario{totalUsuarios !== 1 ? 's' : ''}
@@ -436,562 +1042,108 @@ function AdminUsuariosPage() {
         <div className="d-flex flex-wrap align-items-center gap-2">
           <Dropdown as={ButtonGroup}>
             <Button
+              type="button"
               variant="primary"
               disabled={loading}
               onClick={() => handleExportar(tipoExportacion)}
             >
-              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
-              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
+              <span className={exportIconClass} aria-hidden="true" />
+              {exportText}
             </Button>
-            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" disabled={loading} />
+            <Dropdown.Toggle 
+              split 
+              variant="secondary" 
+              className="btn-dark dropdown-toggle-split" 
+              disabled={loading}
+              id="dropdown-split-export-usuarios"
+              aria-label="Opciones de exportación"
+            />
             <Dropdown.Menu>
               <Dropdown.Item onClick={() => {
                 setTipoExportacion('pdf');
                 handleExportar('pdf');
               }}>
-                <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
+                <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true" /> Exportar a PDF
               </Dropdown.Item>
               <Dropdown.Item onClick={() => {
                 setTipoExportacion('excel');
                 handleExportar('excel');
               }}>
-                <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
+                <span className="bi bi-file-earmark-excel me-2" aria-hidden="true" /> Exportar a Excel
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
-          <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-            <i className="bi bi-arrow-left me-1"></i> Volver
+          <Button type="button" variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
+            <span className="bi bi-arrow-left me-1" aria-hidden="true" /> Volver
           </Button>
-          <Button variant="primary" onClick={() => handleShowModal()}>
-            <i className="bi bi-plus-circle me-1"></i> Nuevo Usuario
+          <Button type="button" variant="primary" onClick={() => handleShowModal()}>
+            <span className="bi bi-plus-circle me-1" aria-hidden="true" /> Nuevo Usuario
           </Button>
         </div>
       </div>
 
-      {/* Notificación flotante inferior izquierda */}
-      {mensaje.texto && (
-        <div className="toast-floating-container-bottom-left">
-          <Alert 
-            variant={mensaje.tipo} 
-            dismissible 
-            onClose={() => setMensaje({ tipo: '', texto: '' })}
-            className={`toast-floating-alert alert-${mensaje.tipo} mb-0`}
-          >
-            <i className={`bi bi-${
-              mensaje.tipo === 'success' ? 'check-circle-fill text-success' :
-              mensaje.tipo === 'danger' ? 'exclamation-octagon-fill text-danger' :
-              mensaje.tipo === 'warning' ? 'exclamation-triangle-fill text-warning' :
-              'info-circle-fill text-info'
-            } fs-5 flex-shrink-0`} />
-            <div className="flex-grow-1 fw-medium text-start">
-              {mensaje.texto}
-            </div>
-          </Alert>
-        </div>
-      )}
+      {/* Notificación flotante estandarizada */}
+      <FloatingToast 
+        mensaje={mensaje} 
+        onClose={() => setMensaje({ tipo: '', texto: '' })} 
+      />
 
       {/* Filtros */}
-      <Card className="shadow-sm border-0 mb-4 admin-card-table">
-        <Card.Body className="p-3 p-md-4">
-          <h6 className="fw-bold mb-3 d-flex align-items-center gap-2 text-navy">
-            <span className="bi bi-funnel text-gold" aria-hidden="true"></span> Filtros de Búsqueda
-          </h6>
-          <Row className="g-3 align-items-end">
-            <Col md={5}>
-              <Form.Group>
-                <Form.Label className="small fw-semibold mb-1">Buscar Usuario</Form.Label>
-                <InputGroup>
-                  <InputGroup.Text className="bg-light">
-                    <span className="bi bi-search" aria-hidden="true"></span>
-                  </InputGroup.Text>
-                  <Form.Control
-                    placeholder="Buscar por nombre o email..."
-                    value={filtros.busqueda}
-                    onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
-                  />
-                </InputGroup>
-              </Form.Group>
-            </Col>
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label className="small fw-semibold mb-1">Filtrar por Rol</Form.Label>
-                <Form.Select
-                  value={filtros.rol}
-                  onChange={(e) => setFiltros({ ...filtros, rol: e.target.value })}
-                >
-                  <option value="todos">Todos los roles</option>
-                  <option value="administrador">Administradores</option>
-                  <option value="auxiliar">Auxiliares</option>
-                  <option value="cliente">Clientes</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={2}>
-              <Form.Group>
-                <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
-                <Form.Select
-                  value={filtros.estado}
-                  onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
-                >
-                  <option value="todos">Todos</option>
-                  <option value="activo">Activos</option>
-                  <option value="inactivo">Inactivos</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={2}>
-              <Button
-                variant="outline-secondary"
-                className="w-100"
-                onClick={() => setFiltros({ busqueda: '', rol: 'todos', estado: 'todos' })}
-              >
-                <span className="bi bi-arrow-clockwise me-1" aria-hidden="true"></span> Limpiar
-              </Button>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
+      <BarraFiltrosUsuarios 
+        filtros={filtros} 
+        setFiltros={setFiltros} 
+      />
 
       {/* Barra de Acciones de Selección Múltiple */}
-      <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 px-1">
-        <div className="d-flex align-items-center gap-2">
-          <Button
-            variant={todosPaginaSeleccionados ? "secondary" : "outline-secondary"}
-            size="sm"
-            className="d-inline-flex align-items-center gap-1"
-            onClick={handleToggleSeleccionarTodos}
-            title={todosPaginaSeleccionados ? "Deseleccionar todos en esta página" : "Seleccionar todos en esta página"}
-          >
-            <i className={`bi bi-${todosPaginaSeleccionados ? 'check-square-fill text-primary' : 'square'}`} />
-            <span>{todosPaginaSeleccionados ? 'Deseleccionar página' : `Seleccionar todo (${usuariosPaginados.length})`}</span>
-          </Button>
-          {seleccionados.size > 0 && (
-            <Badge bg="danger" className="p-2 d-flex align-items-center gap-1 fs-7">
-              <i className="bi bi-check-circle-fill"></i> {seleccionados.size} seleccionado{seleccionados.size !== 1 ? 's' : ''}
-            </Badge>
-          )}
-        </div>
-
-        {seleccionados.size > 0 && (
-          <div className="d-flex flex-wrap align-items-center gap-2">
-            {seleccionados.size === 1 && (
-              <Button
-                variant="outline-primary"
-                size="sm"
-                className="d-inline-flex align-items-center gap-1 fw-semibold"
-                onClick={() => {
-                  const idSel = Array.from(seleccionados)[0];
-                  const usuSel = usuarios.find(u => u.id === idSel);
-                  if (usuSel) handleShowModal(usuSel);
-                }}
-                title="Editar el usuario seleccionado"
-              >
-                <i className="bi bi-pencil-fill"></i>
-                <span>Editar</span>
-              </Button>
-            )}
-            <Button
-              variant="outline-warning"
-              size="sm"
-              className="d-inline-flex align-items-center gap-1 fw-semibold"
-              onClick={solicitarCambioEstadoMasivo}
-              title="Activar o desactivar los usuarios seleccionados"
-            >
-              <i className="bi bi-arrow-repeat"></i>
-              <span>Activar / Desactivar ({seleccionados.size})</span>
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              className="d-inline-flex align-items-center gap-1 fw-semibold"
-              onClick={solicitarEliminacionMasiva}
-              title="Eliminar los usuarios seleccionados"
-            >
-              <i className="bi bi-trash-fill"></i>
-              <span>Eliminar ({seleccionados.size})</span>
-            </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={() => setSeleccionados(new Set())}
-              title="Limpiar selección"
-            >
-              <i className="bi bi-x-lg me-1"></i> Deseleccionar
-            </Button>
-          </div>
-        )}
-      </div>
+      <BarraAccionesSeleccion
+        todosPaginaSeleccionados={todosPaginaSeleccionados}
+        onToggleSeleccionarTodos={handleToggleSeleccionarTodos}
+        totalPaginados={usuarios.length}
+        seleccionados={seleccionados}
+        usuarios={usuarios}
+        onEditarSeleccionado={handleShowModal}
+        onCambioEstadoMasivo={solicitarCambioEstadoMasivo}
+        onEliminacionMasiva={solicitarEliminacionMasiva}
+        onLimpiarSeleccion={() => setSeleccionados(new Set())}
+      />
 
       {/* Tabla de Usuarios Responsiva */}
-      <Card className="shadow-sm border-0 admin-card-table">
-        <Card.Body className="p-0">
-          <Table responsive hover className="admin-table align-middle mb-0">
-            <thead>
-              <tr>
-                <th style={{ width: '50px' }}>ID</th>
-                <th>Nombre</th>
-                <th>Email</th>
-                <th className="d-none d-lg-table-cell" style={{ width: '130px' }}>Teléfono</th>
-                <th style={{ width: '110px' }}>Rol</th>
-                <th className="d-none d-sm-table-cell" style={{ width: '100px' }}>Estado</th>
-                <th className="text-center" style={{ width: '130px', minWidth: '100px' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuariosFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="text-center py-4 text-muted">
-                    No hay usuarios registrados
-                  </td>
-                </tr>
-              ) : (
-                usuariosPaginados.map((usuario) => {
-                  const estaSeleccionado = seleccionados.has(usuario.id);
-                  return (
-                    <tr 
-                      key={usuario.id}
-                      onClick={() => toggleSeleccionarUsuario(usuario.id)}
-                      className={`fila-admin ${estaSeleccionado ? 'fila-admin-seleccionada' : ''}`}
-                      title="Haz clic para seleccionar/deseleccionar este usuario"
-                    >
-                      <td className="align-middle fw-bold">
-                        <div className="d-flex align-items-center gap-2">
-                          <i 
-                            className={`bi bi-${estaSeleccionado ? 'check-circle-fill text-danger' : 'circle text-muted'} fs-6 d-inline-block`}
-                            style={{ cursor: 'pointer' }}
-                          />
-                          <span>{usuario.id}</span>
-                        </div>
-                      </td>
-                      <td className="align-middle fw-bold">
-                        <div>{usuario.nombre} {usuario.apellido || ''}</div>
-                        <small className="d-lg-none text-muted d-block">{usuario.telefono || ''}</small>
-                      </td>
-                      <td className="align-middle">{usuario.email}</td>
-                      <td className="align-middle d-none d-lg-table-cell">{usuario.telefono || '-'}</td>
-                      <td className="align-middle">
-                        <Badge bg={getRolBadgeVariant(usuario.rol)}>
-                          {usuario.rol}
-                        </Badge>
-                      </td>
-                      <td className="align-middle d-none d-sm-table-cell">
-                        <Badge bg={usuario.activo ? 'success' : 'secondary'}>
-                          {usuario.activo ? 'Activo' : 'Inactivo'}
-                        </Badge>
-                      </td>
-                      <td className="align-middle text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="action-btn-group">
-                          <Button
-                            variant="outline-primary"
-                            size="sm"
-                            className="btn-action-table"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleShowModal(usuario);
-                            }}
-                            title="Editar usuario"
-                          >
-                            <i className="bi bi-pencil" />
-                            <span className="btn-text">Editar</span>
-                          </Button>
-                          <Button
-                            variant={usuario.activo ? 'outline-warning' : 'outline-success'}
-                            size="sm"
-                            className="btn-action-table"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              solicitarCambioEstado(usuario);
-                            }}
-                            title={usuario.activo ? 'Desactivar usuario' : 'Activar usuario'}
-                          >
-                            <i className={`bi bi-${usuario.activo ? 'x-circle' : 'check-circle'}`} />
-                            <span className="btn-text">{usuario.activo ? 'Desactivar' : 'Activar'}</span>
-                          </Button>
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
-                            className="btn-action-table"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              solicitarEliminar(usuario);
-                            }}
-                            title="Eliminar usuario"
-                          >
-                            <i className="bi bi-trash" />
-                            <span className="btn-text">Eliminar</span>
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </Table>
-        </Card.Body>
-      </Card>
+      <TablaUsuarios
+        usuarios={usuarios}
+        seleccionados={seleccionados}
+        onToggle={toggleSeleccionarUsuario}
+        onEditar={handleShowModal}
+        onCambiarEstado={solicitarCambioEstado}
+        onEliminar={solicitarEliminar}
+      />
 
       {/* Paginación */}
-      <div className="d-flex justify-content-between align-items-center mt-3">
-        <small className="text-muted">
-          Página <strong>{paginaActual}</strong> de <strong>{totalPaginas || 1}</strong> — Mostrando <strong>{totalUsuarios === 0 ? '0-0' : `${(paginaActual - 1) * registrosPorPagina + 1}-${Math.min(paginaActual * registrosPorPagina, totalUsuarios)}`}</strong> de <strong>{totalUsuarios}</strong> registros
-        </small>
-        <ButtonGroup size="sm">
-          <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1 || loading}>
-            ««
-          </Button>
-          <Button variant="outline-primary" onClick={() => setPaginaActual(p => Math.max(1, p - 1))} disabled={paginaActual === 1 || loading}>
-            Anterior
-          </Button>
-          <Button variant="primary" disabled>
-            {paginaActual} / {totalPaginas || 1}
-          </Button>
-          <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual >= totalPaginas || loading}>
-            Siguiente
-          </Button>
-          <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual >= totalPaginas || loading}>
-            »»
-          </Button>
-        </ButtonGroup>
-      </div>
+      <PaginacionUsuarios
+        paginaActual={paginaActual}
+        totalPaginas={totalPaginas}
+        totalUsuarios={totalUsuarios}
+        registrosPorPagina={REGISTROS_POR_PAGINA}
+        setPaginaActual={setPaginaActual}
+        loading={loading}
+      />
 
       {/* Modal Crear / Editar Usuario Minimalista */}
-      <Modal 
-        show={showModal} 
-        onHide={handleCloseModal} 
-        centered
-        dialogClassName="modal-producto-form"
-        backdrop="static"
-      >
-        <div className="product-minimal-header">
-          <div>
-            <h6 className="fw-bold mb-0 text-navy fs-6">
-              {editando ? 'Editar Usuario' : 'Nuevo Usuario'}
-            </h6>
-            <small className="text-muted" style={{ fontSize: '0.8rem' }}>
-              {editando ? `ID #${usuarioActual.id} — ${usuarioActual.email}` : 'Ingresa los datos para registrar un usuario'}
-            </small>
-          </div>
-          <button 
-            type="button" 
-            className="btn-close" 
-            onClick={handleCloseModal}
-            aria-label="Cerrar"
-          />
-        </div>
-
-        <Form onSubmit={handleSubmit}>
-          <Modal.Body className="p-3 p-sm-4">
-            <Row className="g-2 mb-3">
-              <Col sm={6}>
-                <Form.Group>
-                  <Form.Label className="small fw-semibold text-secondary mb-1">
-                    Nombre <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={usuarioActual.nombre}
-                    onChange={(e) => setUsuarioActual({ ...usuarioActual, nombre: e.target.value })}
-                    required
-                    placeholder="Ej: Carlos"
-                    className="product-minimal-input"
-                  />
-                </Form.Group>
-              </Col>
-              <Col sm={6}>
-                <Form.Group>
-                  <Form.Label className="small fw-semibold text-secondary mb-1">
-                    Apellido
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={usuarioActual.apellido}
-                    onChange={(e) => setUsuarioActual({ ...usuarioActual, apellido: e.target.value })}
-                    placeholder="Ej: Gómez"
-                    className="product-minimal-input"
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-
-            <Form.Group className="mb-3">
-              <Form.Label className="small fw-semibold text-secondary mb-1">
-                Correo Electrónico <span className="text-danger">*</span>
-              </Form.Label>
-              <Form.Control
-                type="email"
-                value={usuarioActual.email}
-                onChange={(e) => setUsuarioActual({ ...usuarioActual, email: e.target.value })}
-                required
-                placeholder="correo@ejemplo.com"
-                className="product-minimal-input"
-              />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label className="small fw-semibold text-secondary mb-1">
-                Contraseña {editando ? <span className="text-muted">(dejar en blanco para mantener)</span> : <span className="text-danger">*</span>}
-              </Form.Label>
-              <InputGroup>
-                <Form.Control
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder={editando ? '••••••••' : 'Mínimo 6 caracteres'}
-                  value={usuarioActual.password}
-                  onChange={(e) => setUsuarioActual({ ...usuarioActual, password: e.target.value })}
-                  required={!editando}
-                  className="product-minimal-input"
-                />
-                <Button
-                  variant="outline-secondary"
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-                  style={{ border: '1px solid #e2e8f0', borderLeft: 'none' }}
-                >
-                  <i className={`bi bi-eye${showPassword ? '-slash' : ''}`}></i>
-                </Button>
-              </InputGroup>
-            </Form.Group>
-
-            <Row className="g-2 mb-3">
-              <Col sm={6}>
-                <Form.Group>
-                  <Form.Label className="small fw-semibold text-secondary mb-1">
-                    Teléfono
-                  </Form.Label>
-                  <Form.Control
-                    type="tel"
-                    inputMode="numeric"
-                    maxLength="10"
-                    value={usuarioActual.telefono}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                      setUsuarioActual({ ...usuarioActual, telefono: val });
-                    }}
-                    placeholder="Ej: 3001234567"
-                    className="product-minimal-input"
-                  />
-                  <Form.Text className="text-muted" style={{ fontSize: '0.72rem' }}>
-                    10 dígitos numéricos
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-              <Col sm={6}>
-                <Form.Group>
-                  <Form.Label className="small fw-semibold text-secondary mb-1">
-                    Rol en el Sistema
-                  </Form.Label>
-                  <Form.Select
-                    value={usuarioActual.rol}
-                    onChange={(e) => setUsuarioActual({ ...usuarioActual, rol: e.target.value })}
-                    className="product-minimal-input"
-                  >
-                    <option value="cliente">Cliente</option>
-                    <option value="auxiliar">Auxiliar</option>
-                    <option value="administrador">Administrador</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-            </Row>
-
-            <Form.Group className="mb-3">
-              <Form.Label className="small fw-semibold text-secondary mb-1">
-                Dirección
-              </Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={2}
-                value={usuarioActual.direccion}
-                onChange={(e) => setUsuarioActual({ ...usuarioActual, direccion: e.target.value })}
-                placeholder="Dirección de envío o residencia..."
-                className="product-minimal-input"
-              />
-            </Form.Group>
-
-            <div className="pt-1">
-              <Form.Check
-                type="switch"
-                id="usuario-switch-activo"
-                label="Usuario activo (habilitado para iniciar sesión)"
-                checked={usuarioActual.activo}
-                onChange={(e) => setUsuarioActual({ ...usuarioActual, activo: e.target.checked })}
-                className="small text-secondary fw-medium"
-              />
-            </div>
-          </Modal.Body>
-
-          <div className="product-minimal-footer">
-            <button 
-              type="button"
-              onClick={handleCloseModal}
-              className="btn-minimal-cancel"
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit"
-              className="btn-minimal-submit"
-            >
-              <i className={`bi bi-${editando ? 'check2' : 'plus-lg'}`} />
-              {editando ? 'Actualizar Usuario' : 'Guardar Usuario'}
-            </button>
-          </div>
-        </Form>
-      </Modal>
+      <ModalUsuarioForm
+        show={showModal}
+        editando={editando}
+        usuarioActual={usuarioActual}
+        setUsuarioActual={setUsuarioActual}
+        showPassword={showPassword}
+        setShowPassword={setShowPassword}
+        onClose={handleCloseModal}
+        onSubmit={handleSubmit}
+      />
 
       {/* Modal de Confirmación Compacto Estilo Dashboard */}
-      <Modal 
-        show={modalConfirmacion.show} 
-        onHide={() => setModalConfirmacion(prev => ({ ...prev, show: false }))} 
-        centered
-        backdrop="static"
-        dialogClassName="modal-confirmacion-compacto"
-      >
-        <Modal.Body className="text-center p-3 p-sm-4">
-          <div 
-            className={`confirm-icon-wrapper mb-3 mx-auto bg-${
-              modalConfirmacion.tipo === 'danger' ? 'danger-subtle' :
-              modalConfirmacion.tipo === 'warning' ? 'warning-subtle' :
-              modalConfirmacion.tipo === 'primary' || modalConfirmacion.tipo === 'info' ? 'primary-subtle' :
-              'success-subtle'
-            } text-${modalConfirmacion.tipo || 'primary'}`}
-          >
-            <i className={`bi bi-${modalConfirmacion.icono || 'exclamation-circle-fill'} confirm-icon`} />
-          </div>
-          
-          <h5 className="fw-bold text-navy mb-2 fs-5">
-            {modalConfirmacion.titulo}
-          </h5>
-          
-          <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
-            {modalConfirmacion.mensaje}
-          </p>
-
-          <div className="d-flex gap-2 justify-content-center w-100 mt-2">
-            <Button 
-              variant="outline-secondary" 
-              className="px-3 py-2 fw-semibold flex-fill"
-              onClick={() => {
-                setModalConfirmacion(prev => ({ ...prev, show: false }));
-                if (modalConfirmacion.onCancel) modalConfirmacion.onCancel();
-              }}
-            >
-              {modalConfirmacion.textoCancelar || 'Cancelar'}
-            </Button>
-            <Button 
-              variant={modalConfirmacion.tipo || 'primary'} 
-              className="px-3 py-2 fw-semibold flex-fill shadow-sm"
-              onClick={async () => {
-                const action = modalConfirmacion.onConfirm;
-                setModalConfirmacion(prev => ({ ...prev, show: false }));
-                if (action) await action();
-              }}
-            >
-              {modalConfirmacion.textoConfirmar || 'Confirmar'}
-            </Button>
-          </div>
-        </Modal.Body>
-      </Modal>
+      <ModalConfirmacionDialog
+        modalConfirmacion={modalConfirmacion}
+        setModalConfirmacion={setModalConfirmacion}
+      />
     </Container>
   );
 }
