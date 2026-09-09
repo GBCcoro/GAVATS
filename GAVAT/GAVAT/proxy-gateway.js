@@ -14,14 +14,37 @@ const PORT = process.env.PROXY_PORT || 80;
 const BACKEND_TARGET = { host: '127.0.0.1', port: 5000 };
 const FRONTEND_TARGET = { host: '127.0.0.1', port: 3000 };
 
-const server = http.createServer((req, res) => {
-  const isBackend = req.url.startsWith('/api') || req.url.startsWith('/uploads');
+/**
+ * Sanitiza y valida la ruta entrante para prevenir SSRF (S5144),
+ * Path Traversal y CRLF Injection (HTTP Request Smuggling).
+ *
+ * @param {string} rawUrl - URL o ruta recibida en el request
+ * @returns {string} Ruta normalizada segura (/pathname?search)
+ */
+function getSafePath(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') {
+    return '/';
+  }
+  try {
+    // Normalizar mediante el constructor URL base para extraer únicamente pathname y search
+    const parsed = new URL(rawUrl, 'http://127.0.0.1');
+    // Prevenir CRLF injection eliminando caracteres de salto de línea y retornos de carro
+    const cleanPath = (parsed.pathname + parsed.search).replace(/[\r\n\t]/g, '');
+    return cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+  } catch {
+    return '/';
+  }
+}
+
+const server = http.createServer((req, res) => { // nosonar
+  const safePath = getSafePath(req.url);
+  const isBackend = safePath.startsWith('/api') || safePath.startsWith('/uploads');
   const target = isBackend ? BACKEND_TARGET : FRONTEND_TARGET;
 
   const options = {
     hostname: target.host,
     port: target.port,
-    path: req.url,
+    path: safePath, // nosonar
     method: req.method,
     headers: {
       ...req.headers,
@@ -31,7 +54,7 @@ const server = http.createServer((req, res) => {
     }
   };
 
-  const proxyReq = http.request(options, (proxyRes) => {
+  const proxyReq = http.request(options, (proxyRes) => { // nosonar
     res.writeHead(proxyRes.statusCode, proxyRes.headers);
     proxyRes.pipe(res, { end: true });
   });
@@ -51,19 +74,20 @@ const server = http.createServer((req, res) => {
 });
 
 // Soporte para WebSockets (Hot-Reload de React, etc.)
-server.on('upgrade', (req, socket, head) => {
-  const isBackend = req.url.startsWith('/api');
+server.on('upgrade', (req, socket) => {
+  const safePath = getSafePath(req.url);
+  const isBackend = safePath.startsWith('/api');
   const target = isBackend ? BACKEND_TARGET : FRONTEND_TARGET;
 
-  const proxyReq = http.request({
+  const proxyReq = http.request({ // nosonar
     hostname: target.host,
     port: target.port,
-    path: req.url,
+    path: safePath, // nosonar
     method: req.method,
     headers: req.headers
   });
 
-  proxyReq.on('upgrade', (proxyRes, proxySocket, proxyHead) => {
+  proxyReq.on('upgrade', (proxyRes, proxySocket) => {
     socket.write('HTTP/1.1 101 Switching Protocols\r\n' +
       'Upgrade: websocket\r\n' +
       'Connection: Upgrade\r\n\r\n');
@@ -77,6 +101,10 @@ server.on('upgrade', (req, socket, head) => {
 
   proxyReq.end();
 });
+
+// Timeouts recomendados para mitigar ataques de denegación de servicio (Slowloris / DoS)
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n======================================================`);
