@@ -5,16 +5,60 @@
  * Moderación y gestión de comentarios de productos
  */
 
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { Container, Card, Table, Button, Modal, Form, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import comentariosService from '../../services/comentariosService';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import FloatingToast from '../../components/FloatingToast';
 import { exportarComentariosAPDF, exportarComentariosAExcel } from '../../utils/exportUtils';
 
+const MODAL_BG_POR_TIPO = Object.freeze({
+  danger: 'danger-subtle',
+  warning: 'warning-subtle',
+  primary: 'primary-subtle',
+  info: 'primary-subtle',
+  success: 'success-subtle',
+});
+
+const normalizarComentario = (comentario) => ({
+  ...comentario,
+  estado: comentario.estado === true || comentario.estado === 'visible',
+  usuario: typeof comentario.usuario === 'object' && comentario.usuario !== null
+    ? comentario.usuario
+    : {
+        nombre: comentario.usuario || comentario.autor || null,
+        email: comentario.email || null
+      },
+  producto: typeof comentario.producto === 'object' && comentario.producto !== null
+    ? comentario.producto
+    : {
+        nombre: comentario.producto || null
+      }
+});
+
+const formatearFecha = (fecha) => {
+  if (!fecha) return '-';
+  return new Date(fecha).toLocaleString('es-CO', { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric', 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+};
+
+const renderizarEstrellas = (calificacion) => {
+  const estrellas = [];
+  for (let i = 1; i <= 5; i++) {
+    estrellas.push(
+      <span key={i} className={`bi bi-star${i <= calificacion ? '-fill' : ''}`} style={{ color: '#f5c271' }} aria-hidden="true" />
+    );
+  }
+  return estrellas;
+};
+
 const AdminComentariosPage = () => {
-  useAuth();
   const navigate = useNavigate();
   const [comentarios, setComentarios] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,43 +104,10 @@ const AdminComentariosPage = () => {
     return () => clearTimeout(timer);
   }, [filtros.busqueda]);
 
-  const filtrosAnteriores = useRef({
-    busquedaDebounced,
-    estado: filtros.estado
-  });
-
+  // Resetear página al filtrar o buscar
   useEffect(() => {
-    const prev = filtrosAnteriores.current;
-    if (
-      prev.busquedaDebounced !== busquedaDebounced ||
-      prev.estado !== filtros.estado
-    ) {
-      filtrosAnteriores.current = {
-        busquedaDebounced,
-        estado: filtros.estado
-      };
-      setPaginaActual(1);
-    }
+    setPaginaActual(1);
   }, [busquedaDebounced, filtros.estado]);
-
-  const normalizarComentario = (comentario) => ({
-    ...comentario,
-    estado: comentario.estado === true || comentario.estado === 'visible',
-    usuario: typeof comentario.usuario === 'object' && comentario.usuario !== null
-      ? comentario.usuario
-      : {
-          nombre: comentario.usuario || comentario.autor || null,
-          email: comentario.email || null
-        },
-    producto: typeof comentario.producto === 'object' && comentario.producto !== null
-      ? comentario.producto
-      : {
-          nombre: comentario.producto || null
-        }
-  });
-
-  const comentariosFiltrados = comentarios;
-  const comentariosPaginados = comentarios;
 
   const loadComentarios = useCallback(async () => {
     setLoading(true);
@@ -111,7 +122,7 @@ const AdminComentariosPage = () => {
       const response = await comentariosService.obtenerTodosComentarios(params);
       const comentariosData = response.data?.comentarios || response.data || [];
       const paginacion = response.data?.paginacion || response.paginacion || {};
-      const total = paginacion.total !== undefined ? paginacion.total : (paginacion.totalComentarios !== undefined ? paginacion.totalComentarios : comentariosData.length);
+      const total = paginacion.total ?? paginacion.totalComentarios ?? comentariosData.length;
       const numPags = paginacion.totalPaginas || Math.max(1, Math.ceil(total / registrosPorPagina));
 
       setComentarios(Array.isArray(comentariosData) ? comentariosData.map(normalizarComentario) : []);
@@ -136,32 +147,22 @@ const AdminComentariosPage = () => {
     setReloadKey(prev => prev + 1);
   }, []);
 
-  const obtenerComentariosParaExportar = async () => {
-    const params = {
-      pagina: 1,
-      limite: 1000
-    };
-    if (busquedaDebounced.trim()) params.buscar = busquedaDebounced.trim();
-    if (filtros.estado && filtros.estado !== 'todos') params.estado = filtros.estado;
-
-    try {
-      const res = await comentariosService.obtenerTodosComentarios(params);
-      const items = res.data?.comentarios || res.data || [];
-      return Array.isArray(items) ? items.map(normalizarComentario) : comentarios;
-    } catch (err) {
-      console.error('Error al obtener comentarios para exportar:', err);
-      return comentarios;
-    }
-  };
-
-  const handleExportar = async (formato) => {
+  const handleExportar = useCallback(async (formato) => {
     setExportando(true);
     try {
-      const itemsParaExportar = await obtenerComentariosParaExportar();
+      const params = {
+        pagina: 1,
+        limite: 1000,
+        ...(busquedaDebounced.trim() && { buscar: busquedaDebounced.trim() }),
+        ...(filtros.estado && filtros.estado !== 'todos' && { estado: filtros.estado })
+      };
+      const res = await comentariosService.obtenerTodosComentarios(params);
+      const items = res.data?.comentarios || res.data || [];
+      const datos = Array.isArray(items) ? items.map(normalizarComentario) : comentarios;
       if (formato === 'pdf') {
-        exportarComentariosAPDF(itemsParaExportar);
+        exportarComentariosAPDF(datos);
       } else {
-        await exportarComentariosAExcel(itemsParaExportar);
+        await exportarComentariosAExcel(datos);
       }
     } catch (error) {
       console.error('Error al exportar comentarios:', error);
@@ -169,14 +170,33 @@ const AdminComentariosPage = () => {
     } finally {
       setExportando(false);
     }
-  };
+  }, [busquedaDebounced, filtros.estado, comentarios]);
 
   const handleVerDetalle = (comentario) => {
     setComentarioSeleccionado(comentario);
     setShowDetalleModal(true);
   };
 
-  // Toggle visibilidad individual con modal
+  // Toggle visibilidad individual
+  const ejecutarToggleVisibilidad = async (comentario) => {
+    const nuevoEstado = !comentario.estado;
+    try {
+      setComentarios(prev =>
+        prev.map(c => c.id === comentario.id ? { ...c, estado: nuevoEstado } : c)
+      );
+      if (comentarioSeleccionado?.id === comentario.id) {
+        setComentarioSeleccionado(prev => prev ? { ...prev, estado: nuevoEstado } : prev);
+      }
+      await comentariosService.toggleComentario(comentario.id);
+      setMensaje({ tipo: 'success', texto: `Comentario ${nuevoEstado ? 'activado y visible' : 'ocultado'} exitosamente` });
+    } catch (error) {
+      console.error('Error al actualizar visibilidad:', error);
+      setMensaje({ tipo: 'danger', texto: 'Error al actualizar visibilidad del comentario' });
+    } finally {
+      recargarComentarios();
+    }
+  };
+
   const solicitarToggleVisibilidad = (comentario) => {
     const nuevoEstado = !comentario.estado;
     setModalConfirmacion({
@@ -187,28 +207,30 @@ const AdminComentariosPage = () => {
       icono: nuevoEstado ? 'eye-fill' : 'eye-slash-fill',
       textoConfirmar: nuevoEstado ? 'Aprobar' : 'Ocultar',
       textoCancelar: 'Cancelar',
-      onConfirm: async () => {
-        try {
-          setComentarios(prev => 
-            prev.map(c => c.id === comentario.id ? { ...c, estado: nuevoEstado } : c)
-          );
-          if (comentarioSeleccionado?.id === comentario.id) {
-            setComentarioSeleccionado(prev => prev ? { ...prev, estado: nuevoEstado } : prev);
-          }
-
-          await comentariosService.toggleComentario(comentario.id);
-          setMensaje({ tipo: 'success', texto: `Comentario ${nuevoEstado ? 'activado y visible' : 'ocultado'} exitosamente` });
-          recargarComentarios();
-        } catch (error) {
-          console.error('Error al actualizar visibilidad:', error);
-          setMensaje({ tipo: 'danger', texto: 'Error al actualizar visibilidad del comentario' });
-          recargarComentarios();
-        }
-      }
+      onConfirm: () => ejecutarToggleVisibilidad(comentario)
     });
   };
 
-  // Eliminar individual con modal
+  // Eliminar individual
+  const ejecutarEliminar = async (comentario) => {
+    try {
+      setComentarios(prev => prev.filter(c => c.id !== comentario.id));
+      setSeleccionados(prev => {
+        const next = new Set(prev);
+        next.delete(comentario.id);
+        return next;
+      });
+      await comentariosService.eliminarComentario(comentario.id);
+      setMensaje({ tipo: 'success', texto: 'Comentario eliminado exitosamente' });
+      setShowDetalleModal(false);
+    } catch (error) {
+      console.error('Error al eliminar comentario:', error);
+      setMensaje({ tipo: 'danger', texto: 'Error al eliminar el comentario' });
+    } finally {
+      recargarComentarios();
+    }
+  };
+
   const solicitarEliminar = (comentario) => {
     setModalConfirmacion({
       show: true,
@@ -218,136 +240,88 @@ const AdminComentariosPage = () => {
       icono: 'trash3-fill',
       textoConfirmar: 'Borrar',
       textoCancelar: 'Cancelar',
-      onConfirm: async () => {
-        try {
-          setComentarios(prev => prev.filter(c => c.id !== comentario.id));
-          setSeleccionados(prev => {
-            const next = new Set(prev);
-            next.delete(comentario.id);
-            return next;
-          });
-
-          await comentariosService.eliminarComentario(comentario.id);
-          setMensaje({ tipo: 'success', texto: 'Comentario eliminado exitosamente' });
-          setShowDetalleModal(false);
-          recargarComentarios();
-        } catch (error) {
-          console.error('Error al eliminar comentario:', error);
-          setMensaje({ tipo: 'danger', texto: 'Error al eliminar el comentario' });
-          recargarComentarios();
-        }
-      }
+      onConfirm: () => ejecutarEliminar(comentario)
     });
   };
 
-  // Eliminación masiva con modal
+  // Eliminación masiva
+  const ejecutarEliminacionMasiva = async (ids) => {
+    try {
+      setComentarios(prev => prev.filter(c => !ids.includes(c.id)));
+      setSeleccionados(new Set());
+      const res = await comentariosService.eliminarComentariosMasivo(ids);
+      const eliminados = res.data?.eliminados || ids.length;
+      setMensaje({ tipo: 'success', texto: `${eliminados} comentarios eliminados exitosamente` });
+    } catch (error) {
+      console.error('Error al eliminar comentarios masivos:', error);
+      setMensaje({ tipo: 'danger', texto: 'Error al eliminar los comentarios seleccionados' });
+    } finally {
+      recargarComentarios();
+    }
+  };
+
   const solicitarEliminacionMasiva = () => {
     const count = seleccionados.size;
     if (count === 0) return;
-
+    const ids = Array.from(seleccionados);
     setModalConfirmacion({
       show: true,
       titulo: `¿Eliminar ${count} comentario${count !== 1 ? 's' : ''}?`,
       mensaje: `Se eliminarán permanentemente los ${count} comentarios seleccionados. ¿Deseas continuar?`,
       tipo: 'danger',
       icono: 'trash3-fill',
-      textoConfirmar: 'Borrar',
+      textoConfirmar: 'Borrar todo',
       textoCancelar: 'Cancelar',
-      onConfirm: async () => {
-        try {
-          const ids = Array.from(seleccionados);
-          const idsSet = new Set(ids);
-          
-          setComentarios(prev => prev.filter(c => !idsSet.has(c.id)));
-          setSeleccionados(new Set());
-
-          const resultados = await Promise.allSettled(ids.map(id => comentariosService.eliminarComentario(id)));
-          const exitosos = resultados.filter(r => r.status === 'fulfilled').length;
-
-          setMensaje({ 
-            tipo: exitosos > 0 ? 'success' : 'danger', 
-            texto: `${exitosos} de ${ids.length} comentarios eliminados exitosamente` 
-          });
-
-          recargarComentarios();
-        } catch (error) {
-          console.error('Error en eliminación masiva:', error);
-          setMensaje({ tipo: 'danger', texto: 'Error al procesar la eliminación masiva' });
-          recargarComentarios();
-        }
-      }
+      onConfirm: () => ejecutarEliminacionMasiva(ids)
     });
   };
 
-  // Toggle masivo con modal
+  // Visibilidad masiva
+  const ejecutarCambioVisibilidadMasiva = async (ids) => {
+    try {
+      setSeleccionados(new Set());
+      const resultados = await Promise.allSettled(ids.map(id => comentariosService.toggleComentario(id)));
+      const exitosos = resultados.filter(r => r.status === 'fulfilled').length;
+      setMensaje({ 
+        tipo: exitosos > 0 ? 'success' : 'danger', 
+        texto: `Visibilidad actualizada en ${exitosos} de ${ids.length} comentarios` 
+      });
+    } catch (error) {
+      console.error('Error al cambiar visibilidad masiva:', error);
+      setMensaje({ tipo: 'danger', texto: 'Error al procesar la actualización masiva' });
+    } finally {
+      recargarComentarios();
+    }
+  };
+
   const solicitarCambioEstadoMasivo = () => {
     const count = seleccionados.size;
     if (count === 0) return;
-
+    const ids = Array.from(seleccionados);
     setModalConfirmacion({
       show: true,
       titulo: `¿Alternar visibilidad a ${count} comentario${count !== 1 ? 's' : ''}?`,
-      mensaje: `Se cambiará el estado de visualización (visible/oculto) para los ${count} comentarios seleccionados.`,
+      mensaje: `Se cambiará el estado de visibilidad de los ${count} comentarios seleccionados. ¿Deseas continuar?`,
       tipo: 'warning',
       icono: 'arrow-repeat',
-      textoConfirmar: 'Actualizar',
+      textoConfirmar: 'Cambiar estado',
       textoCancelar: 'Cancelar',
-      onConfirm: async () => {
-        try {
-          const ids = Array.from(seleccionados);
-          setSeleccionados(new Set());
-
-          const resultados = await Promise.allSettled(ids.map(id => comentariosService.toggleComentario(id)));
-          const exitosos = resultados.filter(r => r.status === 'fulfilled').length;
-
-          setMensaje({ 
-            tipo: exitosos > 0 ? 'success' : 'danger', 
-            texto: `Visibilidad actualizada en ${exitosos} de ${ids.length} comentarios` 
-          });
-
-          recargarComentarios();
-        } catch (error) {
-          console.error('Error al cambiar visibilidad masiva:', error);
-          setMensaje({ tipo: 'danger', texto: 'Error al procesar la actualización masiva' });
-          recargarComentarios();
-        }
-      }
+      onConfirm: () => ejecutarCambioVisibilidadMasiva(ids)
     });
-  };
-
-  const formatearFecha = (fecha) => {
-    if (!fecha) return '-';
-    return new Date(fecha).toLocaleString('es-CO', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric', 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
-
-  const renderizarEstrellas = (calificacion) => {
-    const estrellas = [];
-    for (let i = 1; i <= 5; i++) {
-      estrellas.push(
-        <span key={i} className={`bi bi-star${i <= calificacion ? '-fill' : ''}`} style={{ color: '#f5c271' }} aria-hidden="true"></span>
-      );
-    }
-    return estrellas;
   };
 
   // Selección de filas
   const todosPaginaSeleccionados = useMemo(() => {
-    return comentariosPaginados.length > 0 && comentariosPaginados.every(c => seleccionados.has(c.id));
-  }, [comentariosPaginados, seleccionados]);
+    return comentarios.length > 0 && comentarios.every(c => seleccionados.has(c.id));
+  }, [comentarios, seleccionados]);
 
   const handleToggleSeleccionarTodos = () => {
     setSeleccionados(prev => {
       const nuevo = new Set(prev);
       if (todosPaginaSeleccionados) {
-        comentariosPaginados.forEach(c => nuevo.delete(c.id));
+        comentarios.forEach(c => nuevo.delete(c.id));
       } else {
-        comentariosPaginados.forEach(c => nuevo.add(c.id));
+        comentarios.forEach(c => nuevo.add(c.id));
       }
       return nuevo;
     });
@@ -365,9 +339,14 @@ const AdminComentariosPage = () => {
     });
   };
 
-  if (loading && comentarios.length === 0 && !busquedaDebounced && filtros.estado === 'todos') {
+  const esCargaInicial = loading && comentarios.length === 0 && !busquedaDebounced && filtros.estado === 'todos';
+  if (esCargaInicial) {
     return <LoadingSpinner message="Cargando comentarios..." />;
   }
+
+  const formatoExportar = tipoExportacion === 'pdf' ? 'PDF' : 'Excel';
+  const textoBotonExportar = exportando ? 'Exportando...' : `Exportar a ${formatoExportar}`;
+  const iconTipoExportacion = tipoExportacion === 'pdf' ? 'pdf' : 'excel';
 
   return (
     <Container className="py-4">
@@ -388,8 +367,8 @@ const AdminComentariosPage = () => {
               disabled={exportando}
               onClick={() => handleExportar(tipoExportacion)}
             >
-              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
-              {exportando ? 'Exportando...' : `Exportar a ${tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}`}
+              <span className={`bi bi-file-earmark-${iconTipoExportacion} me-1`} aria-hidden="true"></span>
+              {textoBotonExportar}
             </Button>
             <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" disabled={exportando} />
             <Dropdown.Menu>
@@ -414,26 +393,10 @@ const AdminComentariosPage = () => {
       </div>
 
       {/* Notificación flotante inferior izquierda */}
-      {mensaje.texto && (
-        <div className="toast-floating-container-bottom-left">
-          <Alert 
-            variant={mensaje.tipo} 
-            dismissible 
-            onClose={() => setMensaje({ tipo: '', texto: '' })}
-            className={`toast-floating-alert alert-${mensaje.tipo} mb-0`}
-          >
-            <i className={`bi bi-${
-              mensaje.tipo === 'success' ? 'check-circle-fill text-success' :
-              mensaje.tipo === 'danger' ? 'exclamation-octagon-fill text-danger' :
-              mensaje.tipo === 'warning' ? 'exclamation-triangle-fill text-warning' :
-              'info-circle-fill text-info'
-            } fs-5 flex-shrink-0`} />
-            <div className="flex-grow-1 fw-medium text-start">
-              {mensaje.texto}
-            </div>
-          </Alert>
-        </div>
-      )}
+      <FloatingToast
+        mensaje={mensaje}
+        onClose={() => setMensaje({ tipo: '', texto: '' })}
+      />
 
       {/* Filtros */}
       <Card className="shadow-sm border-0 mb-4 admin-card-table">
@@ -443,13 +406,14 @@ const AdminComentariosPage = () => {
           </h6>
           <Row className="g-3 align-items-end">
             <Col md={6}>
-              <Form.Group>
+              <Form.Group controlId="filtroBuscarComentario">
                 <Form.Label className="small fw-semibold mb-1">Buscar Comentarios</Form.Label>
                 <InputGroup>
                   <InputGroup.Text className="bg-light">
                     <span className="bi bi-search" aria-hidden="true"></span>
                   </InputGroup.Text>
                   <Form.Control
+                    id="filtroBuscarComentario"
                     placeholder="Buscar por usuario, producto o contenido..."
                     value={filtros.busqueda}
                     onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
@@ -458,9 +422,10 @@ const AdminComentariosPage = () => {
               </Form.Group>
             </Col>
             <Col md={3}>
-              <Form.Group>
+              <Form.Group controlId="filtroEstadoComentario">
                 <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
                 <Form.Select
+                  id="filtroEstadoComentario"
                   value={filtros.estado}
                   onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
                 >
@@ -494,7 +459,7 @@ const AdminComentariosPage = () => {
             title={todosPaginaSeleccionados ? "Deseleccionar todos en esta página" : "Seleccionar todos en esta página"}
           >
             <i className={`bi bi-${todosPaginaSeleccionados ? 'check-square-fill text-primary' : 'square'}`} />
-            <span>{todosPaginaSeleccionados ? 'Deseleccionar página' : `Seleccionar todo (${comentariosPaginados.length})`}</span>
+            <span>{todosPaginaSeleccionados ? 'Deseleccionar página' : `Seleccionar todo (${comentarios.length})`}</span>
           </Button>
           {seleccionados.size > 0 && (
             <Badge bg="danger" className="p-2 d-flex align-items-center gap-1 fs-7">
@@ -569,14 +534,14 @@ const AdminComentariosPage = () => {
               </tr>
             </thead>
             <tbody>
-              {comentariosFiltrados.length === 0 ? (
+              {comentarios.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="text-center py-4 text-muted">
                     No hay comentarios registrados
                   </td>
                 </tr>
               ) : (
-                comentariosPaginados.map((comentario) => {
+                comentarios.map((comentario) => {
                   const estaSeleccionado = seleccionados.has(comentario.id);
                   return (
                     <tr 
@@ -689,158 +654,178 @@ const AdminComentariosPage = () => {
         </div>
       )}
 
-      {/* Modal Detalle Comentario Minimalista */}
-      <Modal 
-        show={showDetalleModal} 
-        onHide={() => setShowDetalleModal(false)} 
-        centered
-        dialogClassName="modal-producto-form"
-      >
-        <div className="product-minimal-header">
-          <div>
-            <h6 className="fw-bold mb-0 text-navy fs-6">
-              Detalle del Comentario
-            </h6>
-            <small className="text-muted" style={{ fontSize: '0.8rem' }}>
-              {comentarioSeleccionado ? formatearFecha(comentarioSeleccionado.fecha) : ''}
-            </small>
-          </div>
-          <button 
-            type="button" 
-            className="btn-close" 
-            onClick={() => setShowDetalleModal(false)}
-            aria-label="Cerrar"
-          />
-        </div>
+      <ComentarioDetalleModal
+        show={showDetalleModal}
+        comentario={comentarioSeleccionado}
+        onClose={() => setShowDetalleModal(false)}
+        onToggleVisibilidad={solicitarToggleVisibilidad}
+        onEliminar={solicitarEliminar}
+      />
 
-        {comentarioSeleccionado && (
-          <Modal.Body className="p-3 p-sm-4">
-            <Row className="g-3 mb-3">
-              <Col sm={6}>
-                <div className="p-3 rounded-3 bg-light border">
-                  <h6 className="fw-bold text-navy mb-1 small text-uppercase">Autor</h6>
-                  <p className="mb-0 small text-secondary">
-                    <strong>Nombre:</strong> {comentarioSeleccionado.usuario?.nombre || 'Anónimo'}<br/>
-                    <strong>Email:</strong> {comentarioSeleccionado.usuario?.email || '-'}
-                  </p>
-                </div>
-              </Col>
-              <Col sm={6}>
-                <div className="p-3 rounded-3 bg-light border">
-                  <h6 className="fw-bold text-navy mb-1 small text-uppercase">Producto</h6>
-                  <p className="mb-0 small text-secondary">
-                    <strong className="text-navy">{comentarioSeleccionado.producto?.nombre || 'Producto'}</strong><br/>
-                    <Badge bg={comentarioSeleccionado.estado ? 'success' : 'warning'} className="mt-1">
-                      {comentarioSeleccionado.estado ? 'Visible en tienda' : 'Oculto al público'}
-                    </Badge>
-                  </p>
-                </div>
-              </Col>
-            </Row>
-
-            <div className="mb-3 p-2 px-3 rounded-3 bg-light border d-flex align-items-center justify-content-between">
-              <span className="small fw-semibold text-secondary">Calificación otorgada:</span>
-              <div className="d-inline-flex gap-1">
-                {renderizarEstrellas(comentarioSeleccionado.calificacion)}
-              </div>
-            </div>
-
-            <div className="mb-2">
-              <span className="small fw-semibold text-secondary d-block mb-1">Contenido del Comentario:</span>
-              <div className="p-3 rounded-3 bg-light border small text-dark" style={{ lineHeight: '1.6' }}>
-                {comentarioSeleccionado.comentario}
-              </div>
-            </div>
-          </Modal.Body>
-        )}
-
-        <div className="product-minimal-footer">
-          <button 
-            type="button" 
-            className="btn-minimal-cancel"
-            onClick={() => setShowDetalleModal(false)}
-          >
-            Cerrar
-          </button>
-          {comentarioSeleccionado && (
-            <>
-              <Button 
-                variant={comentarioSeleccionado.estado ? 'warning' : 'success'} 
-                size="sm"
-                className="d-inline-flex align-items-center gap-1 fw-semibold px-3 py-2 rounded-3"
-                onClick={() => solicitarToggleVisibilidad(comentarioSeleccionado)}
-              >
-                <i className={`bi bi-${comentarioSeleccionado.estado ? 'eye-slash' : 'check-circle'}`}></i>
-                {comentarioSeleccionado.estado ? 'Ocultar' : 'Aprobar'}
-              </Button>
-              <Button 
-                variant="danger" 
-                size="sm"
-                className="d-inline-flex align-items-center gap-1 fw-semibold px-3 py-2 rounded-3"
-                onClick={() => solicitarEliminar(comentarioSeleccionado)}
-              >
-                <i className="bi bi-trash"></i> Eliminar
-              </Button>
-            </>
-          )}
-        </div>
-      </Modal>
-
-      {/* Modal de Confirmación Compacto Estilo Dashboard */}
-      <Modal 
-        show={modalConfirmacion.show} 
-        onHide={() => setModalConfirmacion(prev => ({ ...prev, show: false }))} 
-        centered
-        backdrop="static"
-        dialogClassName="modal-confirmacion-compacto"
-      >
-        <Modal.Body className="text-center p-3 p-sm-4">
-          <div 
-            className={`confirm-icon-wrapper mb-3 mx-auto bg-${
-              modalConfirmacion.tipo === 'danger' ? 'danger-subtle' :
-              modalConfirmacion.tipo === 'warning' ? 'warning-subtle' :
-              modalConfirmacion.tipo === 'primary' || modalConfirmacion.tipo === 'info' ? 'primary-subtle' :
-              'success-subtle'
-            } text-${modalConfirmacion.tipo || 'primary'}`}
-          >
-            <i className={`bi bi-${modalConfirmacion.icono || 'exclamation-circle-fill'} confirm-icon`} />
-          </div>
-          
-          <h5 className="fw-bold text-navy mb-2 fs-5">
-            {modalConfirmacion.titulo}
-          </h5>
-          
-          <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
-            {modalConfirmacion.mensaje}
-          </p>
-
-          <div className="d-flex gap-2 justify-content-center w-100 mt-2">
-            <Button 
-              variant="outline-secondary" 
-              className="px-3 py-2 fw-semibold flex-fill"
-              onClick={() => {
-                setModalConfirmacion(prev => ({ ...prev, show: false }));
-                if (modalConfirmacion.onCancel) modalConfirmacion.onCancel();
-              }}
-            >
-              {modalConfirmacion.textoCancelar || 'Cancelar'}
-            </Button>
-            <Button 
-              variant={modalConfirmacion.tipo || 'primary'} 
-              className="px-3 py-2 fw-semibold flex-fill shadow-sm"
-              onClick={async () => {
-                const action = modalConfirmacion.onConfirm;
-                setModalConfirmacion(prev => ({ ...prev, show: false }));
-                if (action) await action();
-              }}
-            >
-              {modalConfirmacion.textoConfirmar || 'Confirmar'}
-            </Button>
-          </div>
-        </Modal.Body>
-      </Modal>
+      <ModalConfirmacion
+        modal={modalConfirmacion}
+        onClose={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
+      />
     </Container>
   );
 };
+
+// Subcomponente Detalle Comentario
+const ComentarioDetalleModal = ({
+  show,
+  comentario,
+  onClose,
+  onToggleVisibilidad,
+  onEliminar,
+}) => (
+  <Modal 
+    show={show} 
+    onHide={onClose} 
+    centered
+    dialogClassName="modal-producto-form"
+  >
+    <div className="product-minimal-header">
+      <div>
+        <h6 className="fw-bold mb-0 text-navy fs-6">
+          Detalle del Comentario
+        </h6>
+        <small className="text-muted" style={{ fontSize: '0.8rem' }}>
+          {formatearFecha(comentario?.fecha)}
+        </small>
+      </div>
+      <button 
+        type="button" 
+        className="btn-close" 
+        onClick={onClose}
+        aria-label="Cerrar"
+      />
+    </div>
+
+    {comentario && (
+      <Modal.Body className="p-3 p-sm-4">
+        <Row className="g-3 mb-3">
+          <Col sm={6}>
+            <div className="p-3 rounded-3 bg-light border">
+              <h6 className="fw-bold text-navy mb-1 small text-uppercase">Autor</h6>
+              <p className="mb-0 small text-secondary">
+                <strong>Nombre:</strong> {comentario.usuario?.nombre || 'Anónimo'}<br/>
+                <strong>Email:</strong> {comentario.usuario?.email || '-'}
+              </p>
+            </div>
+          </Col>
+          <Col sm={6}>
+            <div className="p-3 rounded-3 bg-light border">
+              <h6 className="fw-bold text-navy mb-1 small text-uppercase">Producto</h6>
+              <p className="mb-0 small text-secondary">
+                <strong className="text-navy">{comentario.producto?.nombre || 'Producto'}</strong><br/>
+                <Badge bg={comentario.estado ? 'success' : 'warning'} className="mt-1">
+                  {comentario.estado ? 'Visible en tienda' : 'Oculto al público'}
+                </Badge>
+              </p>
+            </div>
+          </Col>
+        </Row>
+
+        <div className="mb-3 p-2 px-3 rounded-3 bg-light border d-flex align-items-center justify-content-between">
+          <span className="small fw-semibold text-secondary">Calificación otorgada:</span>
+          <div className="d-inline-flex gap-1">
+            {renderizarEstrellas(comentario.calificacion)}
+          </div>
+        </div>
+
+        <div className="mb-2">
+          <span className="small fw-semibold text-secondary d-block mb-1">Contenido del Comentario:</span>
+          <div className="p-3 rounded-3 bg-light border small text-dark" style={{ lineHeight: '1.6' }}>
+            {comentario.comentario}
+          </div>
+        </div>
+      </Modal.Body>
+    )}
+
+    <div className="product-minimal-footer">
+      <button 
+        type="button" 
+        className="btn-minimal-cancel"
+        onClick={onClose}
+      >
+        Cerrar
+      </button>
+      {comentario && (
+        <>
+          <Button 
+            variant={comentario.estado ? 'warning' : 'success'} 
+            size="sm"
+            className="d-inline-flex align-items-center gap-1 fw-semibold px-3 py-2 rounded-3"
+            onClick={() => onToggleVisibilidad(comentario)}
+          >
+            <i className={`bi bi-${comentario.estado ? 'eye-slash' : 'check-circle'}`}></i>
+            {comentario.estado ? 'Ocultar' : 'Aprobar'}
+          </Button>
+          <Button 
+            variant="danger" 
+            size="sm"
+            className="d-inline-flex align-items-center gap-1 fw-semibold px-3 py-2 rounded-3"
+            onClick={() => onEliminar(comentario)}
+          >
+            <i className="bi bi-trash"></i> Eliminar
+          </Button>
+        </>
+      )}
+    </div>
+  </Modal>
+);
+
+// Subcomponente Confirmación Compacto
+const ModalConfirmacion = ({ modal, onClose }) => (
+  <Modal 
+    show={modal.show} 
+    onHide={onClose} 
+    centered
+    backdrop="static"
+    dialogClassName="modal-confirmacion-compacto"
+  >
+    <Modal.Body className="text-center p-3 p-sm-4">
+      <div 
+        className={`confirm-icon-wrapper mb-3 mx-auto bg-${
+          MODAL_BG_POR_TIPO[modal.tipo] || 'primary-subtle'
+        } text-${modal.tipo || 'primary'}`}
+      >
+        <i className={`bi bi-${modal.icono || 'exclamation-circle-fill'} confirm-icon`} />
+      </div>
+      
+      <h5 className="fw-bold text-navy mb-2 fs-5">
+        {modal.titulo}
+      </h5>
+      
+      <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
+        {modal.mensaje}
+      </p>
+
+      <div className="d-flex gap-2 justify-content-center w-100 mt-2">
+        <Button 
+          variant="outline-secondary" 
+          className="px-3 py-2 fw-semibold flex-fill"
+          onClick={() => {
+            onClose();
+            if (modal.onCancel) modal.onCancel();
+          }}
+        >
+          {modal.textoCancelar || 'Cancelar'}
+        </Button>
+        <Button 
+          variant={modal.tipo || 'primary'} 
+          className="px-3 py-2 fw-semibold flex-fill shadow-sm"
+          onClick={async () => {
+            const action = modal.onConfirm;
+            onClose();
+            if (action) await action();
+          }}
+        >
+          {modal.textoConfirmar || 'Confirmar'}
+        </Button>
+      </div>
+    </Modal.Body>
+  </Modal>
+);
 
 export default AdminComentariosPage;

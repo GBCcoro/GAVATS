@@ -6,15 +6,22 @@
  */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
+import { Container, Card, Table, Button, Modal, Form, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import FloatingToast from '../../components/FloatingToast';
 import { exportarCategoriasAPDF, exportarCategoriasAExcel } from '../../utils/exportUtils';
 
+const MODAL_BG_POR_TIPO = Object.freeze({
+  danger: 'danger-subtle',
+  warning: 'warning-subtle',
+  primary: 'primary-subtle',
+  info: 'primary-subtle',
+  success: 'success-subtle',
+});
+
 const AdminCategoriasPage = () => {
-  useAuth();
   const navigate = useNavigate();
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -87,6 +94,14 @@ const AdminCategoriasPage = () => {
   useEffect(() => {
     setPaginaActual(1);
   }, [filtros.busqueda, filtros.estado]);
+
+  const handleExportar = useCallback(async (tipo = tipoExportacion) => {
+    if (tipo === 'pdf') {
+      exportarCategoriasAPDF(categoriasFiltradas);
+    } else {
+      await exportarCategoriasAExcel(categoriasFiltradas);
+    }
+  }, [tipoExportacion, categoriasFiltradas]);
 
   const loadCategorias = useCallback(async () => {
     setLoading(true);
@@ -388,13 +403,7 @@ const AdminCategoriasPage = () => {
           <Dropdown as={ButtonGroup}>
             <Button
               variant="primary"
-              onClick={async () => {
-                if (tipoExportacion === 'pdf') {
-                  exportarCategoriasAPDF(categoriasFiltradas);
-                } else {
-                  await exportarCategoriasAExcel(categoriasFiltradas);
-                }
-              }}
+              onClick={() => handleExportar()}
             >
               <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
               Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
@@ -403,13 +412,13 @@ const AdminCategoriasPage = () => {
             <Dropdown.Menu>
               <Dropdown.Item onClick={() => {
                 setTipoExportacion('pdf');
-                exportarCategoriasAPDF(categoriasFiltradas);
+                handleExportar('pdf');
               }}>
                 <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
               </Dropdown.Item>
-              <Dropdown.Item onClick={async () => {
+              <Dropdown.Item onClick={() => {
                 setTipoExportacion('excel');
-                await exportarCategoriasAExcel(categoriasFiltradas);
+                handleExportar('excel');
               }}>
                 <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
               </Dropdown.Item>
@@ -425,26 +434,10 @@ const AdminCategoriasPage = () => {
       </div>
 
       {/* Notificación flotante inferior izquierda */}
-      {mensaje.texto && (
-        <div className="toast-floating-container-bottom-left">
-          <Alert 
-            variant={mensaje.tipo} 
-            dismissible 
-            onClose={() => setMensaje({ tipo: '', texto: '' })}
-            className={`toast-floating-alert alert-${mensaje.tipo} mb-0`}
-          >
-            <i className={`bi bi-${
-              mensaje.tipo === 'success' ? 'check-circle-fill text-success' :
-              mensaje.tipo === 'danger' ? 'exclamation-octagon-fill text-danger' :
-              mensaje.tipo === 'warning' ? 'exclamation-triangle-fill text-warning' :
-              'info-circle-fill text-info'
-            } fs-5 flex-shrink-0`} />
-            <div className="flex-grow-1 fw-medium text-start">
-              {mensaje.texto}
-            </div>
-          </Alert>
-        </div>
-      )}
+      <FloatingToast
+        mensaje={mensaje}
+        onClose={() => setMensaje({ tipo: '', texto: '' })}
+      />
 
       {/* Filtros */}
       <Card className="shadow-sm border-0 mb-4 admin-card-table">
@@ -454,13 +447,14 @@ const AdminCategoriasPage = () => {
           </h6>
           <Row className="g-3 align-items-end">
             <Col md={6}>
-              <Form.Group>
+              <Form.Group controlId="filtroBusquedaCategoria">
                 <Form.Label className="small fw-semibold mb-1">Buscar Categoría</Form.Label>
                 <InputGroup>
                   <InputGroup.Text className="bg-light">
                     <span className="bi bi-search" aria-hidden="true"></span>
                   </InputGroup.Text>
                   <Form.Control
+                    id="filtroBusquedaCategoria"
                     placeholder="Buscar por nombre o descripción..."
                     value={filtros.busqueda}
                     onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
@@ -469,9 +463,10 @@ const AdminCategoriasPage = () => {
               </Form.Group>
             </Col>
             <Col md={3}>
-              <Form.Group>
+              <Form.Group controlId="filtroEstadoCategoria">
                 <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
                 <Form.Select
+                  id="filtroEstadoCategoria"
                   value={filtros.estado}
                   onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
                 >
@@ -793,10 +788,7 @@ const AdminCategoriasPage = () => {
         <Modal.Body className="text-center p-3 p-sm-4">
           <div 
             className={`confirm-icon-wrapper mb-3 mx-auto bg-${
-              modalConfirmacion.tipo === 'danger' ? 'danger-subtle' :
-              modalConfirmacion.tipo === 'warning' ? 'warning-subtle' :
-              modalConfirmacion.tipo === 'primary' || modalConfirmacion.tipo === 'info' ? 'primary-subtle' :
-              'success-subtle'
+              MODAL_BG_POR_TIPO[modalConfirmacion.tipo] || 'primary-subtle'
             } text-${modalConfirmacion.tipo || 'primary'}`}
           >
             <i className={`bi bi-${modalConfirmacion.icono || 'exclamation-circle-fill'} confirm-icon`} />

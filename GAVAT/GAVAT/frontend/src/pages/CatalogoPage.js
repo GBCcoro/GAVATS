@@ -180,6 +180,119 @@ const CatalogoPage = () => {
 
   const hayFiltrosActivos = Boolean(filtros.buscar || filtros.categoriaId || filtros.subcategoriaId);
 
+  const renderPaginationNumbers = () => {
+    return Array.from({ length: Math.min(5, paginacion.totalPaginas) }, (_, i) => {
+      let pageNum;
+      if (paginacion.totalPaginas <= 5 || paginacion.pagina <= 3) {
+        pageNum = i + 1;
+      } else if (paginacion.pagina >= paginacion.totalPaginas - 2) {
+        pageNum = paginacion.totalPaginas - 4 + i;
+      } else {
+        pageNum = paginacion.pagina - 2 + i;
+      }
+
+      const esActiva = paginacion.pagina === pageNum;
+      return (
+        <Button
+          key={pageNum}
+          className={`btn-pag-num ${esActiva ? 'btn-pag-num-active' : ''}`}
+          onClick={() => handlePageChange(pageNum)}
+        >
+          {pageNum}
+        </Button>
+      );
+    });
+  };
+
+  const renderEmptyState = () => {
+    const mensajeVacio = filtros.buscar
+      ? `No existen productos que coincidan con la búsqueda "${filtros.buscar}".`
+      : 'No hay productos disponibles para los filtros seleccionados.';
+
+    return (
+      <div className="text-center py-5 px-4 bg-white rounded-4 border shadow-sm">
+        <div className="empty-icon-circle mx-auto mb-3">
+          <i className="bi bi-search fs-2 text-gold" />
+        </div>
+        <h4 className="fw-bold text-navy mb-2">No se encontraron productos</h4>
+        <p className="text-muted small mb-4" style={{ maxWidth: '420px', margin: '0 auto' }}>
+          {mensajeVacio}
+        </p>
+        <Button
+          className="btn-hero-gold px-4 py-2 d-inline-flex align-items-center gap-2"
+          onClick={handleLimpiarFiltros}
+        >
+          <i className="bi bi-arrow-counterclockwise" />
+          <span>Restablecer filtros</span>
+        </Button>
+      </div>
+    );
+  };
+
+  const renderContenido = () => {
+    if (loading) {
+      return (
+        <div className="py-5 text-center bg-white rounded-4 border shadow-sm">
+          <LoadingSpinner message="Cargando productos..." />
+        </div>
+      );
+    }
+
+    if (productos.length === 0) {
+      return renderEmptyState();
+    }
+
+    return (
+      <>
+        <div className="d-flex justify-content-between align-items-center mb-3 px-1">
+          <span className="small text-muted">
+            Mostrando <strong>{productos.length}</strong> de <strong>{paginacion.total}</strong> productos
+          </span>
+          <span className="small text-muted">
+            Página <strong>{paginacion.pagina}</strong> de <strong>{paginacion.totalPaginas}</strong>
+          </span>
+        </div>
+
+        <Row className="g-4 mb-4">
+          {productos.map((producto) => (
+            <Col key={producto.id} sm={6} lg={4}>
+              <ProductCard
+                producto={producto}
+                onAddToCart={handleAddToCart}
+              />
+            </Col>
+          ))}
+        </Row>
+
+        {paginacion.totalPaginas > 1 && (
+          <div className="catalogo-pagination-card p-3 rounded-4 bg-white border shadow-sm d-flex flex-wrap align-items-center justify-content-center gap-2 mt-4">
+            <Button
+              className="btn-pag-nav d-flex align-items-center gap-1"
+              disabled={paginacion.pagina === 1}
+              onClick={() => handlePageChange(paginacion.pagina - 1)}
+            >
+              <i className="bi bi-chevron-left" />
+              <span>Anterior</span>
+            </Button>
+
+            <div className="d-flex align-items-center gap-1 mx-2">
+              {renderPaginationNumbers()}
+            </div>
+
+            <Button
+              className="btn-pag-nav d-flex align-items-center gap-1"
+              disabled={paginacion.pagina === paginacion.totalPaginas}
+              onClick={() => handlePageChange(paginacion.pagina + 1)}
+            >
+              <span>Siguiente</span>
+              <i className="bi bi-chevron-right" />
+            </Button>
+          </div>
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="catalogo-page-wrapper py-4 py-lg-5">
       <Container>
@@ -415,104 +528,7 @@ const CatalogoPage = () => {
           {/* GRID DE PRODUCTOS                                                        */}
           {/* ========================================================================= */}
           <Col lg={9}>
-            {loading ? (
-              <div className="py-5 text-center bg-white rounded-4 border shadow-sm">
-                <LoadingSpinner message="Cargando productos..." />
-              </div>
-            ) : productos.length > 0 ? (
-              <>
-                <div className="d-flex justify-content-between align-items-center mb-3 px-1">
-                  <span className="small text-muted">
-                    Mostrando <strong>{productos.length}</strong> de <strong>{paginacion.total}</strong> productos
-                  </span>
-                  <span className="small text-muted">
-                    Página <strong>{paginacion.pagina}</strong> de <strong>{paginacion.totalPaginas}</strong>
-                  </span>
-                </div>
-
-                <Row className="g-4 mb-4">
-                  {productos.map((producto) => (
-                    <Col key={producto.id} sm={6} lg={4}>
-                      <ProductCard
-                        producto={producto}
-                        onAddToCart={handleAddToCart}
-                      />
-                    </Col>
-                  ))}
-                </Row>
-
-                {/* ========================================================================= */}
-                {/* PAGINACIÓN CON BOTONES CLAROS Y VISIBLES                                 */}
-                {/* ========================================================================= */}
-                {paginacion.totalPaginas > 1 && (
-                  <div className="catalogo-pagination-card p-3 rounded-4 bg-white border shadow-sm d-flex flex-wrap align-items-center justify-content-center gap-2 mt-4">
-                    <Button
-                      className="btn-pag-nav d-flex align-items-center gap-1"
-                      disabled={paginacion.pagina === 1}
-                      onClick={() => handlePageChange(paginacion.pagina - 1)}
-                    >
-                      <i className="bi bi-chevron-left" />
-                      <span>Anterior</span>
-                    </Button>
-
-                    <div className="d-flex align-items-center gap-1 mx-2">
-                      {Array.from({ length: Math.min(5, paginacion.totalPaginas) }, (_, i) => {
-                        let pageNum;
-                        if (paginacion.totalPaginas <= 5) {
-                          pageNum = i + 1;
-                        } else if (paginacion.pagina <= 3) {
-                          pageNum = i + 1;
-                        } else if (paginacion.pagina >= paginacion.totalPaginas - 2) {
-                          pageNum = paginacion.totalPaginas - 4 + i;
-                        } else {
-                          pageNum = paginacion.pagina - 2 + i;
-                        }
-
-                        const esActiva = paginacion.pagina === pageNum;
-                        return (
-                          <Button
-                            key={pageNum}
-                            className={`btn-pag-num ${esActiva ? 'btn-pag-num-active' : ''}`}
-                            onClick={() => handlePageChange(pageNum)}
-                          >
-                            {pageNum}
-                          </Button>
-                        );
-                      })}
-                    </div>
-
-                    <Button
-                      className="btn-pag-nav d-flex align-items-center gap-1"
-                      disabled={paginacion.pagina === paginacion.totalPaginas}
-                      onClick={() => handlePageChange(paginacion.pagina + 1)}
-                    >
-                      <span>Siguiente</span>
-                      <i className="bi bi-chevron-right" />
-                    </Button>
-                  </div>
-                )}
-              </>
-            ) : (
-              /* ESTADO VACÍO (EMPTY STATE) CON BOTÓN CLARO */
-              <div className="text-center py-5 px-4 bg-white rounded-4 border shadow-sm">
-                <div className="empty-icon-circle mx-auto mb-3">
-                  <i className="bi bi-search fs-2 text-gold" />
-                </div>
-                <h4 className="fw-bold text-navy mb-2">No se encontraron productos</h4>
-                <p className="text-muted small mb-4" style={{ maxWidth: '420px', margin: '0 auto' }}>
-                  {filtros.buscar
-                    ? `No existen productos que coincidan con la búsqueda "${filtros.buscar}".`
-                    : 'No hay productos disponibles para los filtros seleccionados.'}
-                </p>
-                <Button
-                  className="btn-hero-gold px-4 py-2 d-inline-flex align-items-center gap-2"
-                  onClick={handleLimpiarFiltros}
-                >
-                  <i className="bi bi-arrow-counterclockwise" />
-                  <span>Restablecer filtros</span>
-                </Button>
-              </div>
-            )}
+            {renderContenido()}
           </Col>
         </Row>
       </Container>

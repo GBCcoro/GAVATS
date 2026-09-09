@@ -6,15 +6,22 @@
  */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Dropdown, ButtonGroup, Row, Col, InputGroup } from 'react-bootstrap';
+import { Container, Card, Table, Button, Badge, Dropdown, ButtonGroup, Row, Col, InputGroup, Form, Modal } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import FloatingToast from '../../components/FloatingToast';
 import { exportarSubcategoriasAPDF, exportarSubcategoriasAExcel } from '../../utils/exportUtils';
 
+const MODAL_BG_POR_TIPO = Object.freeze({
+  danger: 'danger-subtle',
+  warning: 'warning-subtle',
+  primary: 'primary-subtle',
+  info: 'primary-subtle',
+  success: 'success-subtle',
+});
+
 const AdminSubcategoriasPage = () => {
-  useAuth();
   const navigate = useNavigate();
   const [subcategorias, setSubcategorias] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -97,6 +104,14 @@ const AdminSubcategoriasPage = () => {
     setPaginaActual(1);
   }, [filtros.busqueda, filtros.categoriaId, filtros.estado]);
 
+  const handleExportar = useCallback(async (tipo = tipoExportacion) => {
+    if (tipo === 'pdf') {
+      exportarSubcategoriasAPDF(subcategoriasFiltradas, categorias);
+    } else {
+      await exportarSubcategoriasAExcel(subcategoriasFiltradas, categorias);
+    }
+  }, [tipoExportacion, subcategoriasFiltradas, categorias]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -104,10 +119,10 @@ const AdminSubcategoriasPage = () => {
         api.get('/admin/subcategorias'),
         api.get('/admin/categorias')
       ]);
-      const subcategorias = subcatResponse.data?.data?.subcategorias || subcatResponse.data?.subcategorias || subcatResponse.data?.data || [];
-      const categorias = catResponse.data?.data?.categorias || catResponse.data?.categorias || catResponse.data?.data || [];
-      setSubcategorias(Array.isArray(subcategorias) ? subcategorias : []);
-      setCategorias(Array.isArray(categorias) ? categorias : []);
+      const subcatData = subcatResponse.data?.data?.subcategorias || subcatResponse.data?.subcategorias || subcatResponse.data?.data || [];
+      const catData = catResponse.data?.data?.categorias || catResponse.data?.categorias || catResponse.data?.data || [];
+      setSubcategorias(Array.isArray(subcatData) ? subcatData : []);
+      setCategorias(Array.isArray(catData) ? catData : []);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       setMensaje({ tipo: 'danger', texto: 'Error al cargar los datos' });
@@ -383,11 +398,15 @@ const AdminSubcategoriasPage = () => {
     });
   };
 
-  const obtenerNombreCategoria = (categoriaId) => {
-    const idNumero = Number(categoriaId);
-    const categoria = categorias.find(c => c.id === idNumero || Number(c.id) === idNumero);
-    return categoria?.nombre || '-';
-  };
+  const categoriasMap = useMemo(() => {
+    const map = new Map();
+    categorias.forEach(c => map.set(Number(c.id), c.nombre));
+    return map;
+  }, [categorias]);
+
+  const obtenerNombreCategoria = useCallback((categoriaId) => {
+    return categoriasMap.get(Number(categoriaId)) || '-';
+  }, [categoriasMap]);
 
   if (loading) {
     return <LoadingSpinner message="Cargando subcategorías..." />;
@@ -409,13 +428,7 @@ const AdminSubcategoriasPage = () => {
           <Dropdown as={ButtonGroup}>
             <Button 
               variant="primary" 
-              onClick={async () => {
-                if (tipoExportacion === 'pdf') {
-                  exportarSubcategoriasAPDF(subcategoriasFiltradas, categorias);
-                } else {
-                  await exportarSubcategoriasAExcel(subcategoriasFiltradas, categorias);
-                }
-              }}
+              onClick={() => handleExportar(tipoExportacion)}
             >
               <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
               Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
@@ -425,15 +438,15 @@ const AdminSubcategoriasPage = () => {
               <Dropdown.Item 
                 onClick={() => {
                   setTipoExportacion('pdf');
-                  exportarSubcategoriasAPDF(subcategoriasFiltradas, categorias);
+                  handleExportar('pdf');
                 }}
               >
                 <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
               </Dropdown.Item>
               <Dropdown.Item 
-                onClick={async () => {
+                onClick={() => {
                   setTipoExportacion('excel');
-                  await exportarSubcategoriasAExcel(subcategoriasFiltradas, categorias);
+                  handleExportar('excel');
                 }}
               >
                 <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
@@ -449,27 +462,8 @@ const AdminSubcategoriasPage = () => {
         </div>
       </div>
 
-      {/* Notificación flotante inferior izquierda */}
-      {mensaje.texto && (
-        <div className="toast-floating-container-bottom-left">
-          <Alert 
-            variant={mensaje.tipo} 
-            dismissible 
-            onClose={() => setMensaje({ tipo: '', texto: '' })}
-            className={`toast-floating-alert alert-${mensaje.tipo} mb-0`}
-          >
-            <i className={`bi bi-${
-              mensaje.tipo === 'success' ? 'check-circle-fill text-success' :
-              mensaje.tipo === 'danger' ? 'exclamation-octagon-fill text-danger' :
-              mensaje.tipo === 'warning' ? 'exclamation-triangle-fill text-warning' :
-              'info-circle-fill text-info'
-            } fs-5 flex-shrink-0`} />
-            <div className="flex-grow-1 fw-medium text-start">
-              {mensaje.texto}
-            </div>
-          </Alert>
-        </div>
-      )}
+      {/* Notificación flotante inferior izquierda mediante FloatingToast */}
+      <FloatingToast mensaje={mensaje} onClose={() => setMensaje({ tipo: '', texto: '' })} />
 
       {/* Filtros */}
       <Card className="shadow-sm border-0 mb-4 admin-card-table">
@@ -479,26 +473,28 @@ const AdminSubcategoriasPage = () => {
           </h6>
           <Row className="g-3 align-items-end">
             <Col md={5}>
-              <Form.Group>
+              <Form.Group controlId="filtroBusquedaSubcat">
                 <Form.Label className="small fw-semibold mb-1">Buscar Subcategoría</Form.Label>
                 <InputGroup>
                   <InputGroup.Text className="bg-light">
                     <span className="bi bi-search" aria-hidden="true"></span>
                   </InputGroup.Text>
                   <Form.Control
+                    id="filtroBusquedaSubcat"
                     placeholder="Buscar por nombre, descripción..."
                     value={filtros.busqueda}
-                    onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
+                    onChange={(e) => setFiltros(prev => ({ ...prev, busqueda: e.target.value }))}
                   />
                 </InputGroup>
               </Form.Group>
             </Col>
             <Col md={4}>
-              <Form.Group>
+              <Form.Group controlId="filtroCategoriaSubcat">
                 <Form.Label className="small fw-semibold mb-1">Categoría</Form.Label>
                 <Form.Select
+                  id="filtroCategoriaSubcat"
                   value={filtros.categoriaId}
-                  onChange={(e) => setFiltros({ ...filtros, categoriaId: e.target.value })}
+                  onChange={(e) => setFiltros(prev => ({ ...prev, categoriaId: e.target.value }))}
                 >
                   <option value="todas">Todas las categorías</option>
                   {categorias.map((cat) => (
@@ -508,11 +504,12 @@ const AdminSubcategoriasPage = () => {
               </Form.Group>
             </Col>
             <Col md={3}>
-              <Form.Group>
+              <Form.Group controlId="filtroEstadoSubcat">
                 <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
                 <Form.Select
+                  id="filtroEstadoSubcat"
                   value={filtros.estado}
-                  onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
+                  onChange={(e) => setFiltros(prev => ({ ...prev, estado: e.target.value }))}
                 >
                   <option value="todos">Todos los estados</option>
                   <option value="activos">Activos</option>
@@ -730,167 +727,196 @@ const AdminSubcategoriasPage = () => {
       )}
 
       {/* Modal Crear / Editar Minimalista */}
-      <Modal 
-        show={showModal} 
-        onHide={handleCloseModal} 
-        centered
-        dialogClassName="modal-producto-form"
-        backdrop="static"
-      >
-        <div className="product-minimal-header">
-          <div>
-            <h6 className="fw-bold mb-0 text-navy fs-6">
-              {editando ? 'Editar Subcategoría' : 'Nueva Subcategoría'}
-            </h6>
-            <small className="text-muted" style={{ fontSize: '0.8rem' }}>
-              {editando ? `ID #${editando.id} — ${editando.nombre}` : 'Ingresa los datos para registrar la subcategoría'}
-            </small>
-          </div>
-          <button 
-            type="button" 
-            className="btn-close" 
-            onClick={handleCloseModal}
-            aria-label="Cerrar"
-          />
-        </div>
-
-        <Form onSubmit={handleSubmit}>
-          <Modal.Body className="p-3 p-sm-4">
-            <Form.Group className="mb-3">
-              <Form.Label className="small fw-semibold text-secondary mb-1">
-                Categoría Principal <span className="text-danger">*</span>
-              </Form.Label>
-              <Form.Select
-                name="categoriaId"
-                value={formData.categoriaId}
-                onChange={handleChange}
-                required
-                className="product-minimal-input"
-              >
-                <option value="">Selecciona una categoría...</option>
-                {categorias.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label className="small fw-semibold text-secondary mb-1">
-                Nombre de la Subcategoría <span className="text-danger">*</span>
-              </Form.Label>
-              <Form.Control
-                type="text"
-                name="nombre"
-                value={formData.nombre}
-                onChange={handleChange}
-                required
-                placeholder="Ej: Anillos de Oro, Pulseras..."
-                className="product-minimal-input"
-              />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label className="small fw-semibold text-secondary mb-1">
-                Descripción (Opcional)
-              </Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                name="descripcion"
-                value={formData.descripcion}
-                onChange={handleChange}
-                placeholder="Descripción detallada de la subcategoría..."
-                className="product-minimal-input"
-              />
-            </Form.Group>
-
-            <div className="pt-1">
-              <Form.Check
-                type="switch"
-                id="subcategoria-switch-activo"
-                label="Subcategoría activa (visible en catálogo)"
-                name="activo"
-                checked={formData.activo}
-                onChange={handleChange}
-                className="small text-secondary fw-medium"
-              />
-            </div>
-          </Modal.Body>
-
-          <div className="product-minimal-footer">
-            <button 
-              type="button"
-              onClick={handleCloseModal}
-              className="btn-minimal-cancel"
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit"
-              className="btn-minimal-submit"
-            >
-              <i className={`bi bi-${editando ? 'check2' : 'plus-lg'}`} />
-              {editando ? 'Actualizar Subcategoría' : 'Guardar Subcategoría'}
-            </button>
-          </div>
-        </Form>
-      </Modal>
+      <SubcategoriaModal
+        show={showModal}
+        onHide={handleCloseModal}
+        editando={editando}
+        formData={formData}
+        categorias={categorias}
+        onChange={handleChange}
+        onSubmit={handleSubmit}
+      />
 
       {/* Modal de Confirmación Compacto Estilo Dashboard */}
-      <Modal 
-        show={modalConfirmacion.show} 
-        onHide={() => setModalConfirmacion(prev => ({ ...prev, show: false }))} 
-        centered
-        backdrop="static"
-        dialogClassName="modal-confirmacion-compacto"
-      >
-        <Modal.Body className="text-center p-3 p-sm-4">
-          <div 
-            className={`confirm-icon-wrapper mb-3 mx-auto bg-${
-              modalConfirmacion.tipo === 'danger' ? 'danger-subtle' :
-              modalConfirmacion.tipo === 'warning' ? 'warning-subtle' :
-              modalConfirmacion.tipo === 'primary' || modalConfirmacion.tipo === 'info' ? 'primary-subtle' :
-              'success-subtle'
-            } text-${modalConfirmacion.tipo || 'primary'}`}
-          >
-            <i className={`bi bi-${modalConfirmacion.icono || 'exclamation-circle-fill'} confirm-icon`} />
-          </div>
-          
-          <h5 className="fw-bold text-navy mb-2 fs-5">
-            {modalConfirmacion.titulo}
-          </h5>
-          
-          <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
-            {modalConfirmacion.mensaje}
-          </p>
-
-          <div className="d-flex gap-2 justify-content-center w-100 mt-2">
-            <Button 
-              variant="outline-secondary" 
-              className="px-3 py-2 fw-semibold flex-fill"
-              onClick={() => {
-                setModalConfirmacion(prev => ({ ...prev, show: false }));
-                if (modalConfirmacion.onCancel) modalConfirmacion.onCancel();
-              }}
-            >
-              {modalConfirmacion.textoCancelar || 'Cancelar'}
-            </Button>
-            <Button 
-              variant={modalConfirmacion.tipo || 'primary'} 
-              className="px-3 py-2 fw-semibold flex-fill shadow-sm"
-              onClick={async () => {
-                const action = modalConfirmacion.onConfirm;
-                setModalConfirmacion(prev => ({ ...prev, show: false }));
-                if (action) await action();
-              }}
-            >
-              {modalConfirmacion.textoConfirmar || 'Confirmar'}
-            </Button>
-          </div>
-        </Modal.Body>
-      </Modal>
+      <ModalConfirmacion
+        modal={modalConfirmacion}
+        onClose={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
+      />
     </Container>
   );
 };
+
+// Subcomponente Formulario Crear / Editar Minimalista
+const SubcategoriaModal = ({
+  show,
+  onHide,
+  editando,
+  formData,
+  categorias,
+  onChange,
+  onSubmit
+}) => (
+  <Modal 
+    show={show} 
+    onHide={onHide} 
+    centered
+    dialogClassName="modal-producto-form"
+    backdrop="static"
+  >
+    <div className="product-minimal-header">
+      <div>
+        <h6 className="fw-bold mb-0 text-navy fs-6">
+          {editando ? 'Editar Subcategoría' : 'Nueva Subcategoría'}
+        </h6>
+        <small className="text-muted" style={{ fontSize: '0.8rem' }}>
+          {editando ? `ID #${editando.id} — ${editando.nombre}` : 'Ingresa los datos para registrar la subcategoría'}
+        </small>
+      </div>
+      <button 
+        type="button" 
+        className="btn-close" 
+        onClick={onHide}
+        aria-label="Cerrar"
+      />
+    </div>
+
+    <Form onSubmit={onSubmit}>
+      <Modal.Body className="p-3 p-sm-4">
+        <Form.Group controlId="subcat-modal-categoriaId" className="mb-3">
+          <Form.Label className="small fw-semibold text-secondary mb-1">
+            Categoría Principal <span className="text-danger">*</span>
+          </Form.Label>
+          <Form.Select
+            id="subcat-modal-categoriaId"
+            name="categoriaId"
+            value={formData.categoriaId}
+            onChange={onChange}
+            required
+            className="product-minimal-input"
+          >
+            <option value="">Selecciona una categoría...</option>
+            {categorias.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+            ))}
+          </Form.Select>
+        </Form.Group>
+
+        <Form.Group controlId="subcat-modal-nombre" className="mb-3">
+          <Form.Label className="small fw-semibold text-secondary mb-1">
+            Nombre de la Subcategoría <span className="text-danger">*</span>
+          </Form.Label>
+          <Form.Control
+            id="subcat-modal-nombre"
+            type="text"
+            name="nombre"
+            value={formData.nombre}
+            onChange={onChange}
+            required
+            placeholder="Ej: Anillos de Oro, Pulseras..."
+            className="product-minimal-input"
+          />
+        </Form.Group>
+
+        <Form.Group controlId="subcat-modal-descripcion" className="mb-3">
+          <Form.Label className="small fw-semibold text-secondary mb-1">
+            Descripción (Opcional)
+          </Form.Label>
+          <Form.Control
+            id="subcat-modal-descripcion"
+            as="textarea"
+            rows={3}
+            name="descripcion"
+            value={formData.descripcion}
+            onChange={onChange}
+            placeholder="Descripción detallada de la subcategoría..."
+            className="product-minimal-input"
+          />
+        </Form.Group>
+
+        <div className="pt-1">
+          <Form.Check
+            type="switch"
+            id="subcategoria-switch-activo"
+            label="Subcategoría activa (visible en catálogo)"
+            name="activo"
+            checked={formData.activo}
+            onChange={onChange}
+            className="small text-secondary fw-medium"
+          />
+        </div>
+      </Modal.Body>
+
+      <div className="product-minimal-footer">
+        <button 
+          type="button" 
+          onClick={onHide}
+          className="btn-minimal-cancel"
+        >
+          Cancelar
+        </button>
+        <button 
+          type="submit" 
+          className="btn-minimal-submit"
+        >
+          <i className={`bi bi-${editando ? 'check2' : 'plus-lg'}`} />
+          {editando ? 'Actualizar Subcategoría' : 'Guardar Subcategoría'}
+        </button>
+      </div>
+    </Form>
+  </Modal>
+);
+
+// Subcomponente Modal de Confirmación Compacto Estilo Dashboard
+const ModalConfirmacion = ({ modal, onClose }) => (
+  <Modal 
+    show={modal.show} 
+    onHide={onClose} 
+    centered
+    backdrop="static"
+    dialogClassName="modal-confirmacion-compacto"
+  >
+    <Modal.Body className="text-center p-3 p-sm-4">
+      <div 
+        className={`confirm-icon-wrapper mb-3 mx-auto bg-${
+          MODAL_BG_POR_TIPO[modal.tipo] || 'primary-subtle'
+        } text-${modal.tipo || 'primary'}`}
+      >
+        <i className={`bi bi-${modal.icono || 'exclamation-circle-fill'} confirm-icon`} />
+      </div>
+      
+      <h5 className="fw-bold text-navy mb-2 fs-5">
+        {modal.titulo}
+      </h5>
+      
+      <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
+        {modal.mensaje}
+      </p>
+
+      <div className="d-flex gap-2 justify-content-center w-100 mt-2">
+        <Button 
+          variant="outline-secondary" 
+          className="px-3 py-2 fw-semibold flex-fill"
+          onClick={() => {
+            onClose();
+            if (modal.onCancel) modal.onCancel();
+          }}
+        >
+          {modal.textoCancelar || 'Cancelar'}
+        </Button>
+        <Button 
+          variant={modal.tipo || 'primary'} 
+          className="px-3 py-2 fw-semibold flex-fill shadow-sm"
+          onClick={async () => {
+            const action = modal.onConfirm;
+            onClose();
+            if (action) await action();
+          }}
+        >
+          {modal.textoConfirmar || 'Confirmar'}
+        </Button>
+      </div>
+    </Modal.Body>
+  </Modal>
+);
 
 export default AdminSubcategoriasPage;

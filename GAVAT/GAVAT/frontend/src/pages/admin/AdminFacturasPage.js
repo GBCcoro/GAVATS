@@ -5,16 +5,52 @@
  * Gestión de facturas (consultar, descargar, anular)
  */
 
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { Container, Card, Table, Button, Modal, Form, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import adminService from '../../services/adminService';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import FloatingToast from '../../components/FloatingToast';
 import { exportarFacturasAPDF, exportarFacturasAExcel } from '../../utils/exportUtils';
 
+const MODAL_BG_POR_TIPO = Object.freeze({
+  danger: 'danger-subtle',
+  warning: 'warning-subtle',
+  primary: 'primary-subtle',
+  info: 'primary-subtle',
+  success: 'success-subtle',
+});
+
+const BADGE_ESTADOS = Object.freeze({
+  emitida: 'warning',
+  enviada: 'info',
+  vista: 'warning',
+  anulada: 'danger',
+  pagada: 'success'
+});
+
+const getBadgeEstado = (estado) => BADGE_ESTADOS[estado] || 'secondary';
+
+const formatearPrecio = (precio) => {
+  return new Intl.NumberFormat('es-CO', { 
+    style: 'currency', 
+    currency: 'COP', 
+    minimumFractionDigits: 0 
+  }).format(precio || 0);
+};
+
+const formatearFecha = (fecha) => {
+  if (!fecha) return '-';
+  return new Date(fecha).toLocaleString('es-CO', { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric', 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+};
+
 const AdminFacturasPage = () => {
-  useAuth();
   const navigate = useNavigate();
   const [facturas, setFacturas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,27 +96,10 @@ const AdminFacturasPage = () => {
     return () => clearTimeout(timer);
   }, [filtros.busqueda]);
 
-  const filtrosAnteriores = useRef({
-    busquedaDebounced,
-    estado: filtros.estado
-  });
-
+  // Resetear página al filtrar o buscar
   useEffect(() => {
-    const prev = filtrosAnteriores.current;
-    if (
-      prev.busquedaDebounced !== busquedaDebounced ||
-      prev.estado !== filtros.estado
-    ) {
-      filtrosAnteriores.current = {
-        busquedaDebounced,
-        estado: filtros.estado
-      };
-      setPaginaActual(1);
-    }
+    setPaginaActual(1);
   }, [busquedaDebounced, filtros.estado]);
-
-  const facturasFiltradas = facturas;
-  const facturasPaginadas = facturas;
 
   const loadFacturas = useCallback(async () => {
     setLoading(true);
@@ -94,7 +113,7 @@ const AdminFacturasPage = () => {
 
       const response = await adminService.getFacturas(params);
       const facturasData = response.data?.facturas || response.data || [];
-      const total = response.data?.total !== undefined ? response.data.total : (response.total !== undefined ? response.total : facturasData.length);
+      const total = response.data?.total ?? response.total ?? facturasData.length;
       const numPags = response.data?.totalPaginas || Math.max(1, Math.ceil(total / registrosPorPagina));
 
       setFacturas(Array.isArray(facturasData) ? facturasData : []);
@@ -119,32 +138,22 @@ const AdminFacturasPage = () => {
     setReloadKey(prev => prev + 1);
   }, []);
 
-  const obtenerFacturasParaExportar = async () => {
-    const params = {
-      pagina: 1,
-      limite: 1000
-    };
-    if (busquedaDebounced.trim()) params.buscar = busquedaDebounced.trim();
-    if (filtros.estado && filtros.estado !== 'todos') params.estado = filtros.estado;
-
-    try {
-      const res = await adminService.getFacturas(params);
-      const items = res.data?.facturas || res.data || [];
-      return Array.isArray(items) ? items : facturas;
-    } catch (err) {
-      console.error('Error al obtener facturas para exportar:', err);
-      return facturas;
-    }
-  };
-
-  const handleExportar = async (formato) => {
+  const handleExportar = useCallback(async (formato) => {
     setExportando(true);
     try {
-      const itemsParaExportar = await obtenerFacturasParaExportar();
+      const params = {
+        pagina: 1,
+        limite: 1000,
+        ...(busquedaDebounced.trim() && { buscar: busquedaDebounced.trim() }),
+        ...(filtros.estado && filtros.estado !== 'todos' && { estado: filtros.estado })
+      };
+      const res = await adminService.getFacturas(params);
+      const items = res.data?.facturas || res.data || [];
+      const datos = Array.isArray(items) ? items : facturas;
       if (formato === 'pdf') {
-        exportarFacturasAPDF(itemsParaExportar);
+        exportarFacturasAPDF(datos);
       } else {
-        await exportarFacturasAExcel(itemsParaExportar);
+        await exportarFacturasAExcel(datos);
       }
     } catch (error) {
       console.error('Error al exportar facturas:', error);
@@ -152,7 +161,7 @@ const AdminFacturasPage = () => {
     } finally {
       setExportando(false);
     }
-  };
+  }, [busquedaDebounced, filtros.estado, facturas]);
 
   const handleVerDetalle = async (factura) => {
     try {
@@ -184,7 +193,27 @@ const AdminFacturasPage = () => {
     }
   };
 
-  // Anular factura con modal de confirmación
+  // Anular factura individual
+  const ejecutarAnulacionFactura = async (factura, numFactura) => {
+    try {
+      setFacturas(prev => 
+        prev.map(f => f.id === factura.id ? { ...f, estado: 'anulada' } : f)
+      );
+      if (facturaSeleccionada?.id === factura.id) {
+        setFacturaSeleccionada(prev => prev ? { ...prev, estado: 'anulada' } : prev);
+      }
+
+      await adminService.anularFactura(factura.id);
+      setMensaje({ tipo: 'success', texto: `Factura "${numFactura}" anulada exitosamente` });
+      setShowDetalleModal(false);
+      recargarFacturas();
+    } catch (error) {
+      console.error('Error al anular factura:', error);
+      setMensaje({ tipo: 'danger', texto: error.message || 'Error al anular la factura' });
+      recargarFacturas();
+    }
+  };
+
   const solicitarAnularFactura = (factura) => {
     const numFactura = factura.numeroFactura || factura.numero_factura || `#${factura.id}`;
     setModalConfirmacion({
@@ -195,71 +224,22 @@ const AdminFacturasPage = () => {
       icono: 'x-circle-fill',
       textoConfirmar: 'Anular Factura',
       textoCancelar: 'Cancelar',
-      onConfirm: async () => {
-        try {
-          // Actualización inmediata local
-          setFacturas(prev => 
-            prev.map(f => f.id === factura.id ? { ...f, estado: 'anulada' } : f)
-          );
-          if (facturaSeleccionada?.id === factura.id) {
-            setFacturaSeleccionada(prev => prev ? { ...prev, estado: 'anulada' } : prev);
-          }
-
-          await adminService.anularFactura(factura.id);
-          setMensaje({ tipo: 'success', texto: `Factura "${numFactura}" anulada exitosamente` });
-          setShowDetalleModal(false);
-          recargarFacturas();
-        } catch (error) {
-          console.error('Error al anular factura:', error);
-          setMensaje({ tipo: 'danger', texto: error.message || 'Error al anular la factura' });
-          recargarFacturas();
-        }
-      }
+      onConfirm: () => ejecutarAnulacionFactura(factura, numFactura)
     });
-  };
-
-  const formatearPrecio = (precio) => {
-    return new Intl.NumberFormat('es-CO', { 
-      style: 'currency', 
-      currency: 'COP', 
-      minimumFractionDigits: 0 
-    }).format(precio || 0);
-  };
-
-  const formatearFecha = (fecha) => {
-    if (!fecha) return '-';
-    return new Date(fecha).toLocaleString('es-CO', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric', 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
-
-  const getBadgeEstado = (estado) => {
-    const estados = {
-      'emitida': 'warning',
-      'enviada': 'info',
-      'vista': 'warning',
-      'anulada': 'danger',
-      'pagada': 'success'
-    };
-    return estados[estado] || 'secondary';
   };
 
   // Selección de filas
   const todosPaginaSeleccionados = useMemo(() => {
-    return facturasPaginadas.length > 0 && facturasPaginadas.every(f => seleccionados.has(f.id));
-  }, [facturasPaginadas, seleccionados]);
+    return facturas.length > 0 && facturas.every(f => seleccionados.has(f.id));
+  }, [facturas, seleccionados]);
 
   const handleToggleSeleccionarTodos = () => {
     setSeleccionados(prev => {
       const nuevo = new Set(prev);
       if (todosPaginaSeleccionados) {
-        facturasPaginadas.forEach(f => nuevo.delete(f.id));
+        facturas.forEach(f => nuevo.delete(f.id));
       } else {
-        facturasPaginadas.forEach(f => nuevo.add(f.id));
+        facturas.forEach(f => nuevo.add(f.id));
       }
       return nuevo;
     });
@@ -277,9 +257,14 @@ const AdminFacturasPage = () => {
     });
   };
 
-  if (loading && facturas.length === 0 && !busquedaDebounced && filtros.estado === 'todos') {
+  const esCargaInicial = loading && facturas.length === 0 && !busquedaDebounced && filtros.estado === 'todos';
+  if (esCargaInicial) {
     return <LoadingSpinner message="Cargando facturas..." />;
   }
+
+  const formatoExportar = tipoExportacion === 'pdf' ? 'PDF' : 'Excel';
+  const textoBotonExportar = exportando ? 'Exportando...' : `Exportar a ${formatoExportar}`;
+  const iconTipoExportacion = tipoExportacion === 'pdf' ? 'pdf' : 'excel';
 
   return (
     <Container className="py-4">
@@ -300,8 +285,8 @@ const AdminFacturasPage = () => {
               disabled={exportando}
               onClick={() => handleExportar(tipoExportacion)}
             >
-              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
-              {exportando ? 'Exportando...' : `Exportar a ${tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}`}
+              <span className={`bi bi-file-earmark-${iconTipoExportacion} me-1`} aria-hidden="true"></span>
+              {textoBotonExportar}
             </Button>
             <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" disabled={exportando} />
             <Dropdown.Menu>
@@ -326,26 +311,10 @@ const AdminFacturasPage = () => {
       </div>
 
       {/* Notificación flotante inferior izquierda */}
-      {mensaje.texto && (
-        <div className="toast-floating-container-bottom-left">
-          <Alert 
-            variant={mensaje.tipo} 
-            dismissible 
-            onClose={() => setMensaje({ tipo: '', texto: '' })}
-            className={`toast-floating-alert alert-${mensaje.tipo} mb-0`}
-          >
-            <i className={`bi bi-${
-              mensaje.tipo === 'success' ? 'check-circle-fill text-success' :
-              mensaje.tipo === 'danger' ? 'exclamation-octagon-fill text-danger' :
-              mensaje.tipo === 'warning' ? 'exclamation-triangle-fill text-warning' :
-              'info-circle-fill text-info'
-            } fs-5 flex-shrink-0`} />
-            <div className="flex-grow-1 fw-medium text-start">
-              {mensaje.texto}
-            </div>
-          </Alert>
-        </div>
-      )}
+      <FloatingToast
+        mensaje={mensaje}
+        onClose={() => setMensaje({ tipo: '', texto: '' })}
+      />
 
       {/* Filtros */}
       <Card className="shadow-sm border-0 mb-4 admin-card-table">
@@ -355,13 +324,14 @@ const AdminFacturasPage = () => {
           </h6>
           <Row className="g-3 align-items-end">
             <Col md={6}>
-              <Form.Group>
+              <Form.Group controlId="filtroBuscarFactura">
                 <Form.Label className="small fw-semibold mb-1">Buscar Factura</Form.Label>
                 <InputGroup>
                   <InputGroup.Text className="bg-light">
                     <span className="bi bi-search" aria-hidden="true"></span>
                   </InputGroup.Text>
                   <Form.Control
+                    id="filtroBuscarFactura"
                     placeholder="Buscar por número, cliente o email..."
                     value={filtros.busqueda}
                     onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
@@ -370,9 +340,10 @@ const AdminFacturasPage = () => {
               </Form.Group>
             </Col>
             <Col md={3}>
-              <Form.Group>
+              <Form.Group controlId="filtroEstadoFactura">
                 <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
                 <Form.Select
+                  id="filtroEstadoFactura"
                   value={filtros.estado}
                   onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
                 >
@@ -409,7 +380,7 @@ const AdminFacturasPage = () => {
             title={todosPaginaSeleccionados ? "Deseleccionar todos en esta página" : "Seleccionar todos en esta página"}
           >
             <i className={`bi bi-${todosPaginaSeleccionados ? 'check-square-fill text-primary' : 'square'}`} />
-            <span>{todosPaginaSeleccionados ? 'Deseleccionar página' : `Seleccionar todo (${facturasPaginadas.length})`}</span>
+            <span>{todosPaginaSeleccionados ? 'Deseleccionar página' : `Seleccionar todo (${facturas.length})`}</span>
           </Button>
           {seleccionados.size > 0 && (
             <Badge bg="danger" className="p-2 d-flex align-items-center gap-1 fs-7">
@@ -463,14 +434,14 @@ const AdminFacturasPage = () => {
               </tr>
             </thead>
             <tbody>
-              {facturasFiltradas.length === 0 ? (
+              {facturas.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="text-center py-4 text-muted">
                     No hay facturas registradas
                   </td>
                 </tr>
               ) : (
-                facturasPaginadas.map((factura) => {
+                facturas.map((factura) => {
                   const estaSeleccionado = seleccionados.has(factura.id);
                   const numFactura = factura.numeroFactura || factura.numero_factura;
                   return (
@@ -580,194 +551,218 @@ const AdminFacturasPage = () => {
         </div>
       )}
 
-      {/* Modal Detalle Factura Minimalista */}
-      <Modal 
-        show={showDetalleModal} 
-        onHide={() => setShowDetalleModal(false)} 
-        size="lg" 
-        centered
-        dialogClassName="modal-producto-form"
-        style={{ maxWidth: '780px' }}
-      >
-        <div className="product-minimal-header">
-          <div>
-            <h6 className="fw-bold mb-0 text-navy fs-6">
-              Detalle de Factura
-            </h6>
-            <small className="text-muted" style={{ fontSize: '0.8rem' }}>
-              {facturaSeleccionada ? (facturaSeleccionada.numeroFactura || facturaSeleccionada.numero_factura) : ''}
-            </small>
-          </div>
-          <button 
-            type="button" 
-            className="btn-close" 
-            onClick={() => setShowDetalleModal(false)}
-            aria-label="Cerrar"
-          />
-        </div>
+      <FacturaDetalleModal
+        show={showDetalleModal}
+        factura={facturaSeleccionada}
+        onClose={() => setShowDetalleModal(false)}
+        onDescargarPDF={handleDescargarPDF}
+        onAnularFactura={solicitarAnularFactura}
+      />
 
-        {facturaSeleccionada && (
-          <Modal.Body className="p-3 p-sm-4">
-            <Row className="g-3 mb-3">
-              <Col sm={6}>
-                <div className="p-3 rounded-3 bg-light border">
-                  <h6 className="fw-bold text-navy mb-2 small text-uppercase">Datos del Comprobante</h6>
-                  <p className="mb-0 small text-secondary">
-                    <strong>Factura:</strong> {facturaSeleccionada.numeroFactura || facturaSeleccionada.numero_factura}<br/>
-                    <strong>Emisión:</strong> {formatearFecha(facturaSeleccionada.fechaEmision || facturaSeleccionada.created_at)}<br/>
-                    <strong>Estado:</strong> <Badge bg={getBadgeEstado(facturaSeleccionada.estado)} className="ms-1">{facturaSeleccionada.estado}</Badge>
-                  </p>
-                </div>
-              </Col>
-              <Col sm={6}>
-                <div className="p-3 rounded-3 bg-light border">
-                  <h6 className="fw-bold text-navy mb-2 small text-uppercase">Datos del Cliente</h6>
-                  <p className="mb-0 small text-secondary">
-                    <strong>Cliente:</strong> {facturaSeleccionada.clienteNombre || facturaSeleccionada.cliente_nombre || '-'}<br/>
-                    <strong>Email:</strong> {facturaSeleccionada.clienteEmail || facturaSeleccionada.cliente_email || '-'}<br/>
-                    <strong>Documento:</strong> {facturaSeleccionada.clienteDocumento || facturaSeleccionada.cliente_documento || 'N/A'}
-                  </p>
-                </div>
-              </Col>
-            </Row>
-
-            <Row className="g-3 mb-3">
-              <Col sm={6}>
-                <div className="p-2 px-3 rounded-3 bg-light border small text-muted">
-                  <strong className="text-secondary d-block">Teléfono:</strong>
-                  {facturaSeleccionada.telefonoEnvio || facturaSeleccionada.telefono || '-'}
-                </div>
-              </Col>
-              <Col sm={6}>
-                <div className="p-2 px-3 rounded-3 bg-light border small text-muted">
-                  <strong className="text-secondary d-block">Método de Pago:</strong>
-                  {facturaSeleccionada.metodoPago || facturaSeleccionada.metodo_pago || '-'}
-                </div>
-              </Col>
-            </Row>
-
-            <div className="mb-3">
-              <span className="small fw-semibold text-secondary d-block mb-1">Dirección de Envío / Entrega:</span>
-              <div className="p-2 px-3 rounded-3 bg-light border small text-muted">
-                {facturaSeleccionada.direccionEnvio || facturaSeleccionada.direccion || 'No especificada'}
-              </div>
-            </div>
-
-            <div className="p-3 rounded-3 border bg-light mb-3">
-              <Row className="mb-1">
-                <Col xs={6} className="small text-secondary">Subtotal:</Col>
-                <Col xs={6} className="text-end small fw-semibold">{formatearPrecio(facturaSeleccionada.subtotal)}</Col>
-              </Row>
-              <Row className="mb-2">
-                <Col xs={6} className="small text-secondary">Impuesto (IVA):</Col>
-                <Col xs={6} className="text-end small fw-semibold">{formatearPrecio(facturaSeleccionada.impuesto)}</Col>
-              </Row>
-              <hr className="my-2" />
-              <Row className="align-items-center">
-                <Col xs={6} className="fw-bold text-navy fs-6">Total Facturado:</Col>
-                <Col xs={6} className="text-end fw-bold fs-5 text-primary">{formatearPrecio(facturaSeleccionada.total)}</Col>
-              </Row>
-            </div>
-
-            {facturaSeleccionada.notas && (
-              <div className="mb-2">
-                <span className="small fw-semibold text-secondary d-block mb-1">Notas:</span>
-                <div className="p-2 px-3 rounded-3 bg-info-subtle border border-info-subtle small text-navy">
-                  {facturaSeleccionada.notas}
-                </div>
-              </div>
-            )}
-          </Modal.Body>
-        )}
-
-        <div className="product-minimal-footer">
-          <button 
-            type="button" 
-            className="btn-minimal-cancel"
-            onClick={() => setShowDetalleModal(false)}
-          >
-            Cerrar
-          </button>
-          {facturaSeleccionada && (
-            <>
-              <Button 
-                variant="success" 
-                size="sm"
-                className="d-inline-flex align-items-center gap-1 fw-semibold px-3 py-2 rounded-3"
-                onClick={() => handleDescargarPDF(facturaSeleccionada.numeroFactura || facturaSeleccionada.numero_factura)}
-              >
-                <i className="bi bi-download"></i> Descargar PDF
-              </Button>
-              {facturaSeleccionada.estado !== 'anulada' && (
-                <Button 
-                  variant="danger" 
-                  size="sm"
-                  className="d-inline-flex align-items-center gap-1 fw-semibold px-3 py-2 rounded-3"
-                  onClick={() => solicitarAnularFactura(facturaSeleccionada)}
-                >
-                  <i className="bi bi-x-circle"></i> Anular Factura
-                </Button>
-              )}
-            </>
-          )}
-        </div>
-      </Modal>
-
-      {/* Modal de Confirmación Compacto Estilo Dashboard */}
-      <Modal 
-        show={modalConfirmacion.show} 
-        onHide={() => setModalConfirmacion(prev => ({ ...prev, show: false }))} 
-        centered
-        backdrop="static"
-        dialogClassName="modal-confirmacion-compacto"
-      >
-        <Modal.Body className="text-center p-3 p-sm-4">
-          <div 
-            className={`confirm-icon-wrapper mb-3 mx-auto bg-${
-              modalConfirmacion.tipo === 'danger' ? 'danger-subtle' :
-              modalConfirmacion.tipo === 'warning' ? 'warning-subtle' :
-              modalConfirmacion.tipo === 'primary' || modalConfirmacion.tipo === 'info' ? 'primary-subtle' :
-              'success-subtle'
-            } text-${modalConfirmacion.tipo || 'primary'}`}
-          >
-            <i className={`bi bi-${modalConfirmacion.icono || 'exclamation-circle-fill'} confirm-icon`} />
-          </div>
-          
-          <h5 className="fw-bold text-navy mb-2 fs-5">
-            {modalConfirmacion.titulo}
-          </h5>
-          
-          <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
-            {modalConfirmacion.mensaje}
-          </p>
-
-          <div className="d-flex gap-2 justify-content-center w-100 mt-2">
-            <Button 
-              variant="outline-secondary" 
-              className="px-3 py-2 fw-semibold flex-fill"
-              onClick={() => {
-                setModalConfirmacion(prev => ({ ...prev, show: false }));
-                if (modalConfirmacion.onCancel) modalConfirmacion.onCancel();
-              }}
-            >
-              {modalConfirmacion.textoCancelar || 'Cancelar'}
-            </Button>
-            <Button 
-              variant={modalConfirmacion.tipo || 'primary'} 
-              className="px-3 py-2 fw-semibold flex-fill shadow-sm"
-              onClick={async () => {
-                const action = modalConfirmacion.onConfirm;
-                setModalConfirmacion(prev => ({ ...prev, show: false }));
-                if (action) await action();
-              }}
-            >
-              {modalConfirmacion.textoConfirmar || 'Confirmar'}
-            </Button>
-          </div>
-        </Modal.Body>
-      </Modal>
+      <ModalConfirmacion
+        modal={modalConfirmacion}
+        onClose={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
+      />
     </Container>
   );
 };
+
+// Subcomponente Detalle Factura
+const FacturaDetalleModal = ({
+  show,
+  factura,
+  onClose,
+  onDescargarPDF,
+  onAnularFactura,
+}) => {
+  const numFactura = factura ? (factura.numeroFactura || factura.numero_factura) : '';
+
+  return (
+    <Modal 
+      show={show} 
+      onHide={onClose} 
+      size="lg" 
+      centered
+      dialogClassName="modal-producto-form"
+      style={{ maxWidth: '780px' }}
+    >
+      <div className="product-minimal-header">
+        <div>
+          <h6 className="fw-bold mb-0 text-navy fs-6">
+            Detalle de Factura
+          </h6>
+          <small className="text-muted" style={{ fontSize: '0.8rem' }}>
+            {numFactura}
+          </small>
+        </div>
+        <button 
+          type="button" 
+          className="btn-close" 
+          onClick={onClose}
+          aria-label="Cerrar"
+        />
+      </div>
+
+      {factura && (
+        <Modal.Body className="p-3 p-sm-4">
+          <Row className="g-3 mb-3">
+            <Col sm={6}>
+              <div className="p-3 rounded-3 bg-light border">
+                <h6 className="fw-bold text-navy mb-2 small text-uppercase">Datos del Comprobante</h6>
+                <p className="mb-0 small text-secondary">
+                  <strong>Factura:</strong> {numFactura}<br/>
+                  <strong>Emisión:</strong> {formatearFecha(factura.fechaEmision || factura.created_at)}<br/>
+                  <strong>Estado:</strong> <Badge bg={getBadgeEstado(factura.estado)} className="ms-1">{factura.estado}</Badge>
+                </p>
+              </div>
+            </Col>
+            <Col sm={6}>
+              <div className="p-3 rounded-3 bg-light border">
+                <h6 className="fw-bold text-navy mb-2 small text-uppercase">Datos del Cliente</h6>
+                <p className="mb-0 small text-secondary">
+                  <strong>Cliente:</strong> {factura.clienteNombre || factura.cliente_nombre || '-'}<br/>
+                  <strong>Email:</strong> {factura.clienteEmail || factura.cliente_email || '-'}<br/>
+                  <strong>Documento:</strong> {factura.clienteDocumento || factura.cliente_documento || 'N/A'}
+                </p>
+              </div>
+            </Col>
+          </Row>
+
+          <Row className="g-3 mb-3">
+            <Col sm={6}>
+              <div className="p-2 px-3 rounded-3 bg-light border small text-muted">
+                <strong className="text-secondary d-block">Teléfono:</strong>
+                {factura.telefonoEnvio || factura.telefono || '-'}
+              </div>
+            </Col>
+            <Col sm={6}>
+              <div className="p-2 px-3 rounded-3 bg-light border small text-muted">
+                <strong className="text-secondary d-block">Método de Pago:</strong>
+                {factura.metodoPago || factura.metodo_pago || '-'}
+              </div>
+            </Col>
+          </Row>
+
+          <div className="mb-3">
+            <span className="small fw-semibold text-secondary d-block mb-1">Dirección de Envío / Entrega:</span>
+            <div className="p-2 px-3 rounded-3 bg-light border small text-muted">
+              {factura.direccionEnvio || factura.direccion || 'No especificada'}
+            </div>
+          </div>
+
+          <div className="p-3 rounded-3 border bg-light mb-3">
+            <Row className="mb-1">
+              <Col xs={6} className="small text-secondary">Subtotal:</Col>
+              <Col xs={6} className="text-end small fw-semibold">{formatearPrecio(factura.subtotal)}</Col>
+            </Row>
+            <Row className="mb-2">
+              <Col xs={6} className="small text-secondary">Impuesto (IVA):</Col>
+              <Col xs={6} className="text-end small fw-semibold">{formatearPrecio(factura.impuesto)}</Col>
+            </Row>
+            <hr className="my-2" />
+            <Row className="align-items-center">
+              <Col xs={6} className="fw-bold text-navy fs-6">Total Facturado:</Col>
+              <Col xs={6} className="text-end fw-bold fs-5 text-primary">{formatearPrecio(factura.total)}</Col>
+            </Row>
+          </div>
+
+          {factura.notas && (
+            <div className="mb-2">
+              <span className="small fw-semibold text-secondary d-block mb-1">Notas:</span>
+              <div className="p-2 px-3 rounded-3 bg-info-subtle border border-info-subtle small text-navy">
+                {factura.notas}
+              </div>
+            </div>
+          )}
+        </Modal.Body>
+      )}
+
+      <div className="product-minimal-footer">
+        <button 
+          type="button" 
+          className="btn-minimal-cancel"
+          onClick={onClose}
+        >
+          Cerrar
+        </button>
+        {factura && (
+          <>
+            <Button 
+              variant="success" 
+              size="sm"
+              className="d-inline-flex align-items-center gap-1 fw-semibold px-3 py-2 rounded-3"
+              onClick={() => onDescargarPDF(numFactura)}
+            >
+              <i className="bi bi-download"></i> Descargar PDF
+            </Button>
+            {factura.estado !== 'anulada' && (
+              <Button 
+                variant="danger" 
+                size="sm"
+                className="d-inline-flex align-items-center gap-1 fw-semibold px-3 py-2 rounded-3"
+                onClick={() => onAnularFactura(factura)}
+              >
+                <i className="bi bi-x-circle"></i> Anular Factura
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    </Modal>
+  );
+};
+
+// Subcomponente Confirmación Compacto
+const ModalConfirmacion = ({ modal, onClose }) => (
+  <Modal 
+    show={modal.show} 
+    onHide={onClose} 
+    centered
+    backdrop="static"
+    dialogClassName="modal-confirmacion-compacto"
+  >
+    <Modal.Body className="text-center p-3 p-sm-4">
+      <div 
+        className={`confirm-icon-wrapper mb-3 mx-auto bg-${
+          MODAL_BG_POR_TIPO[modal.tipo] || 'primary-subtle'
+        } text-${modal.tipo || 'primary'}`}
+      >
+        <i className={`bi bi-${modal.icono || 'exclamation-circle-fill'} confirm-icon`} />
+      </div>
+      
+      <h5 className="fw-bold text-navy mb-2 fs-5">
+        {modal.titulo}
+      </h5>
+      
+      <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
+        {modal.mensaje}
+      </p>
+
+      <div className="d-flex gap-2 justify-content-center w-100 mt-2">
+        <Button 
+          variant="outline-secondary" 
+          className="px-3 py-2 fw-semibold flex-fill"
+          onClick={() => {
+            onClose();
+            if (modal.onCancel) modal.onCancel();
+          }}
+        >
+          {modal.textoCancelar || 'Cancelar'}
+        </Button>
+        <Button 
+          variant={modal.tipo || 'primary'} 
+          className="px-3 py-2 fw-semibold flex-fill shadow-sm"
+          onClick={async () => {
+            const action = modal.onConfirm;
+            onClose();
+            if (action) await action();
+          }}
+        >
+          {modal.textoConfirmar || 'Confirmar'}
+        </Button>
+      </div>
+    </Modal.Body>
+  </Modal>
+);
 
 export default AdminFacturasPage;
