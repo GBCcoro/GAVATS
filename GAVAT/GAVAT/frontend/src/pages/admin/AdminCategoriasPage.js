@@ -6,19 +6,18 @@
  */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { Container, Card, Table, Button, Modal, Form, Badge, Row, Col, InputGroup } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
+import { Container, Card, Table, Button, Modal, Form, Badge, Col, InputGroup } from 'react-bootstrap';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import FloatingToast from '../../components/FloatingToast';
 import ModalConfirmacion from '../../components/ModalConfirmacion';
 import BotonExportar from '../../components/BotonExportar';
 import ToolbarSeleccionLote from '../../components/ToolbarSeleccionLote';
 import PaginacionTabla from '../../components/PaginacionTabla';
+import AdminPageHeader from '../../components/AdminPageHeader';
+import AdminFiltrosCard from '../../components/AdminFiltrosCard';
 import { exportarCategoriasAPDF, exportarCategoriasAExcel } from '../../utils/exportUtils';
 
 const AdminCategoriasPage = () => {
-  const navigate = useNavigate();
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -347,85 +346,67 @@ const AdminCategoriasPage = () => {
   return (
     <Container className="py-4">
       {/* Header Toolbar Responsivo */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
-        <div>
-          <h1 className="h2 mb-1 fw-bold text-navy">
-            <span className="bi bi-tags me-2 text-gold" aria-hidden="true"></span> Gestión de Categorías
-          </h1>
-          <p className="text-muted mb-0">
-            Total: {categoriasFiltradas.length} de {categorias.length} categoría{categorias.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className="d-flex flex-wrap align-items-center gap-2">
-          <BotonExportar
-            tipoExportacion={tipoExportacion}
-            onTipoChange={setTipoExportacion}
-            onExportar={handleExportar}
-          />
-          <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-            <i className="bi bi-arrow-left me-1"></i> Volver
-          </Button>
-          <Button variant="primary" onClick={() => handleShowModal()}>
-            <i className="bi bi-plus-circle me-1"></i> Nueva Categoría
-          </Button>
-        </div>
-      </div>
-
-      {/* Notificación flotante inferior izquierda */}
-      <FloatingToast
+      <AdminPageHeader
+        titulo="Gestión de Categorías"
+        icono="tags"
+        total={categorias.length}
+        totalFiltrados={categoriasFiltradas.length}
+        etiqueta="categoría"
         mensaje={mensaje}
-        onClose={() => setMensaje({ tipo: '', texto: '' })}
-      />
+        onLimpiarMensaje={() => setMensaje({ tipo: '', texto: '' })}
+      >
+        <BotonExportar
+          tipoExportacion={tipoExportacion}
+          onTipoChange={setTipoExportacion}
+          onExportar={handleExportar}
+        />
+        <Button variant="primary" onClick={() => handleShowModal()}>
+          <i className="bi bi-plus-circle me-1"></i> Nueva Categoría
+        </Button>
+      </AdminPageHeader>
 
       {/* Filtros */}
-      <Card className="shadow-sm border-0 mb-4 admin-card-table">
-        <Card.Body className="p-3 p-md-4">
-          <h6 className="fw-bold mb-3 d-flex align-items-center gap-2 text-navy">
-            <span className="bi bi-funnel text-gold" aria-hidden="true"></span> Filtros de Búsqueda
-          </h6>
-          <Row className="g-3 align-items-end">
-            <Col md={6}>
-              <Form.Group controlId="filtroBusquedaCategoria">
-                <Form.Label className="small fw-semibold mb-1">Buscar Categoría</Form.Label>
-                <InputGroup>
-                  <InputGroup.Text className="bg-light">
-                    <span className="bi bi-search" aria-hidden="true"></span>
-                  </InputGroup.Text>
-                  <Form.Control
-                    id="filtroBusquedaCategoria"
-                    placeholder="Buscar por nombre o descripción..."
-                    value={filtros.busqueda}
-                    onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
-                  />
-                </InputGroup>
-              </Form.Group>
-            </Col>
-            <Col md={3}>
-              <Form.Group controlId="filtroEstadoCategoria">
-                <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
-                <Form.Select
-                  id="filtroEstadoCategoria"
-                  value={filtros.estado}
-                  onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
-                >
-                  <option value="todos">Todos los estados</option>
-                  <option value="activos">Activos</option>
-                  <option value="inactivos">Inactivos</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={3}>
-              <Button
-                variant="outline-secondary"
-                className="w-100"
-                onClick={() => setFiltros({ busqueda: '', estado: 'todos' })}
-              >
-                <span className="bi bi-arrow-clockwise me-1" aria-hidden="true"></span> Limpiar filtros
-              </Button>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
+      <AdminFiltrosCard>
+        <Col md={6}>
+          <Form.Group controlId="filtroBusquedaCategoria">
+            <Form.Label className="small fw-semibold mb-1">Buscar Categoría</Form.Label>
+            <InputGroup>
+              <InputGroup.Text className="bg-light">
+                <span className="bi bi-search" aria-hidden="true"></span>
+              </InputGroup.Text>
+              <Form.Control
+                id="filtroBusquedaCategoria"
+                placeholder="Buscar por nombre o descripción..."
+                value={filtros.busqueda}
+                onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
+              />
+            </InputGroup>
+          </Form.Group>
+        </Col>
+        <Col md={3}>
+          <Form.Group controlId="filtroEstadoCategoria">
+            <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
+            <Form.Select
+              id="filtroEstadoCategoria"
+              value={filtros.estado}
+              onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
+            >
+              <option value="todos">Todos los estados</option>
+              <option value="activos">Activos</option>
+              <option value="inactivos">Inactivos</option>
+            </Form.Select>
+          </Form.Group>
+        </Col>
+        <Col md={3}>
+          <Button
+            variant="outline-secondary"
+            className="w-100"
+            onClick={() => setFiltros({ busqueda: '', estado: 'todos' })}
+          >
+            <span className="bi bi-arrow-clockwise me-1" aria-hidden="true"></span> Limpiar filtros
+          </Button>
+        </Col>
+      </AdminFiltrosCard>
 
       {/* Barra de Acciones de Selección Múltiple */}
       <ToolbarSeleccionLote

@@ -7,14 +7,14 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Container, Card, Table, Button, Modal, Form, Badge, Row, Col, InputGroup } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
 import adminService from '../../services/adminService';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import FloatingToast from '../../components/FloatingToast';
 import ModalConfirmacion from '../../components/ModalConfirmacion';
 import BotonExportar from '../../components/BotonExportar';
 import ToolbarSeleccionLote from '../../components/ToolbarSeleccionLote';
 import PaginacionTabla from '../../components/PaginacionTabla';
+import AdminPageHeader from '../../components/AdminPageHeader';
+import AdminFiltrosCard from '../../components/AdminFiltrosCard';
 import { exportarFacturasAPDF, exportarFacturasAExcel } from '../../utils/exportUtils';
 
 const BADGE_ESTADOS = Object.freeze({
@@ -47,7 +47,6 @@ const formatearFecha = (fecha) => {
 };
 
 const AdminFacturasPage = () => {
-  const navigate = useNavigate();
   const [facturas, setFacturas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
@@ -244,86 +243,67 @@ const AdminFacturasPage = () => {
   return (
     <Container className="py-4">
       {/* Header Toolbar Responsivo */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
-        <div>
-          <h1 className="h2 mb-1 fw-bold text-navy">
-            <span className="bi bi-file-earmark-pdf me-2 text-gold" aria-hidden="true"></span> Gestión de Facturas
-          </h1>
-          <p className="text-muted mb-0">
-            Total: <strong>{totalFacturas}</strong> factura{totalFacturas !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className="d-flex flex-wrap align-items-center gap-2">
-          <BotonExportar
-            tipoExportacion={tipoExportacion}
-            onTipoChange={setTipoExportacion}
-            onExportar={handleExportar}
-            exportando={exportando}
-          />
-          <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
-            <i className="bi bi-arrow-left me-1"></i> Volver
-          </Button>
-        </div>
-      </div>
-
-      {/* Notificación flotante inferior izquierda */}
-      <FloatingToast
+      <AdminPageHeader
+        titulo="Gestión de Facturas"
+        icono="file-earmark-pdf"
+        total={totalFacturas}
+        etiqueta="factura"
         mensaje={mensaje}
-        onClose={() => setMensaje({ tipo: '', texto: '' })}
-      />
+        onLimpiarMensaje={() => setMensaje({ tipo: '', texto: '' })}
+      >
+        <BotonExportar
+          tipoExportacion={tipoExportacion}
+          onTipoChange={setTipoExportacion}
+          onExportar={handleExportar}
+          exportando={exportando}
+        />
+      </AdminPageHeader>
 
       {/* Filtros */}
-      <Card className="shadow-sm border-0 mb-4 admin-card-table">
-        <Card.Body className="p-3 p-md-4">
-          <h6 className="fw-bold mb-3 d-flex align-items-center gap-2 text-navy">
-            <span className="bi bi-funnel text-gold" aria-hidden="true"></span> Filtros de Búsqueda
-          </h6>
-          <Row className="g-3 align-items-end">
-            <Col md={6}>
-              <Form.Group controlId="filtroBuscarFactura">
-                <Form.Label className="small fw-semibold mb-1">Buscar Factura</Form.Label>
-                <InputGroup>
-                  <InputGroup.Text className="bg-light">
-                    <span className="bi bi-search" aria-hidden="true"></span>
-                  </InputGroup.Text>
-                  <Form.Control
-                    id="filtroBuscarFactura"
-                    placeholder="Buscar por número, cliente o email..."
-                    value={filtros.busqueda}
-                    onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
-                  />
-                </InputGroup>
-              </Form.Group>
-            </Col>
-            <Col md={3}>
-              <Form.Group controlId="filtroEstadoFactura">
-                <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
-                <Form.Select
-                  id="filtroEstadoFactura"
-                  value={filtros.estado}
-                  onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
-                >
-                  <option value="todos">Todos</option>
-                  <option value="emitida">Emitida</option>
-                  <option value="enviada">Enviada</option>
-                  <option value="vista">Vista</option>
-                  <option value="pagada">Pagada</option>
-                  <option value="anulada">Anulada</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={3}>
-              <Button
-                variant="outline-secondary"
-                className="w-100"
-                onClick={() => setFiltros({ busqueda: '', estado: 'todos' })}
-              >
-                <span className="bi bi-arrow-clockwise me-1" aria-hidden="true"></span> Limpiar filtros
-              </Button>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
+      <AdminFiltrosCard>
+        <Col md={6}>
+          <Form.Group controlId="filtroBuscarFactura">
+            <Form.Label className="small fw-semibold mb-1">Buscar Factura</Form.Label>
+            <InputGroup>
+              <InputGroup.Text className="bg-light">
+                <span className="bi bi-search" aria-hidden="true"></span>
+              </InputGroup.Text>
+              <Form.Control
+                id="filtroBuscarFactura"
+                placeholder="Buscar por número, cliente o email..."
+                value={filtros.busqueda}
+                onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
+              />
+            </InputGroup>
+          </Form.Group>
+        </Col>
+        <Col md={3}>
+          <Form.Group controlId="filtroEstadoFactura">
+            <Form.Label className="small fw-semibold mb-1">Estado</Form.Label>
+            <Form.Select
+              id="filtroEstadoFactura"
+              value={filtros.estado}
+              onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
+            >
+              <option value="todos">Todos</option>
+              <option value="emitida">Emitida</option>
+              <option value="enviada">Enviada</option>
+              <option value="vista">Vista</option>
+              <option value="pagada">Pagada</option>
+              <option value="anulada">Anulada</option>
+            </Form.Select>
+          </Form.Group>
+        </Col>
+        <Col md={3}>
+          <Button
+            variant="outline-secondary"
+            className="w-100"
+            onClick={() => setFiltros({ busqueda: '', estado: 'todos' })}
+          >
+            <span className="bi bi-arrow-clockwise me-1" aria-hidden="true"></span> Limpiar filtros
+          </Button>
+        </Col>
+      </AdminFiltrosCard>
 
       {/* Barra de Acciones de Selección Múltiple */}
       <ToolbarSeleccionLote
