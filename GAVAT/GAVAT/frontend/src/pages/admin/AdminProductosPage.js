@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ModalConfirmacion from '../../components/ModalConfirmacion';
+import ToolbarSeleccionLote from '../../components/ToolbarSeleccionLote';
 import { getImageUrl } from '../../utils/helpers';
 import { exportarProductosAPDF, exportarProductosAExcel } from '../../utils/exportUtils';
 
@@ -788,17 +789,7 @@ const AdminProductosPage = () => {
   
   const [seleccionados, setSeleccionados] = useState(new Set());
 
-  const [modalConfirmacion, setModalConfirmacion] = useState({
-    show: false,
-    titulo: '',
-    mensaje: '',
-    tipo: 'danger',
-    icono: 'trash3-fill',
-    textoConfirmar: 'Confirmar',
-    textoCancelar: 'Cancelar',
-    onConfirm: null,
-    onCancel: null
-  });
+  const [modalConfirmacion, setModalConfirmacion] = useState({ show: false });
   
   const [formData, setFormData] = useState({
     nombre: '',
@@ -1033,7 +1024,8 @@ const AdminProductosPage = () => {
     }
   };
 
-  const ejecutarGuardado = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('nombre', formData.nombre);
@@ -1050,23 +1042,16 @@ const AdminProductosPage = () => {
         formDataToSend.append('imagen', imagenArchivo);
       }
 
-      if (editando) {
-        const res = await api.put(`/admin/productos/${editando.id}`, formDataToSend, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        setMensaje({ 
-          tipo: 'success', 
-          texto: res.data?.message || `Producto "${formData.nombre}" actualizado exitosamente` 
-        });
-      } else {
-        const res = await api.post('/admin/productos', formDataToSend, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        setMensaje({ 
-          tipo: 'success', 
-          texto: res.data?.message || `Producto "${formData.nombre}" creado exitosamente` 
-        });
-      }
+      const endpoint = editando ? `/admin/productos/${editando.id}` : '/admin/productos';
+      const method = editando ? api.put : api.post;
+      const res = await method(endpoint, formDataToSend, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      setMensaje({ 
+        tipo: 'success', 
+        texto: res.data?.message || `Producto "${formData.nombre}" ${editando ? 'actualizado' : 'creado'} exitosamente` 
+      });
 
       handleCloseModal();
       recargarProductos();
@@ -1076,27 +1061,6 @@ const AdminProductosPage = () => {
         tipo: 'danger', 
         texto: error.response?.data?.message || 'Error al guardar el producto' 
       });
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (editando) {
-      setModalConfirmacion({
-        show: true,
-        titulo: '¿Actualizar producto?',
-        mensaje: `¿Deseas guardar los cambios realizados en el producto "${formData.nombre || editando.nombre}"?`,
-        tipo: 'primary',
-        icono: 'pencil-square',
-        textoConfirmar: 'Actualizar',
-        textoCancelar: 'Cancelar',
-        onConfirm: async () => {
-          await ejecutarGuardado();
-        }
-      });
-    } else {
-      ejecutarGuardado();
     }
   };
 
@@ -1406,78 +1370,51 @@ const AdminProductosPage = () => {
         }}
       />
 
-      {/* Barra de Selección y Acciones Masivas */}
-      <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 p-2 px-3 bg-white rounded-3 shadow-sm border admin-selection-bar">
-        <div className="d-flex align-items-center gap-2">
+      {/* Barra de Selección Masiva */}
+      <ToolbarSeleccionLote
+        totalItems={productos.length}
+        todosSeleccionados={todosPaginaSeleccionados}
+        cantidadSeleccionados={seleccionados.size}
+        etiquetaItem="producto"
+        onToggleTodos={handleToggleSeleccionarTodos}
+        onLimpiar={() => setSeleccionados(new Set())}
+      >
+        {seleccionados.size === 1 && (
           <Button
             type="button"
-            variant={todosPaginaSeleccionados ? 'primary' : 'outline-primary'}
+            variant="outline-primary"
             size="sm"
             className="d-inline-flex align-items-center gap-1 fw-semibold"
-            onClick={handleToggleSeleccionarTodos}
-            title={todosPaginaSeleccionados ? 'Deseleccionar todos los de esta página' : 'Seleccionar todos los de esta página'}
+            onClick={handleEditarSeleccionadoUnico}
+            title="Editar el producto seleccionado"
           >
-            <span className={`bi bi-${todosPaginaSeleccionados ? 'check-square-fill' : 'square'}`} aria-hidden="true" />
-            <span>{todosPaginaSeleccionados ? 'Deseleccionar página' : `Seleccionar todo (${productos.length})`}</span>
+            <span className="bi bi-pencil-fill" aria-hidden="true" />
+            <span>Editar</span>
           </Button>
-          {seleccionados.size > 0 && (
-            <Badge bg="danger" className="p-2 d-flex align-items-center gap-1 fs-7">
-              <span className="bi bi-check-circle-fill" aria-hidden="true" />
-              <span>{seleccionados.size} seleccionado{seleccionados.size !== 1 ? 's' : ''}</span>
-            </Badge>
-          )}
-        </div>
-
-        {seleccionados.size > 0 && (
-          <div className="d-flex flex-wrap align-items-center gap-2">
-            {seleccionados.size === 1 && (
-              <Button
-                type="button"
-                variant="outline-primary"
-                size="sm"
-                className="d-inline-flex align-items-center gap-1 fw-semibold"
-                onClick={handleEditarSeleccionadoUnico}
-                title="Editar el producto seleccionado"
-              >
-                <span className="bi bi-pencil-fill" aria-hidden="true" />
-                <span>Editar</span>
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline-warning"
-              size="sm"
-              className="d-inline-flex align-items-center gap-1 fw-semibold"
-              onClick={solicitarCambioEstadoMasivo}
-              title="Activar o desactivar los productos seleccionados"
-            >
-              <span className="bi bi-arrow-repeat" aria-hidden="true" />
-              <span>Activar / Desactivar ({seleccionados.size})</span>
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              className="d-inline-flex align-items-center gap-1 fw-semibold"
-              onClick={solicitarEliminacionMasiva}
-              title="Eliminar los productos seleccionados"
-            >
-              <span className="bi bi-trash-fill" aria-hidden="true" />
-              <span>Eliminar ({seleccionados.size})</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline-secondary"
-              size="sm"
-              onClick={() => setSeleccionados(new Set())}
-              title="Limpiar selección"
-            >
-              <span className="bi bi-x-lg me-1" aria-hidden="true" />
-              <span>Deseleccionar</span>
-            </Button>
-          </div>
         )}
-      </div>
+        <Button
+          type="button"
+          variant="outline-warning"
+          size="sm"
+          className="d-inline-flex align-items-center gap-1 fw-semibold"
+          onClick={solicitarCambioEstadoMasivo}
+          title="Activar o desactivar los productos seleccionados"
+        >
+          <span className="bi bi-arrow-repeat" aria-hidden="true" />
+          <span>Activar / Desactivar ({seleccionados.size})</span>
+        </Button>
+        <Button
+          type="button"
+          variant="danger"
+          size="sm"
+          className="d-inline-flex align-items-center gap-1 fw-semibold"
+          onClick={solicitarEliminacionMasiva}
+          title="Eliminar los productos seleccionados"
+        >
+          <span className="bi bi-trash-fill" aria-hidden="true" />
+          <span>Eliminar ({seleccionados.size})</span>
+        </Button>
+      </ToolbarSeleccionLote>
 
       {/* Tabla Responsiva */}
       <Card className="shadow-sm border-0 admin-card-table">
