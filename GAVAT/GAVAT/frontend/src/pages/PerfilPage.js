@@ -578,7 +578,7 @@ function ModalConfirmacionPerfil({ modal, passwordAdmin, setPasswordAdmin, onCer
                 placeholder="Ingresa tu contraseña"
                 value={passwordAdmin}
                 onChange={(e) => setPasswordAdmin(e.target.value)}
-                autoFocus
+                autoComplete="current-password"
               />
             </div>
           </div>

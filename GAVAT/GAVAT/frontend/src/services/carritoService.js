@@ -10,6 +10,48 @@ import api from './api';
 
 const CARRITO_LOCAL_KEY = 'carrito_local';
 
+/**
+ * Agrega o actualiza un producto en el almacenamiento local del carrito.
+ */
+function agregarItemLocal(productoId, cantidad, productoInfo) {
+  if (!productoInfo) {
+    throw new Error('Se requiere información del producto');
+  }
+
+  const carritoLocal = JSON.parse(localStorage.getItem(CARRITO_LOCAL_KEY) || '[]');
+  const existente = carritoLocal.find(item => item.productoId === productoId);
+
+  if (existente) {
+    const maxStock = Number(existente.producto?.stock ?? existente.stock ?? productoInfo?.stock);
+    if (maxStock && (existente.cantidad + cantidad) > maxStock) {
+      throw new Error(`Stock insuficiente. Disponible: ${maxStock}, En carrito: ${existente.cantidad}`);
+    }
+    existente.cantidad += cantidad;
+  } else {
+    const maxStock = Number(productoInfo?.stock);
+    if (maxStock && cantidad > maxStock) {
+      throw new Error(`Stock insuficiente. Disponible: ${maxStock}`);
+    }
+    carritoLocal.push({
+      id: Date.now(), // ID temporal para el carrito local
+      productoId,
+      cantidad,
+      precio: productoInfo.precio,
+      nombre: productoInfo.nombre,
+      imagen: productoInfo.imagen,
+      stock: productoInfo.stock,
+      producto: productoInfo
+    });
+  }
+
+  localStorage.setItem(CARRITO_LOCAL_KEY, JSON.stringify(carritoLocal));
+
+  return {
+    success: true,
+    message: 'Producto agregado al carrito exitosamente'
+  };
+}
+
 const carritoService = {
   /**
    * Obtener carrito (local o del servidor)
@@ -25,17 +67,17 @@ const carritoService = {
       } catch (error) {
         throw error.response?.data || { success: false, message: 'Error de conexión' };
       }
-    } else {
-      // Usuario no autenticado: obtener del localStorage
-      const carritoLocal = JSON.parse(localStorage.getItem(CARRITO_LOCAL_KEY) || '[]');
-      return {
-        success: true,
-        carrito: {
-          items: carritoLocal,
-          total: carritoLocal.reduce((sum, item) => sum + (item.precio * item.cantidad), 0)
-        }
-      };
     }
+
+    // Usuario no autenticado: obtener del localStorage
+    const carritoLocal = JSON.parse(localStorage.getItem(CARRITO_LOCAL_KEY) || '[]');
+    return {
+      success: true,
+      carrito: {
+        items: carritoLocal,
+        total: carritoLocal.reduce((sum, item) => sum + (item.precio * item.cantidad), 0)
+      }
+    };
   },
 
   /**
@@ -55,47 +97,10 @@ const carritoService = {
       } catch (error) {
         throw error.response?.data || { success: false, message: 'Error de conexión' };
       }
-    } else {
-      // Usuario no autenticado: agregar en localStorage
-      if (!productoInfo) {
-        throw new Error('Se requiere información del producto');
-      }
-
-      const carritoLocal = JSON.parse(localStorage.getItem(CARRITO_LOCAL_KEY) || '[]');
-      
-      // Buscar si el producto ya existe
-      const existente = carritoLocal.find(item => item.productoId === productoId);
-      
-      if (existente) {
-        const maxStock = Number(existente.producto?.stock ?? existente.stock ?? productoInfo?.stock);
-        if (maxStock && (existente.cantidad + cantidad) > maxStock) {
-          throw new Error(`Stock insuficiente. Disponible: ${maxStock}, En carrito: ${existente.cantidad}`);
-        }
-        existente.cantidad += cantidad;
-      } else {
-        const maxStock = Number(productoInfo?.stock);
-        if (maxStock && cantidad > maxStock) {
-          throw new Error(`Stock insuficiente. Disponible: ${maxStock}`);
-        }
-        carritoLocal.push({
-          id: Date.now(), // ID temporal para el carrito local
-          productoId,
-          cantidad,
-          precio: productoInfo.precio,
-          nombre: productoInfo.nombre,
-          imagen: productoInfo.imagen,
-          stock: productoInfo.stock,
-          producto: productoInfo
-        });
-      }
-      
-      localStorage.setItem(CARRITO_LOCAL_KEY, JSON.stringify(carritoLocal));
-      
-      return {
-        success: true,
-        message: 'Producto agregado al carrito exitosamente'
-      };
     }
+
+    // Usuario no autenticado: agregar en localStorage
+    return agregarItemLocal(productoId, cantidad, productoInfo);
   },
 
   /**
