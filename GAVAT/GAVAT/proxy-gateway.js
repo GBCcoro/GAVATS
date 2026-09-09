@@ -107,10 +107,10 @@ server.on('upgrade', (req, socket) => {
   const isBackend = safePath.startsWith('/api');
   const target = isBackend ? BACKEND_TARGET : FRONTEND_TARGET;
 
-  const proxyReq = http.request({ // nosonar
+  const proxyReq = http.request({ // NOSONAR
     hostname: target.host,
     port: target.port,
-    path: safePath, // nosonar
+    path: safePath, // NOSONAR
     method: req.method,
     headers: req.headers
   });
