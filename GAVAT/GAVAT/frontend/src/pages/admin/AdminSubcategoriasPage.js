@@ -6,12 +6,15 @@
  */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { Container, Card, Table, Button, Badge, Dropdown, ButtonGroup, Row, Col, InputGroup, Form, Modal } from 'react-bootstrap';
+import { Container, Card, Table, Button, Badge, Row, Col, InputGroup, Form, Modal } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import FloatingToast from '../../components/FloatingToast';
 import ModalConfirmacion from '../../components/ModalConfirmacion';
+import BotonExportar from '../../components/BotonExportar';
+import ToolbarSeleccionLote from '../../components/ToolbarSeleccionLote';
+import PaginacionTabla from '../../components/PaginacionTabla';
 import { exportarSubcategoriasAPDF, exportarSubcategoriasAExcel } from '../../utils/exportUtils';
 
 const AdminSubcategoriasPage = () => {
@@ -26,17 +29,7 @@ const AdminSubcategoriasPage = () => {
   const [seleccionados, setSeleccionados] = useState(new Set());
   
   // Modal de confirmación en pantalla
-  const [modalConfirmacion, setModalConfirmacion] = useState({
-    show: false,
-    titulo: '',
-    mensaje: '',
-    tipo: 'danger',
-    icono: 'trash3-fill',
-    textoConfirmar: 'Borrar',
-    textoCancelar: 'Cancelar',
-    onConfirm: null,
-    onCancel: null
-  });
+  const [modalConfirmacion, setModalConfirmacion] = useState({ show: false });
   
   // Paginación
   const [paginaActual, setPaginaActual] = useState(1);
@@ -165,8 +158,9 @@ const AdminSubcategoriasPage = () => {
     }));
   };
 
-  // Guardado real
-  const ejecutarGuardado = async () => {
+  // Guardado
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     if (!formData.nombre.trim()) {
       setMensaje({ tipo: 'danger', texto: 'El nombre es obligatorio' });
       return;
@@ -177,14 +171,13 @@ const AdminSubcategoriasPage = () => {
     }
 
     try {
-      if (editando) {
-        await api.put(`/admin/subcategorias/${editando.id}`, formData);
-        setMensaje({ tipo: 'success', texto: `Subcategoría "${formData.nombre}" actualizada exitosamente` });
-      } else {
-        await api.post('/admin/subcategorias', formData);
-        setMensaje({ tipo: 'success', texto: `Subcategoría "${formData.nombre}" creada exitosamente` });
-      }
-      
+      const endpoint = editando ? `/admin/subcategorias/${editando.id}` : '/admin/subcategorias';
+      const method = editando ? api.put : api.post;
+      await method(endpoint, formData);
+      setMensaje({
+        tipo: 'success',
+        texto: `Subcategoría "${formData.nombre}" ${editando ? 'actualizada' : 'creada'} exitosamente`
+      });
       handleCloseModal();
       await loadData();
     } catch (error) {
@@ -193,26 +186,6 @@ const AdminSubcategoriasPage = () => {
         tipo: 'danger', 
         texto: error.response?.data?.message || 'Error al guardar la subcategoría' 
       });
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (editando) {
-      setModalConfirmacion({
-        show: true,
-        titulo: '¿Actualizar subcategoría?',
-        mensaje: `¿Deseas guardar los cambios realizados en la subcategoría "${formData.nombre || editando.nombre}"?`,
-        tipo: 'primary',
-        icono: 'pencil-square',
-        textoConfirmar: 'Actualizar',
-        textoCancelar: 'Cancelar',
-        onConfirm: async () => {
-          await ejecutarGuardado();
-        }
-      });
-    } else {
-      ejecutarGuardado();
     }
   };
 
@@ -418,34 +391,11 @@ const AdminSubcategoriasPage = () => {
           </p>
         </div>
         <div className="d-flex flex-wrap align-items-center gap-2">
-          <Dropdown as={ButtonGroup}>
-            <Button 
-              variant="primary" 
-              onClick={() => handleExportar(tipoExportacion)}
-            >
-              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
-              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
-            </Button>
-            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" />
-            <Dropdown.Menu>
-              <Dropdown.Item 
-                onClick={() => {
-                  setTipoExportacion('pdf');
-                  handleExportar('pdf');
-                }}
-              >
-                <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
-              </Dropdown.Item>
-              <Dropdown.Item 
-                onClick={() => {
-                  setTipoExportacion('excel');
-                  handleExportar('excel');
-                }}
-              >
-                <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
+          <BotonExportar
+            tipoExportacion={tipoExportacion}
+            onTipoChange={setTipoExportacion}
+            onExportar={handleExportar}
+          />
           <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
             <i className="bi bi-arrow-left me-1"></i> Volver
           </Button>
@@ -515,74 +465,51 @@ const AdminSubcategoriasPage = () => {
       </Card>
 
       {/* Barra de Acciones de Selección Múltiple */}
-      <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 px-1">
-        <div className="d-flex align-items-center gap-2">
+      <ToolbarSeleccionLote
+        totalItems={subcategoriasPaginadas.length}
+        todosSeleccionados={todosPaginaSeleccionados}
+        cantidadSeleccionados={seleccionados.size}
+        etiquetaItem="subcategoría"
+        onToggleTodos={handleToggleSeleccionarTodos}
+        onLimpiar={() => setSeleccionados(new Set())}
+      >
+        {seleccionados.size === 1 && (
           <Button
-            variant={todosPaginaSeleccionados ? "secondary" : "outline-secondary"}
+            variant="outline-primary"
             size="sm"
-            className="d-inline-flex align-items-center gap-1"
-            onClick={handleToggleSeleccionarTodos}
-            title={todosPaginaSeleccionados ? "Deseleccionar todos en esta página" : "Seleccionar todos en esta página"}
+            className="d-inline-flex align-items-center gap-1 fw-semibold"
+            onClick={() => {
+              const idSel = Array.from(seleccionados)[0];
+              const subSel = subcategorias.find(s => s.id === idSel);
+              if (subSel) handleShowModal(subSel);
+            }}
+            title="Editar la subcategoría seleccionada"
           >
-            <i className={`bi bi-${todosPaginaSeleccionados ? 'check-square-fill text-primary' : 'square'}`} />
-            <span>{todosPaginaSeleccionados ? 'Deseleccionar página' : `Seleccionar todo (${subcategoriasPaginadas.length})`}</span>
+            <i className="bi bi-pencil-fill"></i>
+            <span>Editar</span>
           </Button>
-          {seleccionados.size > 0 && (
-            <Badge bg="danger" className="p-2 d-flex align-items-center gap-1 fs-7">
-              <i className="bi bi-check-circle-fill"></i> {seleccionados.size} seleccionada{seleccionados.size !== 1 ? 's' : ''}
-            </Badge>
-          )}
-        </div>
-
-        {seleccionados.size > 0 && (
-          <div className="d-flex flex-wrap align-items-center gap-2">
-            {seleccionados.size === 1 && (
-              <Button
-                variant="outline-primary"
-                size="sm"
-                className="d-inline-flex align-items-center gap-1 fw-semibold"
-                onClick={() => {
-                  const idSel = Array.from(seleccionados)[0];
-                  const subSel = subcategorias.find(s => s.id === idSel);
-                  if (subSel) handleShowModal(subSel);
-                }}
-                title="Editar la subcategoría seleccionada"
-              >
-                <i className="bi bi-pencil-fill"></i>
-                <span>Editar</span>
-              </Button>
-            )}
-            <Button
-              variant="outline-warning"
-              size="sm"
-              className="d-inline-flex align-items-center gap-1 fw-semibold"
-              onClick={solicitarCambioEstadoMasivo}
-              title="Activar o desactivar las subcategorías seleccionadas"
-            >
-              <i className="bi bi-arrow-repeat"></i>
-              <span>Activar / Desactivar ({seleccionados.size})</span>
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              className="d-inline-flex align-items-center gap-1 fw-semibold"
-              onClick={solicitarEliminacionMasiva}
-              title="Eliminar las subcategorías seleccionadas"
-            >
-              <i className="bi bi-trash-fill"></i>
-              <span>Eliminar ({seleccionados.size})</span>
-            </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={() => setSeleccionados(new Set())}
-              title="Limpiar selección"
-            >
-              <i className="bi bi-x-lg me-1"></i> Deseleccionar
-            </Button>
-          </div>
         )}
-      </div>
+        <Button
+          variant="outline-warning"
+          size="sm"
+          className="d-inline-flex align-items-center gap-1 fw-semibold"
+          onClick={solicitarCambioEstadoMasivo}
+          title="Activar o desactivar las subcategorías seleccionadas"
+        >
+          <i className="bi bi-arrow-repeat"></i>
+          <span>Activar / Desactivar ({seleccionados.size})</span>
+        </Button>
+        <Button
+          variant="danger"
+          size="sm"
+          className="d-inline-flex align-items-center gap-1 fw-semibold"
+          onClick={solicitarEliminacionMasiva}
+          title="Eliminar las subcategorías seleccionadas"
+        >
+          <i className="bi bi-trash-fill"></i>
+          <span>Eliminar ({seleccionados.size})</span>
+        </Button>
+      </ToolbarSeleccionLote>
 
       {/* Tabla de Subcategorías Responsiva */}
       <Card className="shadow-sm border-0 admin-card-table">
@@ -694,30 +621,15 @@ const AdminSubcategoriasPage = () => {
       </Card>
 
       {/* Paginación */}
-      {totalPaginas > 1 && (
-        <div className="d-flex justify-content-between align-items-center mt-3">
-          <small className="text-muted">
-            Página {paginaActual} de {totalPaginas} - Mostrando {subcategoriasPaginadas.length} de {subcategoriasFiltradas.length} registros
-          </small>
-          <ButtonGroup size="sm">
-            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
-              ««
-            </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1}>
-              Anterior
-            </Button>
-            <Button variant="primary" disabled>
-              {paginaActual} / {totalPaginas}
-            </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas}>
-              Siguiente
-            </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
-              »»
-            </Button>
-          </ButtonGroup>
-        </div>
-      )}
+      <PaginacionTabla
+        paginaActual={paginaActual}
+        totalPaginas={totalPaginas}
+        totalItems={subcategoriasFiltradas.length}
+        itemsActuales={subcategoriasPaginadas.length}
+        etiquetaItems="registros"
+        onCambiarPagina={setPaginaActual}
+        loading={loading}
+      />
 
       {/* Modal Crear / Editar Minimalista */}
       <SubcategoriaModal

@@ -6,12 +6,15 @@
  */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { Container, Card, Table, Button, Modal, Form, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
+import { Container, Card, Table, Button, Modal, Form, Badge, Row, Col, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import FloatingToast from '../../components/FloatingToast';
 import ModalConfirmacion from '../../components/ModalConfirmacion';
+import BotonExportar from '../../components/BotonExportar';
+import ToolbarSeleccionLote from '../../components/ToolbarSeleccionLote';
+import PaginacionTabla from '../../components/PaginacionTabla';
 import { exportarCategoriasAPDF, exportarCategoriasAExcel } from '../../utils/exportUtils';
 
 const AdminCategoriasPage = () => {
@@ -22,25 +25,8 @@ const AdminCategoriasPage = () => {
   const [editando, setEditando] = useState(null);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [seleccionados, setSeleccionados] = useState(new Set());
-  
-  // Modal de confirmación en pantalla
-  const [modalConfirmacion, setModalConfirmacion] = useState({
-    show: false,
-    titulo: '',
-    mensaje: '',
-    tipo: 'danger',
-    icono: 'trash3-fill',
-    textoConfirmar: 'Borrar',
-    textoCancelar: 'Cancelar',
-    onConfirm: null,
-    onCancel: null
-  });
-  
-  // Filtros
-  const [filtros, setFiltros] = useState({
-    busqueda: '',
-    estado: 'todos'
-  });
+  const [modalConfirmacion, setModalConfirmacion] = useState({ show: false });
+  const [filtros, setFiltros] = useState({ busqueda: '', estado: 'todos' });
   
   const [formData, setFormData] = useState({
     nombre: '',
@@ -152,22 +138,21 @@ const AdminCategoriasPage = () => {
     }));
   };
 
-  // Guardado real
-  const ejecutarGuardado = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     if (!formData.nombre.trim()) {
       setMensaje({ tipo: 'danger', texto: 'El nombre es obligatorio' });
       return;
     }
 
     try {
-      if (editando) {
-        await api.put(`/admin/categorias/${editando.id}`, formData);
-        setMensaje({ tipo: 'success', texto: `Categoría "${formData.nombre}" actualizada exitosamente` });
-      } else {
-        await api.post('/admin/categorias', formData);
-        setMensaje({ tipo: 'success', texto: `Categoría "${formData.nombre}" creada exitosamente` });
-      }
-      
+      const endpoint = editando ? `/admin/categorias/${editando.id}` : '/admin/categorias';
+      const method = editando ? api.put : api.post;
+      await method(endpoint, formData);
+      setMensaje({
+        tipo: 'success',
+        texto: `Categoría "${formData.nombre}" ${editando ? 'actualizada' : 'creada'} exitosamente`
+      });
       handleCloseModal();
       await loadCategorias();
     } catch (error) {
@@ -176,27 +161,6 @@ const AdminCategoriasPage = () => {
         tipo: 'danger', 
         texto: error.response?.data?.message || 'Error al guardar la categoría' 
       });
-    }
-  };
-
-  // Submit con confirmación modal si está editando
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (editando) {
-      setModalConfirmacion({
-        show: true,
-        titulo: '¿Actualizar categoría?',
-        mensaje: `¿Deseas guardar los cambios realizados en la categoría "${formData.nombre || editando.nombre}"?`,
-        tipo: 'primary',
-        icono: 'pencil-square',
-        textoConfirmar: 'Actualizar',
-        textoCancelar: 'Cancelar',
-        onConfirm: async () => {
-          await ejecutarGuardado();
-        }
-      });
-    } else {
-      ejecutarGuardado();
     }
   };
 
@@ -393,30 +357,11 @@ const AdminCategoriasPage = () => {
           </p>
         </div>
         <div className="d-flex flex-wrap align-items-center gap-2">
-          <Dropdown as={ButtonGroup}>
-            <Button
-              variant="primary"
-              onClick={() => handleExportar()}
-            >
-              <span className={`bi bi-file-earmark-${tipoExportacion === 'pdf' ? 'pdf' : 'excel'} me-1`} aria-hidden="true"></span>
-              Exportar a {tipoExportacion === 'pdf' ? 'PDF' : 'Excel'}
-            </Button>
-            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" />
-            <Dropdown.Menu>
-              <Dropdown.Item onClick={() => {
-                setTipoExportacion('pdf');
-                handleExportar('pdf');
-              }}>
-                <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => {
-                setTipoExportacion('excel');
-                handleExportar('excel');
-              }}>
-                <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
+          <BotonExportar
+            tipoExportacion={tipoExportacion}
+            onTipoChange={setTipoExportacion}
+            onExportar={handleExportar}
+          />
           <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
             <i className="bi bi-arrow-left me-1"></i> Volver
           </Button>
@@ -483,74 +428,51 @@ const AdminCategoriasPage = () => {
       </Card>
 
       {/* Barra de Acciones de Selección Múltiple */}
-      <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 px-1">
-        <div className="d-flex align-items-center gap-2">
+      <ToolbarSeleccionLote
+        totalItems={categoriasPaginadas.length}
+        todosSeleccionados={todosPaginaSeleccionados}
+        cantidadSeleccionados={seleccionados.size}
+        etiquetaItem="categoría"
+        onToggleTodos={handleToggleSeleccionarTodos}
+        onLimpiar={() => setSeleccionados(new Set())}
+      >
+        {seleccionados.size === 1 && (
           <Button
-            variant={todosPaginaSeleccionados ? "secondary" : "outline-secondary"}
+            variant="outline-primary"
             size="sm"
-            className="d-inline-flex align-items-center gap-1"
-            onClick={handleToggleSeleccionarTodos}
-            title={todosPaginaSeleccionados ? "Deseleccionar todos en esta página" : "Seleccionar todos en esta página"}
+            className="d-inline-flex align-items-center gap-1 fw-semibold"
+            onClick={() => {
+              const idSel = Array.from(seleccionados)[0];
+              const catSel = categorias.find(c => c.id === idSel);
+              if (catSel) handleShowModal(catSel);
+            }}
+            title="Editar la categoría seleccionada"
           >
-            <i className={`bi bi-${todosPaginaSeleccionados ? 'check-square-fill text-primary' : 'square'}`} />
-            <span>{todosPaginaSeleccionados ? 'Deseleccionar página' : `Seleccionar todo (${categoriasPaginadas.length})`}</span>
+            <i className="bi bi-pencil-fill"></i>
+            <span>Editar</span>
           </Button>
-          {seleccionados.size > 0 && (
-            <Badge bg="danger" className="p-2 d-flex align-items-center gap-1 fs-7">
-              <i className="bi bi-check-circle-fill"></i> {seleccionados.size} seleccionada{seleccionados.size !== 1 ? 's' : ''}
-            </Badge>
-          )}
-        </div>
-
-        {seleccionados.size > 0 && (
-          <div className="d-flex flex-wrap align-items-center gap-2">
-            {seleccionados.size === 1 && (
-              <Button
-                variant="outline-primary"
-                size="sm"
-                className="d-inline-flex align-items-center gap-1 fw-semibold"
-                onClick={() => {
-                  const idSel = Array.from(seleccionados)[0];
-                  const catSel = categorias.find(c => c.id === idSel);
-                  if (catSel) handleShowModal(catSel);
-                }}
-                title="Editar la categoría seleccionada"
-              >
-                <i className="bi bi-pencil-fill"></i>
-                <span>Editar</span>
-              </Button>
-            )}
-            <Button
-              variant="outline-warning"
-              size="sm"
-              className="d-inline-flex align-items-center gap-1 fw-semibold"
-              onClick={solicitarCambioEstadoMasivo}
-              title="Activar o desactivar las categorías seleccionadas"
-            >
-              <i className="bi bi-arrow-repeat"></i>
-              <span>Activar / Desactivar ({seleccionados.size})</span>
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              className="d-inline-flex align-items-center gap-1 fw-semibold"
-              onClick={solicitarEliminacionMasiva}
-              title="Eliminar las categorías seleccionadas"
-            >
-              <i className="bi bi-trash-fill"></i>
-              <span>Eliminar ({seleccionados.size})</span>
-            </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={() => setSeleccionados(new Set())}
-              title="Limpiar selección"
-            >
-              <i className="bi bi-x-lg me-1"></i> Deseleccionar
-            </Button>
-          </div>
         )}
-      </div>
+        <Button
+          variant="outline-warning"
+          size="sm"
+          className="d-inline-flex align-items-center gap-1 fw-semibold"
+          onClick={solicitarCambioEstadoMasivo}
+          title="Activar o desactivar las categorías seleccionadas"
+        >
+          <i className="bi bi-arrow-repeat"></i>
+          <span>Activar / Desactivar ({seleccionados.size})</span>
+        </Button>
+        <Button
+          variant="danger"
+          size="sm"
+          className="d-inline-flex align-items-center gap-1 fw-semibold"
+          onClick={solicitarEliminacionMasiva}
+          title="Eliminar las categorías seleccionadas"
+        >
+          <i className="bi bi-trash-fill"></i>
+          <span>Eliminar ({seleccionados.size})</span>
+        </Button>
+      </ToolbarSeleccionLote>
 
       {/* Tabla de Categorías Responsiva */}
       <Card className="shadow-sm border-0 admin-card-table">
@@ -656,30 +578,15 @@ const AdminCategoriasPage = () => {
       </Card>
 
       {/* Paginación */}
-      {totalPaginas > 1 && (
-        <div className="d-flex justify-content-between align-items-center mt-3">
-          <small className="text-muted">
-            Página {paginaActual} de {totalPaginas} - Mostrando {categoriasPaginadas.length} de {categoriasFiltradas.length} registros
-          </small>
-          <ButtonGroup size="sm">
-            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1}>
-              ««
-            </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1}>
-              Anterior
-            </Button>
-            <Button variant="primary" disabled>
-              {paginaActual} / {totalPaginas}
-            </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas}>
-              Siguiente
-            </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas}>
-              »»
-            </Button>
-          </ButtonGroup>
-        </div>
-      )}
+      <PaginacionTabla
+        paginaActual={paginaActual}
+        totalPaginas={totalPaginas}
+        totalItems={categoriasFiltradas.length}
+        itemsActuales={categoriasPaginadas.length}
+        etiquetaItems="registros"
+        onCambiarPagina={setPaginaActual}
+        loading={loading}
+      />
 
       {/* Modal Crear / Editar Minimalista */}
       <Modal 

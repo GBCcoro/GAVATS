@@ -13,6 +13,7 @@ import { exportarPedidosAPDF, exportarPedidosAExcel } from '../utils/exportUtils
 import LoadingSpinner from '../components/LoadingSpinner';
 import FloatingToast from '../components/FloatingToast';
 import ModalConfirmacion from '../components/ModalConfirmacion';
+import ToolbarSeleccionLote from '../components/ToolbarSeleccionLote';
 
 const TITULOS_ESTADO = {
   pagado: '¿Marcar pedido como pagado?',
@@ -829,99 +830,72 @@ function AdminPedidosPage() {
       />
 
       {/* Barra de Acciones de Selección Múltiple */}
-      <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 px-1">
-        <div className="d-flex align-items-center gap-2">
+      <ToolbarSeleccionLote
+        totalItems={pedidos.length}
+        todosSeleccionados={todosPaginaSeleccionados}
+        cantidadSeleccionados={seleccionados.size}
+        etiquetaItem="pedido"
+        onToggleTodos={handleToggleSeleccionarTodos}
+        onLimpiar={() => setSeleccionados(new Set())}
+      >
+        {seleccionados.size === 1 && (
           <Button
             type="button"
-            variant={todosPaginaSeleccionados ? "secondary" : "outline-secondary"}
+            variant="outline-primary"
             size="sm"
-            className="d-inline-flex align-items-center gap-1"
-            onClick={handleToggleSeleccionarTodos}
-            title={todosPaginaSeleccionados ? "Deseleccionar todos en esta página" : "Seleccionar todos en esta página"}
+            className="d-inline-flex align-items-center gap-1 fw-semibold"
+            onClick={handleVerDetalleUnico}
+            title="Ver detalle del pedido seleccionado"
           >
-            <span className={`bi bi-${todosPaginaSeleccionados ? 'check-square-fill text-primary' : 'square'}`} aria-hidden="true" />
-            <span>{todosPaginaSeleccionados ? 'Deseleccionar página' : `Seleccionar todo (${pedidos.length})`}</span>
+            <span className="bi bi-eye-fill" aria-hidden="true" />
+            <span>Ver Detalle</span>
           </Button>
-          {seleccionados.size > 0 && (
-            <Badge bg="danger" className="p-2 d-flex align-items-center gap-1 fs-7">
-              <span className="bi bi-check-circle-fill" aria-hidden="true" />
-              <span>{seleccionados.size} seleccionado{seleccionados.size !== 1 ? 's' : ''}</span>
-            </Badge>
-          )}
-        </div>
-
-        {seleccionados.size > 0 && (
-          <div className="d-flex flex-wrap align-items-center gap-2">
-            {seleccionados.size === 1 && (
-              <Button
-                type="button"
-                variant="outline-primary"
-                size="sm"
-                className="d-inline-flex align-items-center gap-1 fw-semibold"
-                onClick={handleVerDetalleUnico}
-                title="Ver detalle del pedido seleccionado"
-              >
-                <span className="bi bi-eye-fill" aria-hidden="true" />
-                <span>Ver Detalle</span>
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline-info"
-              size="sm"
-              className="d-inline-flex align-items-center gap-1 fw-semibold"
-              onClick={() => solicitarCambioEstadoMasivo('pagado')}
-              title="Marcar como pagados"
-            >
-              <span className="bi bi-cash-stack" aria-hidden="true" />
-              <span>Pagar ({seleccionados.size})</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline-primary"
-              size="sm"
-              className="d-inline-flex align-items-center gap-1 fw-semibold"
-              onClick={() => solicitarCambioEstadoMasivo('enviado')}
-              title="Marcar como enviados"
-            >
-              <span className="bi bi-truck" aria-hidden="true" />
-              <span>Enviar ({seleccionados.size})</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline-success"
-              size="sm"
-              className="d-inline-flex align-items-center gap-1 fw-semibold"
-              onClick={() => solicitarCambioEstadoMasivo('entregado')}
-              title="Marcar como entregados"
-            >
-              <span className="bi bi-check-circle-fill" aria-hidden="true" />
-              <span>Entregar ({seleccionados.size})</span>
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              className="d-inline-flex align-items-center gap-1 fw-semibold"
-              onClick={() => solicitarCambioEstadoMasivo('cancelado')}
-              title="Cancelar pedidos seleccionados"
-            >
-              <span className="bi bi-x-circle-fill" aria-hidden="true" />
-              <span>Cancelar ({seleccionados.size})</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline-secondary"
-              size="sm"
-              onClick={() => setSeleccionados(new Set())}
-              title="Limpiar selección"
-            >
-              <span className="bi bi-x-lg me-1" aria-hidden="true" />
-              <span>Deseleccionar</span>
-            </Button>
-          </div>
         )}
-      </div>
+        <Button
+          type="button"
+          variant="outline-info"
+          size="sm"
+          className="d-inline-flex align-items-center gap-1 fw-semibold"
+          onClick={() => solicitarCambioEstadoMasivo('pagado')}
+          title="Marcar como pagados"
+        >
+          <span className="bi bi-cash-stack" aria-hidden="true" />
+          <span>Pagar ({seleccionados.size})</span>
+        </Button>
+        <Button
+          type="button"
+          variant="outline-primary"
+          size="sm"
+          className="d-inline-flex align-items-center gap-1 fw-semibold"
+          onClick={() => solicitarCambioEstadoMasivo('enviado')}
+          title="Marcar como enviados"
+        >
+          <span className="bi bi-truck" aria-hidden="true" />
+          <span>Enviar ({seleccionados.size})</span>
+        </Button>
+        <Button
+          type="button"
+          variant="outline-success"
+          size="sm"
+          className="d-inline-flex align-items-center gap-1 fw-semibold"
+          onClick={() => solicitarCambioEstadoMasivo('entregado')}
+          title="Marcar como entregados"
+        >
+          <span className="bi bi-check-circle-fill" aria-hidden="true" />
+          <span>Entregar ({seleccionados.size})</span>
+        </Button>
+        <Button
+          type="button"
+          variant="danger"
+          size="sm"
+          className="d-inline-flex align-items-center gap-1 fw-semibold"
+          onClick={() => solicitarCambioEstadoMasivo('cancelado')}
+          title="Cancelar pedidos seleccionados"
+        >
+          <span className="bi bi-x-circle-fill" aria-hidden="true" />
+          <span>Cancelar ({seleccionados.size})</span>
+        </Button>
+      </ToolbarSeleccionLote>
 
       {/* Tabla de Pedidos Responsiva */}
       <Card className="shadow-sm border-0 admin-card-table">
