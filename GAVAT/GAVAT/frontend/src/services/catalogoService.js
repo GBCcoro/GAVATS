@@ -7,78 +7,55 @@
 
 import api from './api';
 
+/**
+ * Helper genérico para peticiones GET del catálogo con manejo de error estándar
+ */
+const fetchCatalogo = async (endpoint, config = {}) => {
+  try {
+    const response = await api.get(endpoint, config);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Error de conexión' };
+  }
+};
+
 const catalogoService = {
   /**
    * Obtener productos con filtros
    */
   getProductos: async (filters = {}) => {
-    try {
-      const params = new URLSearchParams();
-      
-      if (filters.categoriaId) params.append('categoriaId', filters.categoriaId);
-      if (filters.subcategoriaId) params.append('subcategoriaId', filters.subcategoriaId);
-      if (filters.buscar && typeof filters.buscar === 'string' && filters.buscar.trim()) {
-        params.append('buscar', filters.buscar.trim());
+    const params = new URLSearchParams();
+    
+    Object.entries(filters).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        params.append(key, typeof val === 'string' ? val.trim() : val);
       }
-      if (filters.precioMin) params.append('precioMin', filters.precioMin);
-      if (filters.precioMax) params.append('precioMax', filters.precioMax);
-      if (filters.pagina) params.append('pagina', filters.pagina);
-      if (filters.limite) params.append('limite', filters.limite);
-      
-      const response = await api.get(`/catalogo/productos?${params}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { success: false, message: 'Error de conexión' };
-    }
+    });
+
+    const queryString = params.toString();
+    return fetchCatalogo(`/catalogo/productos${queryString ? `?${queryString}` : ''}`);
   },
 
   /**
    * Obtener un producto por ID
    */
-  getProductoById: async (id) => {
-    try {
-      const response = await api.get(`/catalogo/productos/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { success: false, message: 'Error de conexión' };
-    }
-  },
+  getProductoById: (id) => fetchCatalogo(`/catalogo/productos/${id}`),
 
   /**
    * Obtener todas las categorías activas
    */
-  getCategorias: async () => {
-    try {
-      const response = await api.get('/catalogo/categorias');
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { success: false, message: 'Error de conexión' };
-    }
-  },
+  getCategorias: () => fetchCatalogo('/catalogo/categorias'),
 
   /**
    * Obtener subcategorías por categoría
    */
-  getSubcategoriasPorCategoria: async (categoriaId) => {
-    try {
-      const response = await api.get(`/catalogo/categorias/${categoriaId}/subcategorias`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { success: false, message: 'Error de conexión' };
-    }
-  },
+  getSubcategoriasPorCategoria: (categoriaId) =>
+    fetchCatalogo(`/catalogo/categorias/${categoriaId}/subcategorias`),
 
   /**
    * Obtener productos destacados
    */
-  getProductosDestacados: async () => {
-    try {
-      const response = await api.get('/catalogo/destacados');
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { success: false, message: 'Error de conexión' };
-    }
-  },
+  getProductosDestacados: () => fetchCatalogo('/catalogo/destacados'),
 };
 
 export default catalogoService;
