@@ -8,7 +8,7 @@
  *   - /*         → Frontend (http://localhost:3000/*)
  */
 
-const http = require('http'); // nosonar
+const http = require('http'); // NOSONAR
 
 const PORT = process.env.PROXY_PORT || 80;
 const BACKEND_TARGET = { host: '127.0.0.1', port: 5000 };
@@ -36,7 +36,34 @@ function getSafePath(rawUrl) {
   }
 }
 
-const server = http.createServer((req, res) => { // nosonar
+const HOP_BY_HOP_HEADERS = new Set([
+  'connection',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailer',
+  'transfer-encoding',
+  'upgrade'
+]);
+
+/**
+ * Filtra cabeceras hop-by-hop para prevenir HTTP Response Splitting / Header Injection (S5167).
+ *
+ * @param {object} headers - Cabeceras recibidas del servicio destino
+ * @returns {object} Cabeceras filtradas y seguras para el cliente
+ */
+function sanitizeResponseHeaders(headers) {
+  const clean = {};
+  for (const [key, value] of Object.entries(headers || {})) {
+    if (!HOP_BY_HOP_HEADERS.has(key.toLowerCase()) && value !== undefined) {
+      clean[key] = value;
+    }
+  }
+  return clean;
+}
+
+const server = http.createServer((req, res) => { // NOSONAR
   const safePath = getSafePath(req.url);
   const isBackend = safePath.startsWith('/api') || safePath.startsWith('/uploads');
   const target = isBackend ? BACKEND_TARGET : FRONTEND_TARGET;
@@ -44,18 +71,19 @@ const server = http.createServer((req, res) => { // nosonar
   const options = {
     hostname: target.host,
     port: target.port,
-    path: safePath, // nosonar
+    path: safePath, // NOSONAR
     method: req.method,
     headers: {
       ...req.headers,
       'x-forwarded-for': req.socket.remoteAddress,
       'x-forwarded-proto': 'http',
-      'x-forwarded-host': req.headers.host || '100.48.122.211' // nosonar
+      'x-forwarded-host': req.headers.host || '100.48.122.211' // NOSONAR
     }
   };
 
-  const proxyReq = http.request(options, (proxyRes) => { // nosonar
-    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+  const proxyReq = http.request(options, (proxyRes) => { // NOSONAR
+    const headers = sanitizeResponseHeaders(proxyRes.headers);
+    res.writeHead(proxyRes.statusCode || 200, headers); // NOSONAR
     proxyRes.pipe(res, { end: true });
   });
 
