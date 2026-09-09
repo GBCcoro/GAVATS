@@ -11,16 +11,7 @@ import { Container, Row, Col, Card, Button, Form, Badge, Modal } from 'react-boo
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import FloatingToast from '../components/FloatingToast';
-
-const BG_MODAL_CONFIRMACION = {
-  danger: 'danger-subtle',
-  warning: 'warning-subtle',
-  primary: 'primary-subtle',
-  info: 'primary-subtle',
-  success: 'success-subtle'
-};
-
-const getBgModalConfirmacion = (tipo) => BG_MODAL_CONFIRMACION[tipo] || 'primary-subtle';
+import ModalConfirmacion from '../components/ModalConfirmacion';
 
 const getRolLabel = (isAdmin, isAuxiliar) => {
   if (isAdmin) return 'Administrador';
@@ -523,91 +514,6 @@ function ModalEliminarCuenta({ show, eliminando, modalData, onCerrar, onChangeFi
   );
 }
 
-function ModalConfirmacionPerfil({ modal, passwordAdmin, setPasswordAdmin, onCerrar }) {
-  const bgClass = getBgModalConfirmacion(modal.tipo);
-
-  const handleCancelar = () => {
-    onCerrar();
-    setPasswordAdmin('');
-    if (modal.onCancel) modal.onCancel();
-  };
-
-  const handleConfirmar = async () => {
-    const action = modal.onConfirm;
-    const pwd = passwordAdmin;
-    onCerrar();
-    if (action) await action(pwd);
-  };
-
-  return (
-    <Modal
-      show={modal.show}
-      onHide={handleCancelar}
-      centered
-      backdrop="static"
-      dialogClassName="modal-confirmacion-compacto"
-    >
-      <Modal.Body className="text-center p-3 p-sm-4">
-        <div
-          className={`confirm-icon-wrapper mb-3 mx-auto bg-${bgClass} text-${modal.tipo || 'primary'}`}
-        >
-          <span className={`bi bi-${modal.icono || 'trash3-fill'} confirm-icon`} aria-hidden="true" />
-        </div>
-
-        <h5 className="fw-bold text-navy mb-2 fs-5">
-          {modal.titulo}
-        </h5>
-
-        <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '340px', margin: '0 auto' }}>
-          {modal.mensaje}
-        </p>
-
-        {modal.requierePassword && (
-          <div className="mb-3 text-start px-2" style={{ maxWidth: '340px', margin: '0 auto' }}>
-            <label htmlFor="input-password-admin" className="small fw-semibold text-navy mb-1">
-              Contraseña actual de Administrador
-            </label>
-            <div className="input-group">
-              <span className="input-group-text bg-light border-end-0">
-                <span className="bi bi-lock text-muted" aria-hidden="true" />
-              </span>
-              <input
-                id="input-password-admin"
-                type="password"
-                className="form-control border-start-0"
-                placeholder="Ingresa tu contraseña"
-                value={passwordAdmin}
-                onChange={(e) => setPasswordAdmin(e.target.value)}
-                autoComplete="current-password"
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="d-flex gap-2 justify-content-center w-100 mt-2">
-          <Button
-            type="button"
-            variant="outline-secondary"
-            className="px-3 py-2 fw-semibold flex-fill"
-            onClick={handleCancelar}
-          >
-            {modal.textoCancelar || 'Cancelar'}
-          </Button>
-          <Button
-            type="button"
-            variant={modal.tipo || 'danger'}
-            className="px-3 py-2 fw-semibold flex-fill shadow-sm"
-            disabled={modal.requierePassword && !passwordAdmin}
-            onClick={handleConfirmar}
-          >
-            {modal.textoConfirmar || 'Borrar'}
-          </Button>
-        </div>
-      </Modal.Body>
-    </Modal>
-  );
-}
-
 function AccesosRapidos({ isCliente, isAdmin, isAuxiliar }) {
   if (isCliente) {
     return (
@@ -1093,11 +999,11 @@ const PerfilPage = () => {
         onSubmit={ejecutarEliminacionCuenta}
       />
 
-      <ModalConfirmacionPerfil
+      <ModalConfirmacion
         modal={modalConfirmacion}
         passwordAdmin={passwordAdmin}
         setPasswordAdmin={setPasswordAdmin}
-        onCerrar={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
+        onClose={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
       />
 
       {/* ESTILOS DE LA PÁGINA */}

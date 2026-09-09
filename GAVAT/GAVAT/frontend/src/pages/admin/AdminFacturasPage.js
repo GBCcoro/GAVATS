@@ -11,15 +11,8 @@ import { useNavigate } from 'react-router-dom';
 import adminService from '../../services/adminService';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import FloatingToast from '../../components/FloatingToast';
+import ModalConfirmacion from '../../components/ModalConfirmacion';
 import { exportarFacturasAPDF, exportarFacturasAExcel } from '../../utils/exportUtils';
-
-const MODAL_BG_POR_TIPO = Object.freeze({
-  danger: 'danger-subtle',
-  warning: 'warning-subtle',
-  primary: 'primary-subtle',
-  info: 'primary-subtle',
-  success: 'success-subtle',
-});
 
 const BADGE_ESTADOS = Object.freeze({
   emitida: 'warning',
@@ -711,58 +704,5 @@ const FacturaDetalleModal = ({
     </Modal>
   );
 };
-
-// Subcomponente Confirmación Compacto
-const ModalConfirmacion = ({ modal, onClose }) => (
-  <Modal 
-    show={modal.show} 
-    onHide={onClose} 
-    centered
-    backdrop="static"
-    dialogClassName="modal-confirmacion-compacto"
-  >
-    <Modal.Body className="text-center p-3 p-sm-4">
-      <div 
-        className={`confirm-icon-wrapper mb-3 mx-auto bg-${
-          MODAL_BG_POR_TIPO[modal.tipo] || 'primary-subtle'
-        } text-${modal.tipo || 'primary'}`}
-      >
-        <i className={`bi bi-${modal.icono || 'exclamation-circle-fill'} confirm-icon`} />
-      </div>
-      
-      <h5 className="fw-bold text-navy mb-2 fs-5">
-        {modal.titulo}
-      </h5>
-      
-      <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
-        {modal.mensaje}
-      </p>
-
-      <div className="d-flex gap-2 justify-content-center w-100 mt-2">
-        <Button 
-          variant="outline-secondary" 
-          className="px-3 py-2 fw-semibold flex-fill"
-          onClick={() => {
-            onClose();
-            if (modal.onCancel) modal.onCancel();
-          }}
-        >
-          {modal.textoCancelar || 'Cancelar'}
-        </Button>
-        <Button 
-          variant={modal.tipo || 'primary'} 
-          className="px-3 py-2 fw-semibold flex-fill shadow-sm"
-          onClick={async () => {
-            const action = modal.onConfirm;
-            onClose();
-            if (action) await action();
-          }}
-        >
-          {modal.textoConfirmar || 'Confirmar'}
-        </Button>
-      </div>
-    </Modal.Body>
-  </Modal>
-);
 
 export default AdminFacturasPage;

@@ -6,30 +6,13 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
+import { Container, Card, Table, Button, Modal, Form, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import pedidoService from '../services/pedidoService';
 import { exportarPedidosAPDF, exportarPedidosAExcel } from '../utils/exportUtils';
 import LoadingSpinner from '../components/LoadingSpinner';
-
-const ICONOS_MENSAJE = {
-  success: 'check-circle-fill text-success',
-  danger: 'exclamation-octagon-fill text-danger',
-  warning: 'exclamation-triangle-fill text-warning',
-  info: 'info-circle-fill text-info'
-};
-
-const getIconoMensaje = (tipo) => ICONOS_MENSAJE[tipo] || 'info-circle-fill text-info';
-
-const BG_MODAL_CONFIRMACION = {
-  danger: 'danger-subtle',
-  warning: 'warning-subtle',
-  primary: 'primary-subtle',
-  info: 'primary-subtle',
-  success: 'success-subtle'
-};
-
-const getBgModalConfirmacion = (tipo) => BG_MODAL_CONFIRMACION[tipo] || 'primary-subtle';
+import FloatingToast from '../components/FloatingToast';
+import ModalConfirmacion from '../components/ModalConfirmacion';
 
 const TITULOS_ESTADO = {
   pagado: '¿Marcar pedido como pagado?',
@@ -511,64 +494,6 @@ function ModalDetallePedido({ show, pedido, onCerrar, onCambiarEstado }) {
   );
 }
 
-function ModalConfirmacionCompacto({ modal, onCerrar }) {
-  const handleCancelar = () => {
-    onCerrar();
-    if (modal.onCancel) modal.onCancel();
-  };
-
-  const handleConfirmar = async () => {
-    const action = modal.onConfirm;
-    onCerrar();
-    if (action) await action();
-  };
-
-  return (
-    <Modal 
-      show={modal.show} 
-      onHide={handleCancelar} 
-      centered
-      backdrop="static"
-      dialogClassName="modal-confirmacion-compacto"
-    >
-      <Modal.Body className="text-center p-3 p-sm-4">
-        <div 
-          className={`confirm-icon-wrapper mb-3 mx-auto bg-${getBgModalConfirmacion(modal.tipo)} text-${modal.tipo || 'primary'}`}
-        >
-          <span className={`bi bi-${modal.icono || 'exclamation-circle-fill'} confirm-icon`} aria-hidden="true" />
-        </div>
-        
-        <h5 className="fw-bold text-navy mb-2 fs-5">
-          {modal.titulo}
-        </h5>
-        
-        <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
-          {modal.mensaje}
-        </p>
-
-        <div className="d-flex gap-2 justify-content-center w-100 mt-2">
-          <Button 
-            type="button"
-            variant="outline-secondary" 
-            className="px-3 py-2 fw-semibold flex-fill"
-            onClick={handleCancelar}
-          >
-            {modal.textoCancelar || 'Cancelar'}
-          </Button>
-          <Button 
-            type="button"
-            variant={modal.tipo || 'primary'} 
-            className="px-3 py-2 fw-semibold flex-fill shadow-sm"
-            onClick={handleConfirmar}
-          >
-            {modal.textoConfirmar || 'Confirmar'}
-          </Button>
-        </div>
-      </Modal.Body>
-    </Modal>
-  );
-}
-
 // ============================================
 // COMPONENTE PRINCIPAL
 // ============================================
@@ -893,22 +818,8 @@ function AdminPedidosPage() {
         </div>
       </div>
 
-      {/* Notificación flotante inferior izquierda */}
-      {mensaje.texto && (
-        <div className="toast-floating-container-bottom-left">
-          <Alert 
-            variant={mensaje.tipo} 
-            dismissible 
-            onClose={() => setMensaje({ tipo: '', texto: '' })}
-            className={`toast-floating-alert alert-${mensaje.tipo} mb-0`}
-          >
-            <span className={`bi bi-${getIconoMensaje(mensaje.tipo)} fs-5 flex-shrink-0`} aria-hidden="true" />
-            <div className="flex-grow-1 fw-medium text-start">
-              {mensaje.texto}
-            </div>
-          </Alert>
-        </div>
-      )}
+      {/* Notificación flotante inferior izquierda mediante FloatingToast */}
+      <FloatingToast mensaje={mensaje} onClose={() => setMensaje({ tipo: '', texto: '' })} />
 
       {/* Filtros */}
       <FiltrosPedidos 
@@ -1073,9 +984,9 @@ function AdminPedidosPage() {
       />
 
       {/* Modal de Confirmación Compacto Estilo Dashboard */}
-      <ModalConfirmacionCompacto
+      <ModalConfirmacion
         modal={modalConfirmacion}
-        onCerrar={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
+        onClose={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
       />
     </Container>
   );

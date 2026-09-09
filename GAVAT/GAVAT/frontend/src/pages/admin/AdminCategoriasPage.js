@@ -11,15 +11,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import FloatingToast from '../../components/FloatingToast';
+import ModalConfirmacion from '../../components/ModalConfirmacion';
 import { exportarCategoriasAPDF, exportarCategoriasAExcel } from '../../utils/exportUtils';
-
-const MODAL_BG_POR_TIPO = Object.freeze({
-  danger: 'danger-subtle',
-  warning: 'warning-subtle',
-  primary: 'primary-subtle',
-  info: 'primary-subtle',
-  success: 'success-subtle',
-});
 
 const AdminCategoriasPage = () => {
   const navigate = useNavigate();
@@ -778,55 +771,10 @@ const AdminCategoriasPage = () => {
       </Modal>
 
       {/* Modal de Confirmación Compacto Estilo Dashboard */}
-      <Modal 
-        show={modalConfirmacion.show} 
-        onHide={() => setModalConfirmacion(prev => ({ ...prev, show: false }))} 
-        centered
-        backdrop="static"
-        dialogClassName="modal-confirmacion-compacto"
-      >
-        <Modal.Body className="text-center p-3 p-sm-4">
-          <div 
-            className={`confirm-icon-wrapper mb-3 mx-auto bg-${
-              MODAL_BG_POR_TIPO[modalConfirmacion.tipo] || 'primary-subtle'
-            } text-${modalConfirmacion.tipo || 'primary'}`}
-          >
-            <i className={`bi bi-${modalConfirmacion.icono || 'exclamation-circle-fill'} confirm-icon`} />
-          </div>
-          
-          <h5 className="fw-bold text-navy mb-2 fs-5">
-            {modalConfirmacion.titulo}
-          </h5>
-          
-          <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
-            {modalConfirmacion.mensaje}
-          </p>
-
-          <div className="d-flex gap-2 justify-content-center w-100 mt-2">
-            <Button 
-              variant="outline-secondary" 
-              className="px-3 py-2 fw-semibold flex-fill"
-              onClick={() => {
-                setModalConfirmacion(prev => ({ ...prev, show: false }));
-                if (modalConfirmacion.onCancel) modalConfirmacion.onCancel();
-              }}
-            >
-              {modalConfirmacion.textoCancelar || 'Cancelar'}
-            </Button>
-            <Button 
-              variant={modalConfirmacion.tipo || 'primary'} 
-              className="px-3 py-2 fw-semibold flex-fill shadow-sm"
-              onClick={async () => {
-                const action = modalConfirmacion.onConfirm;
-                setModalConfirmacion(prev => ({ ...prev, show: false }));
-                if (action) await action();
-              }}
-            >
-              {modalConfirmacion.textoConfirmar || 'Confirmar'}
-            </Button>
-          </div>
-        </Modal.Body>
-      </Modal>
+      <ModalConfirmacion
+        modal={modalConfirmacion}
+        onClose={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
+      />
     </Container>
   );
 };

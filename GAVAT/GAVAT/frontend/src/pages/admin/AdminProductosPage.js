@@ -12,31 +12,9 @@ import { Container, Card, Table, Button, Modal, Form, Alert, Badge, Row, Col, Dr
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import ModalConfirmacion from '../../components/ModalConfirmacion';
 import { getImageUrl } from '../../utils/helpers';
 import { exportarProductosAPDF, exportarProductosAExcel } from '../../utils/exportUtils';
-
-// ============================================
-// CONSTANTES Y HELPERS PUROS
-// ============================================
-
-const ICONOS_MENSAJE = {
-  success: 'check-circle-fill text-success',
-  danger: 'exclamation-octagon-fill text-danger',
-  warning: 'exclamation-triangle-fill text-warning',
-  info: 'info-circle-fill text-info'
-};
-
-const getIconoMensaje = (tipo) => ICONOS_MENSAJE[tipo] || 'info-circle-fill text-info';
-
-const BG_MODAL_CONFIRMACION = {
-  danger: 'danger-subtle',
-  warning: 'warning-subtle',
-  primary: 'primary-subtle',
-  info: 'primary-subtle',
-  success: 'success-subtle'
-};
-
-const getBgModalConfirmacion = (tipo) => BG_MODAL_CONFIRMACION[tipo] || 'primary-subtle';
 
 const formatearPrecio = (precio) => {
   return new Intl.NumberFormat('es-CO', {
@@ -774,66 +752,6 @@ function ModalProductoForm({
           </button>
         </div>
       </Form>
-    </Modal>
-  );
-}
-
-function ModalConfirmacionCompacto({ modal, onCerrar }) {
-  const bgClass = getBgModalConfirmacion(modal.tipo);
-
-  const handleCancelar = () => {
-    onCerrar();
-    if (modal.onCancel) modal.onCancel();
-  };
-
-  const handleConfirmar = async () => {
-    const action = modal.onConfirm;
-    onCerrar();
-    if (action) await action();
-  };
-
-  return (
-    <Modal 
-      show={modal.show} 
-      onHide={handleCancelar} 
-      centered
-      backdrop="static"
-      dialogClassName="modal-confirmacion-compacto"
-    >
-      <Modal.Body className="text-center p-3 p-sm-4">
-        <div 
-          className={`confirm-icon-wrapper mb-3 mx-auto bg-${bgClass} text-${modal.tipo || 'primary'}`}
-        >
-          <span className={`bi bi-${modal.icono || 'exclamation-circle-fill'} confirm-icon`} aria-hidden="true" />
-        </div>
-        
-        <h5 className="fw-bold text-navy mb-2 fs-5">
-          {modal.titulo}
-        </h5>
-        
-        <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '300px', margin: '0 auto' }}>
-          {modal.mensaje}
-        </p>
-
-        <div className="d-flex gap-2 justify-content-center w-100 mt-2">
-          <Button 
-            type="button"
-            variant="outline-secondary" 
-            className="px-3 py-2 fw-semibold flex-fill"
-            onClick={handleCancelar}
-          >
-            {modal.textoCancelar || 'Cancelar'}
-          </Button>
-          <Button 
-            type="button"
-            variant={modal.tipo || 'primary'} 
-            className="px-3 py-2 fw-semibold flex-fill shadow-sm"
-            onClick={handleConfirmar}
-          >
-            {modal.textoConfirmar || 'Confirmar'}
-          </Button>
-        </div>
-      </Modal.Body>
     </Modal>
   );
 }
@@ -1675,9 +1593,9 @@ const AdminProductosPage = () => {
       />
 
       {/* Modal de Confirmación Compacto */}
-      <ModalConfirmacionCompacto
+      <ModalConfirmacion
         modal={modalConfirmacion}
-        onCerrar={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
+        onClose={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
       />
 
       {/* Estilos locales */}
