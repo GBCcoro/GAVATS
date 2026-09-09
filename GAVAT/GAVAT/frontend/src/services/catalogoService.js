@@ -23,7 +23,7 @@ const catalogoService = {
   /**
    * Obtener productos con filtros
    */
-  getProductos: async (filters = {}) => {
+  getProductos: (filters = {}) => {
     const params = new URLSearchParams();
     
     Object.entries(filters).forEach(([key, val]) => {
@@ -33,7 +33,8 @@ const catalogoService = {
     });
 
     const queryString = params.toString();
-    return fetchCatalogo(`/catalogo/productos${queryString ? `?${queryString}` : ''}`);
+    const endpoint = queryString ? `/catalogo/productos?${queryString}` : '/catalogo/productos';
+    return fetchCatalogo(endpoint);
   },
 
   /**

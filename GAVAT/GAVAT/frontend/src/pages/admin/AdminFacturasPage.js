@@ -6,12 +6,15 @@
  */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { Container, Card, Table, Button, Modal, Form, Badge, Row, Col, Dropdown, ButtonGroup, InputGroup } from 'react-bootstrap';
+import { Container, Card, Table, Button, Modal, Form, Badge, Row, Col, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import adminService from '../../services/adminService';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import FloatingToast from '../../components/FloatingToast';
 import ModalConfirmacion from '../../components/ModalConfirmacion';
+import BotonExportar from '../../components/BotonExportar';
+import ToolbarSeleccionLote from '../../components/ToolbarSeleccionLote';
+import PaginacionTabla from '../../components/PaginacionTabla';
 import { exportarFacturasAPDF, exportarFacturasAExcel } from '../../utils/exportUtils';
 
 const BADGE_ESTADOS = Object.freeze({
@@ -53,25 +56,8 @@ const AdminFacturasPage = () => {
   const [tipoExportacion, setTipoExportacion] = useState('pdf');
   const [exportando, setExportando] = useState(false);
   const [seleccionados, setSeleccionados] = useState(new Set());
-  
-  // Modal de confirmación en pantalla
-  const [modalConfirmacion, setModalConfirmacion] = useState({
-    show: false,
-    titulo: '',
-    mensaje: '',
-    tipo: 'danger',
-    icono: 'x-circle-fill',
-    textoConfirmar: 'Anular',
-    textoCancelar: 'Cancelar',
-    onConfirm: null,
-    onCancel: null
-  });
-  
-  // Filtros
-  const [filtros, setFiltros] = useState({
-    busqueda: '',
-    estado: 'todos'
-  });
+  const [modalConfirmacion, setModalConfirmacion] = useState({ show: false });
+  const [filtros, setFiltros] = useState({ busqueda: '', estado: 'todos' });
   const [busquedaDebounced, setBusquedaDebounced] = useState('');
   
   // Paginación
@@ -255,10 +241,6 @@ const AdminFacturasPage = () => {
     return <LoadingSpinner message="Cargando facturas..." />;
   }
 
-  const formatoExportar = tipoExportacion === 'pdf' ? 'PDF' : 'Excel';
-  const textoBotonExportar = exportando ? 'Exportando...' : `Exportar a ${formatoExportar}`;
-  const iconTipoExportacion = tipoExportacion === 'pdf' ? 'pdf' : 'excel';
-
   return (
     <Container className="py-4">
       {/* Header Toolbar Responsivo */}
@@ -272,31 +254,12 @@ const AdminFacturasPage = () => {
           </p>
         </div>
         <div className="d-flex flex-wrap align-items-center gap-2">
-          <Dropdown as={ButtonGroup}>
-            <Button
-              variant="primary"
-              disabled={exportando}
-              onClick={() => handleExportar(tipoExportacion)}
-            >
-              <span className={`bi bi-file-earmark-${iconTipoExportacion} me-1`} aria-hidden="true"></span>
-              {textoBotonExportar}
-            </Button>
-            <Dropdown.Toggle split variant="secondary" className="btn-dark dropdown-toggle-split" disabled={exportando} />
-            <Dropdown.Menu>
-              <Dropdown.Item onClick={() => {
-                setTipoExportacion('pdf');
-                handleExportar('pdf');
-              }}>
-                <span className="bi bi-file-earmark-pdf me-2" aria-hidden="true"></span> Exportar a PDF
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => {
-                setTipoExportacion('excel');
-                handleExportar('excel');
-              }}>
-                <span className="bi bi-file-earmark-excel me-2" aria-hidden="true"></span> Exportar a Excel
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
+          <BotonExportar
+            tipoExportacion={tipoExportacion}
+            onTipoChange={setTipoExportacion}
+            onExportar={handleExportar}
+            exportando={exportando}
+          />
           <Button variant="outline-secondary" onClick={() => navigate('/admin/dashboard')}>
             <i className="bi bi-arrow-left me-1"></i> Volver
           </Button>
@@ -363,54 +326,31 @@ const AdminFacturasPage = () => {
       </Card>
 
       {/* Barra de Acciones de Selección Múltiple */}
-      <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 px-1">
-        <div className="d-flex align-items-center gap-2">
+      <ToolbarSeleccionLote
+        totalItems={facturas.length}
+        todosSeleccionados={todosPaginaSeleccionados}
+        cantidadSeleccionados={seleccionados.size}
+        etiquetaItem="factura"
+        onToggleTodos={handleToggleSeleccionarTodos}
+        onLimpiar={() => setSeleccionados(new Set())}
+      >
+        {seleccionados.size === 1 && (
           <Button
-            variant={todosPaginaSeleccionados ? "secondary" : "outline-secondary"}
+            variant="outline-primary"
             size="sm"
-            className="d-inline-flex align-items-center gap-1"
-            onClick={handleToggleSeleccionarTodos}
-            title={todosPaginaSeleccionados ? "Deseleccionar todos en esta página" : "Seleccionar todos en esta página"}
+            className="d-inline-flex align-items-center gap-1 fw-semibold"
+            onClick={() => {
+              const idSel = Array.from(seleccionados)[0];
+              const factSel = facturas.find(f => f.id === idSel);
+              if (factSel) handleVerDetalle(factSel);
+            }}
+            title="Ver detalle de la factura seleccionada"
           >
-            <i className={`bi bi-${todosPaginaSeleccionados ? 'check-square-fill text-primary' : 'square'}`} />
-            <span>{todosPaginaSeleccionados ? 'Deseleccionar página' : `Seleccionar todo (${facturas.length})`}</span>
+            <i className="bi bi-eye-fill"></i>
+            <span>Ver Detalle</span>
           </Button>
-          {seleccionados.size > 0 && (
-            <Badge bg="danger" className="p-2 d-flex align-items-center gap-1 fs-7">
-              <i className="bi bi-check-circle-fill"></i> {seleccionados.size} seleccionada{seleccionados.size !== 1 ? 's' : ''}
-            </Badge>
-          )}
-        </div>
-
-        {seleccionados.size > 0 && (
-          <div className="d-flex flex-wrap align-items-center gap-2">
-            {seleccionados.size === 1 && (
-              <Button
-                variant="outline-primary"
-                size="sm"
-                className="d-inline-flex align-items-center gap-1 fw-semibold"
-                onClick={() => {
-                  const idSel = Array.from(seleccionados)[0];
-                  const factSel = facturas.find(f => f.id === idSel);
-                  if (factSel) handleVerDetalle(factSel);
-                }}
-                title="Ver detalle de la factura seleccionada"
-              >
-                <i className="bi bi-eye-fill"></i>
-                <span>Ver Detalle</span>
-              </Button>
-            )}
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={() => setSeleccionados(new Set())}
-              title="Limpiar selección"
-            >
-              <i className="bi bi-x-lg me-1"></i> Deseleccionar
-            </Button>
-          </div>
         )}
-      </div>
+      </ToolbarSeleccionLote>
 
       {/* Tabla de Facturas Responsiva */}
       <Card className="shadow-sm border-0 admin-card-table">
@@ -519,30 +459,15 @@ const AdminFacturasPage = () => {
       </Card>
 
       {/* Paginación */}
-      {totalPaginas > 1 && (
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 mt-4 p-3 bg-white rounded shadow-sm">
-          <small className="text-muted">
-            Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> — Mostrando <strong>{facturas.length}</strong> de <strong>{totalFacturas}</strong> facturas
-          </small>
-          <ButtonGroup size="sm">
-            <Button variant="outline-primary" onClick={() => setPaginaActual(1)} disabled={paginaActual === 1 || loading}>
-              ««
-            </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p - 1)} disabled={paginaActual === 1 || loading}>
-              Anterior
-            </Button>
-            <Button variant="primary" disabled>
-              {paginaActual} / {totalPaginas}
-            </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(p => p + 1)} disabled={paginaActual === totalPaginas || loading}>
-              Siguiente
-            </Button>
-            <Button variant="outline-primary" onClick={() => setPaginaActual(totalPaginas)} disabled={paginaActual === totalPaginas || loading}>
-              »»
-            </Button>
-          </ButtonGroup>
-        </div>
-      )}
+      <PaginacionTabla
+        paginaActual={paginaActual}
+        totalPaginas={totalPaginas}
+        totalItems={totalFacturas}
+        itemsActuales={facturas.length}
+        etiquetaItems="facturas"
+        onCambiarPagina={setPaginaActual}
+        loading={loading}
+      />
 
       <FacturaDetalleModal
         show={showDetalleModal}
