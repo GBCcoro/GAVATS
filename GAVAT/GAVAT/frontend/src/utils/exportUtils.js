@@ -75,7 +75,19 @@ const exportToPDF = ({
  * Helper genérico para exportar listas a Excel.
  * params: { sheetName, title, headers, rows (array of arrays), summaryLines (array of [label, value] tuples), columnWidths }
  */
-const exportToExcel = async ({ sheetName, title, headers, rows, summaryLines = [], columnWidths = [] }) => {
+const exportToExcel = async ({
+  sheetName,
+  title,
+  headers,
+  rows,
+  summaryLines = [],
+  columnWidths = [],
+  headerColor = 'FF3498DB',
+  titleColor = 'FF2980B9',
+  headerTextColor = 'FFFFFFFF',
+  titleTextColor = 'FFFFFFFF',
+  filename,
+}) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet(sheetName || 'Sheet1');
 
@@ -92,9 +104,15 @@ const exportToExcel = async ({ sheetName, title, headers, rows, summaryLines = [
   worksheet.mergeCells(`A1:${lastCol}1`);
   const tituloCell = worksheet.getCell('A1');
   tituloCell.value = title;
-  tituloCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
-  tituloCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2980B9' } };
+  tituloCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: titleTextColor } };
+  tituloCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: titleColor } };
   tituloCell.alignment = { vertical: 'middle', horizontal: 'center' };
+  tituloCell.border = {
+    top: { style: 'thick' },
+    bottom: { style: 'thick' },
+    left: { style: 'thick' },
+    right: { style: 'thick' }
+  };
   worksheet.getRow(1).height = 30;
 
   // Fecha
@@ -109,8 +127,8 @@ const exportToExcel = async ({ sheetName, title, headers, rows, summaryLines = [
   // Encabezados
   const headerRow = worksheet.getRow(4);
   headerRow.values = headers;
-  headerRow.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3498DB' } };
+  headerRow.font = { name: 'Arial', size: 11, bold: true, color: { argb: headerTextColor } };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerColor } };
   headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
   headerRow.height = 25;
   headerRow.eachCell((cell) => {
@@ -162,7 +180,7 @@ const exportToExcel = async ({ sheetName, title, headers, rows, summaryLines = [
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${title.replace(/\s+/g, '_').toLowerCase()}_${Date.now()}.xlsx`;
+  a.download = filename || `${title.replace(/\s+/g, '_').toLowerCase()}_${Date.now()}.xlsx`;
   a.click();
   window.URL.revokeObjectURL(url);
 };
@@ -382,300 +400,87 @@ export const exportarSubcategoriasAExcel = async (subcategorias, categorias) => 
  * Exportar productos a Excel
  */
 export const exportarProductosAExcel = async (productos) => {
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Productos');
-  
-  const fecha = new Date().toLocaleDateString('es-CO', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-  
-  // Título
-  worksheet.mergeCells('A1:H1');
-  const tituloCell = worksheet.getCell('A1');
-  tituloCell.value = 'REPORTE DE PRODUCTOS';
-  tituloCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
-  tituloCell.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FF2ECC71' }
-  };
-  tituloCell.alignment = { vertical: 'middle', horizontal: 'center' };
-  tituloCell.border = {
-    top: { style: 'thick' },
-    bottom: { style: 'thick' },
-    left: { style: 'thick' },
-    right: { style: 'thick' }
-  };
-  worksheet.getRow(1).height = 30;
-  
-  // Fecha
-  worksheet.mergeCells('A2:H2');
-  const fechaCell = worksheet.getCell('A2');
-  fechaCell.value = `Generado: ${fecha}`;
-  fechaCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF555555' } };
-  fechaCell.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFECF0F1' }
-  };
-  fechaCell.alignment = { vertical: 'middle', horizontal: 'center' };
-  worksheet.getRow(2).height = 20;
-  
-  // Encabezados
-  const encabezados = ['ID', 'Nombre', 'Categoría', 'Subcategoría', 'Precio', 'Stock', 'Valor Inventario', 'Estado'];
-  const headerRow = worksheet.getRow(4);
-  headerRow.values = encabezados;
-  headerRow.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-  headerRow.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FF2ECC71' }
-  };
-  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-  headerRow.height = 25;
-  headerRow.eachCell((cell) => {
-    cell.border = {
-      top: { style: 'medium' },
-      bottom: { style: 'medium' },
-      left: { style: 'thin' },
-      right: { style: 'thin' }
-    };
-  });
-  
-  // Datos
-  let rowIndex = 5;
+  const headers = ['ID', 'Nombre', 'Categoría', 'Subcategoría', 'Precio', 'Stock', 'Valor Inventario', 'Estado'];
   let valorTotalInventario = 0;
   let stockTotal = 0;
-  
-  productos.forEach(prod => {
+
+  const rows = productos.map(prod => {
     const valorInv = Number(prod.precio) * prod.stock;
     valorTotalInventario += valorInv;
     stockTotal += prod.stock;
-    
-    const row = worksheet.getRow(rowIndex);
-    row.values = [
+
+    return [
       prod.id,
       prod.nombre,
       prod.categoria?.nombre || '',
       prod.subcategoria?.nombre || '',
-      Number(prod.precio),
+      `$${Number(prod.precio).toLocaleString('es-CO')}`,
       prod.stock,
-      valorInv,
+      `$${valorInv.toLocaleString('es-CO')}`,
       prod.activo ? '✓ Activo' : '✗ Inactivo'
     ];
-    row.alignment = { vertical: 'middle' };
-    row.eachCell((cell, colNumber) => {
-      if (colNumber === 5 || colNumber === 7) {
-        cell.numFmt = '$#,##0';
-      }
-      if (colNumber === 8) {
-        cell.font = { bold: true, color: { argb: prod.activo ? 'FF27AE60' : 'FFE74C3C' } };
-      }
-    });
-    rowIndex++;
   });
-  
-  // Resumen
-  rowIndex++;
-  const resumenRow = worksheet.getRow(rowIndex);
-  resumenRow.getCell(1).value = '📊 RESUMEN';
-  resumenRow.getCell(1).font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
-  resumenRow.getCell(1).fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FF27AE60' }
-  };
-  resumenRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
-  resumenRow.height = 25;
-  
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['Total de productos:', productos.length];
-  worksheet.getRow(rowIndex).font = { bold: true };
-  
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['📦 Stock total:', stockTotal + ' unidades'];
-  worksheet.getRow(rowIndex).font = { bold: true };
-  
-  rowIndex++;
-  const valorRow = worksheet.getRow(rowIndex);
-  valorRow.values = ['💵 Valor total inventario:', valorTotalInventario];
-  valorRow.font = { bold: true };
-  valorRow.getCell(2).numFmt = '$#,##0';
-  
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['✓ Activos:', productos.filter(p => p.activo).length];
-  worksheet.getRow(rowIndex).getCell(1).font = { color: { argb: 'FF27AE60' } };
-  
-  // Anchos de columna
-  worksheet.columns = [
-    { width: 8 },
-    { width: 35 },
-    { width: 18 },
-    { width: 18 },
-    { width: 15 },
-    { width: 10 },
-    { width: 18 },
-    { width: 15 }
+
+  const summaryLines = [
+    ['Total de productos:', productos.length],
+    ['📦 Stock total:', `${stockTotal} unidades`],
+    ['💵 Valor total inventario:', `$${valorTotalInventario.toLocaleString('es-CO')}`],
+    ['✓ Activos:', productos.filter(p => p.activo).length],
   ];
-  
-  // Descargar archivo
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `productos_${Date.now()}.xlsx`;
-  a.click();
-  window.URL.revokeObjectURL(url);
+
+  const columnWidths = [8, 35, 18, 18, 15, 10, 18, 15];
+
+  await exportToExcel({
+    sheetName: 'Productos',
+    title: 'REPORTE DE PRODUCTOS',
+    headers,
+    rows,
+    summaryLines,
+    columnWidths,
+    headerColor: 'FF2ECC71',
+    titleColor: 'FF2ECC71',
+    filename: `productos_${Date.now()}.xlsx`,
+  });
 };
 
 /**
  * Exportar usuarios a Excel
  */
 export const exportarUsuariosAExcel = async (usuarios) => {
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Usuarios');
-  
-  const fecha = new Date().toLocaleDateString('es-CO', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-  
-  // Título
-  worksheet.mergeCells('A1:G1');
-  const tituloCell = worksheet.getCell('A1');
-  tituloCell.value = 'REPORTE DE USUARIOS';
-  tituloCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FF000000' } };
-  tituloCell.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFF1C40F' }
-  };
-  tituloCell.alignment = { vertical: 'middle', horizontal: 'center' };
-  tituloCell.border = {
-    top: { style: 'thick' },
-    bottom: { style: 'thick' },
-    left: { style: 'thick' },
-    right: { style: 'thick' }
-  };
-  worksheet.getRow(1).height = 30;
-  
-  // Fecha
-  worksheet.mergeCells('A2:G2');
-  const fechaCell = worksheet.getCell('A2');
-  fechaCell.value = `Generado: ${fecha}`;
-  fechaCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF555555' } };
-  fechaCell.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFECF0F1' }
-  };
-  fechaCell.alignment = { vertical: 'middle', horizontal: 'center' };
-  worksheet.getRow(2).height = 20;
-  
-  // Encabezados
-  const encabezados = ['ID', 'Nombre', 'Email', 'Rol', 'Teléfono', 'Estado', 'Fecha Registro'];
-  const headerRow = worksheet.getRow(4);
-  headerRow.values = encabezados;
-  headerRow.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FF000000' } };
-  headerRow.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFF1C40F' }
-  };
-  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-  headerRow.height = 25;
-  headerRow.eachCell((cell) => {
-    cell.border = {
-      top: { style: 'medium' },
-      bottom: { style: 'medium' },
-      left: { style: 'thin' },
-      right: { style: 'thin' }
-    };
-  });
-  
-  // Datos
-  let rowIndex = 5;
-  usuarios.forEach(usr => {
-    const row = worksheet.getRow(rowIndex);
-    row.values = [
-      usr.id,
-      usr.nombre,
-      usr.email,
-      usr.rol,
-      usr.telefono || '',
-      usr.activo ? '✓ Activo' : '✗ Inactivo',
-      new Date(usr.createdAt).toLocaleDateString('es-CO')
-    ];
-    row.alignment = { vertical: 'middle' };
-    row.eachCell((cell, colNumber) => {
-      if (colNumber === 6) {
-        cell.font = { bold: true, color: { argb: usr.activo ? 'FF27AE60' : 'FFE74C3C' } };
-      }
-    });
-    rowIndex++;
-  });
-  
-  // Resumen
-  rowIndex++;
-  const resumenRow = worksheet.getRow(rowIndex);
-  resumenRow.getCell(1).value = '📊 RESUMEN';
-  resumenRow.getCell(1).font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
-  resumenRow.getCell(1).fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FF27AE60' }
-  };
-  resumenRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
-  resumenRow.height = 25;
-  
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['Total de usuarios:', usuarios.length];
-  worksheet.getRow(rowIndex).font = { bold: true };
-  
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['👑 Administradores:', usuarios.filter(u => u.rol === 'administrador').length];
-  worksheet.getRow(rowIndex).font = { bold: true };
-  
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['💼 Auxiliares:', usuarios.filter(u => u.rol === 'auxiliar').length];
-  worksheet.getRow(rowIndex).font = { bold: true };
-  
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['👥 Clientes:', usuarios.filter(u => u.rol === 'cliente').length];
-  worksheet.getRow(rowIndex).font = { bold: true };
-  
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['✓ Activos:', usuarios.filter(u => u.activo).length];
-  worksheet.getRow(rowIndex).getCell(1).font = { color: { argb: 'FF27AE60' } };
-  
-  // Anchos de columna
-  worksheet.columns = [
-    { width: 8 },
-    { width: 30 },
-    { width: 35 },
-    { width: 18 },
-    { width: 18 },
-    { width: 15 },
-    { width: 18 }
+  const headers = ['ID', 'Nombre', 'Email', 'Rol', 'Teléfono', 'Estado', 'Fecha Registro'];
+  const rows = usuarios.map(usr => [
+    usr.id,
+    usr.nombre,
+    usr.email,
+    usr.rol,
+    usr.telefono || '',
+    usr.activo ? '✓ Activo' : '✗ Inactivo',
+    new Date(usr.createdAt).toLocaleDateString('es-CO')
+  ]);
+
+  const summaryLines = [
+    ['Total de usuarios:', usuarios.length],
+    ['👑 Administradores:', usuarios.filter(u => u.rol === 'administrador').length],
+    ['💼 Auxiliares:', usuarios.filter(u => u.rol === 'auxiliar').length],
+    ['👥 Clientes:', usuarios.filter(u => u.rol === 'cliente').length],
+    ['✓ Activos:', usuarios.filter(u => u.activo).length],
   ];
-  
-  // Descargar archivo
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `usuarios_${Date.now()}.xlsx`;
-  a.click();
-  window.URL.revokeObjectURL(url);
+
+  const columnWidths = [8, 30, 35, 18, 18, 15, 18];
+
+  await exportToExcel({
+    sheetName: 'Usuarios',
+    title: 'REPORTE DE USUARIOS',
+    headers,
+    rows,
+    summaryLines,
+    columnWidths,
+    headerColor: 'FFF1C40F',
+    titleColor: 'FFF1C40F',
+    headerTextColor: 'FF000000',
+    titleTextColor: 'FF000000',
+    filename: `usuarios_${Date.now()}.xlsx`,
+  });
 };
 
 /**
@@ -718,93 +523,36 @@ export const exportarFacturasAPDF = (facturas) => {
  * Exportar facturas a Excel
  */
 export const exportarFacturasAExcel = async (facturas) => {
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Facturas');
-  const fecha = new Date().toLocaleDateString('es-CO', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const headers = ['ID', 'Factura', 'Cliente', 'Email', 'Estado', 'Fecha', 'Total'];
+  const rows = facturas.map(fact => [
+    fact.id,
+    fact.numero_factura || fact.numeroFactura || '-',
+    fact.cliente_nombre || fact.clienteNombre || fact.cliente?.nombre || '-',
+    fact.cliente_email || fact.clienteEmail || fact.cliente?.email || '-',
+    fact.estado || '-',
+    new Date(fact.fechaEmision || fact.createdAt || fact.fecha || Date.now()).toLocaleDateString('es-CO'),
+    `$${Number(fact.total || fact.monto || 0).toLocaleString('es-CO')}`
+  ]);
 
-  worksheet.mergeCells('A1:G1');
-  const tituloCell = worksheet.getCell('A1');
-  tituloCell.value = 'REPORTE DE FACTURAS';
-  tituloCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
-  tituloCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF9B59B6' } };
-  tituloCell.alignment = { vertical: 'middle', horizontal: 'center' };
-  tituloCell.border = { top: { style: 'thick' }, bottom: { style: 'thick' }, left: { style: 'thick' }, right: { style: 'thick' } };
-  worksheet.getRow(1).height = 30;
-
-  worksheet.mergeCells('A2:G2');
-  const fechaCell = worksheet.getCell('A2');
-  fechaCell.value = `Generado: ${fecha}`;
-  fechaCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF555555' } };
-  fechaCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECF0F1' } };
-  fechaCell.alignment = { vertical: 'middle', horizontal: 'center' };
-  worksheet.getRow(2).height = 20;
-
-  const encabezados = ['ID', 'Factura', 'Cliente', 'Email', 'Estado', 'Fecha', 'Total'];
-  const headerRow = worksheet.getRow(4);
-  headerRow.values = encabezados;
-  headerRow.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF9B59B6' } };
-  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-  headerRow.height = 25;
-  headerRow.eachCell((cell) => {
-    cell.border = { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'thin' }, right: { style: 'thin' } };
-  });
-
-  let rowIndex = 5;
-  facturas.forEach(fact => {
-    const row = worksheet.getRow(rowIndex);
-    row.values = [
-      fact.id,
-      fact.numero_factura || fact.numeroFactura || '-',
-      fact.cliente_nombre || fact.clienteNombre || fact.cliente?.nombre || '-',
-      fact.cliente_email || fact.clienteEmail || fact.cliente?.email || '-',
-      fact.estado || '-',
-      new Date(fact.fechaEmision || fact.createdAt || fact.fecha || Date.now()).toLocaleDateString('es-CO'),
-      Number(fact.total || fact.monto || 0)
-    ];
-    row.alignment = { vertical: 'middle' };
-    row.eachCell((cell, colNumber) => {
-      if (colNumber === 7) {
-        cell.numFmt = '$#,##0';
-      }
-    });
-    rowIndex++;
-  });
-
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['Total de facturas:', facturas.length];
-  worksheet.getRow(rowIndex).font = { bold: true };
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['Emitidas:', facturas.filter(f => f.estado === 'emitida').length];
-  worksheet.getRow(rowIndex).font = { bold: true };
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['Anuladas:', facturas.filter(f => f.estado === 'anulada').length];
-  worksheet.getRow(rowIndex).font = { bold: true };
-
-  worksheet.columns = [
-    { width: 8 },
-    { width: 18 },
-    { width: 26 },
-    { width: 26 },
-    { width: 14 },
-    { width: 16 },
-    { width: 14 }
+  const summaryLines = [
+    ['Total de facturas:', facturas.length],
+    ['Emitidas:', facturas.filter(f => f.estado === 'emitida').length],
+    ['Anuladas:', facturas.filter(f => f.estado === 'anulada').length],
   ];
 
-  const bufferExcel = await workbook.xlsx.writeBuffer();
-  const blobExcel = new Blob([bufferExcel], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const urlExcel = window.URL.createObjectURL(blobExcel);
-  const aExcel = document.createElement('a');
-  aExcel.href = urlExcel;
-  aExcel.download = `facturas_${Date.now()}.xlsx`;
-  aExcel.click();
-  window.URL.revokeObjectURL(urlExcel);
+  const columnWidths = [8, 18, 26, 26, 14, 16, 14];
+
+  await exportToExcel({
+    sheetName: 'Facturas',
+    title: 'REPORTE DE FACTURAS',
+    headers,
+    rows,
+    summaryLines,
+    columnWidths,
+    headerColor: 'FF9B59B6',
+    titleColor: 'FF9B59B6',
+    filename: `facturas_${Date.now()}.xlsx`,
+  });
 };
 
 /**
@@ -847,244 +595,79 @@ export const exportarComentariosAPDF = (comentarios) => {
  * Exportar comentarios a Excel
  */
 export const exportarComentariosAExcel = async (comentarios) => {
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Comentarios');
-  const fecha = new Date().toLocaleDateString('es-CO', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const headers = ['ID', 'Usuario', 'Producto', 'Calificación', 'Comentario', 'Estado', 'Fecha'];
+  const rows = comentarios.map(coment => [
+    coment.id,
+    coment.usuario?.nombre || coment.autor || '-',
+    coment.producto?.nombre || '-',
+    coment.calificacion || '-',
+    coment.comentario || '',
+    coment.estado ? 'Visible' : 'Oculto',
+    new Date(coment.fecha || coment.createdAt || Date.now()).toLocaleDateString('es-CO')
+  ]);
 
-  worksheet.mergeCells('A1:G1');
-  const tituloCell = worksheet.getCell('A1');
-  tituloCell.value = 'REPORTE DE COMENTARIOS';
-  tituloCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
-  tituloCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3498DB' } };
-  tituloCell.alignment = { vertical: 'middle', horizontal: 'center' };
-  tituloCell.border = { top: { style: 'thick' }, bottom: { style: 'thick' }, left: { style: 'thick' }, right: { style: 'thick' } };
-  worksheet.getRow(1).height = 30;
-
-  worksheet.mergeCells('A2:G2');
-  const fechaCell2 = worksheet.getCell('A2');
-  fechaCell2.value = `Generado: ${fecha}`;
-  fechaCell2.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF555555' } };
-  fechaCell2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECF0F1' } };
-  fechaCell2.alignment = { vertical: 'middle', horizontal: 'center' };
-  worksheet.getRow(2).height = 20;
-
-  const encabezadosComentarios = ['ID', 'Usuario', 'Producto', 'Calificación', 'Comentario', 'Estado', 'Fecha'];
-  const headerRowComentarios = worksheet.getRow(4);
-  headerRowComentarios.values = encabezadosComentarios;
-  headerRowComentarios.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-  headerRowComentarios.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3498DB' } };
-  headerRowComentarios.alignment = { vertical: 'middle', horizontal: 'center' };
-  headerRowComentarios.height = 25;
-  headerRowComentarios.eachCell((cell) => {
-    cell.border = { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'thin' }, right: { style: 'thin' } };
-  });
-
-  let rowIndexComentarios = 5;
-  comentarios.forEach(coment => {
-    const row = worksheet.getRow(rowIndexComentarios);
-    row.values = [
-      coment.id,
-      coment.usuario?.nombre || coment.autor || '-',
-      coment.producto?.nombre || '-',
-      coment.calificacion || '-',
-      coment.comentario || '',
-      coment.estado ? 'Visible' : 'Oculto',
-      new Date(coment.fecha || coment.createdAt || Date.now()).toLocaleDateString('es-CO')
-    ];
-    row.alignment = { vertical: 'middle' };
-    rowIndexComentarios++;
-  });
-
-  rowIndexComentarios++;
-  worksheet.getRow(rowIndexComentarios).values = ['Total de comentarios:', comentarios.length];
-  worksheet.getRow(rowIndexComentarios).font = { bold: true };
-  rowIndexComentarios++;
-  worksheet.getRow(rowIndexComentarios).values = ['Visibles:', comentarios.filter(c => c.estado === true).length];
-  worksheet.getRow(rowIndexComentarios).font = { bold: true };
-  rowIndexComentarios++;
-  worksheet.getRow(rowIndexComentarios).values = ['Ocultos:', comentarios.filter(c => c.estado === false).length];
-  worksheet.getRow(rowIndexComentarios).font = { bold: true };
-
-  worksheet.columns = [
-    { width: 8 },
-    { width: 22 },
-    { width: 22 },
-    { width: 12 },
-    { width: 40 },
-    { width: 12 },
-    { width: 16 }
+  const summaryLines = [
+    ['Total de comentarios:', comentarios.length],
+    ['Visibles:', comentarios.filter(c => c.estado === true).length],
+    ['Ocultos:', comentarios.filter(c => c.estado === false).length],
   ];
 
-  const bufferComentarios = await workbook.xlsx.writeBuffer();
-  const blobComentarios = new Blob([bufferComentarios], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const urlComentarios = window.URL.createObjectURL(blobComentarios);
-  const aComentarios = document.createElement('a');
-  aComentarios.href = urlComentarios;
-  aComentarios.download = `comentarios_${Date.now()}.xlsx`;
-  aComentarios.click();
-  window.URL.revokeObjectURL(urlComentarios);
+  const columnWidths = [8, 22, 22, 12, 40, 12, 16];
+
+  await exportToExcel({
+    sheetName: 'Comentarios',
+    title: 'REPORTE DE COMENTARIOS',
+    headers,
+    rows,
+    summaryLines,
+    columnWidths,
+    headerColor: 'FF3498DB',
+    titleColor: 'FF3498DB',
+    filename: `comentarios_${Date.now()}.xlsx`,
+  });
 };
 
 /**
  * Exportar pedidos a Excel
  */
 export const exportarPedidosAExcel = async (pedidos) => {
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Pedidos');
-  
-  const fecha = new Date().toLocaleDateString('es-CO', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-  
-  // Título
-  worksheet.mergeCells('A1:G1');
-  const tituloCell = worksheet.getCell('A1');
-  tituloCell.value = 'REPORTE DE PEDIDOS';
-  tituloCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
-  tituloCell.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FF9B59B6' }
-  };
-  tituloCell.alignment = { vertical: 'middle', horizontal: 'center' };
-  tituloCell.border = {
-    top: { style: 'thick' },
-    bottom: { style: 'thick' },
-    left: { style: 'thick' },
-    right: { style: 'thick' }
-  };
-  worksheet.getRow(1).height = 30;
-  
-  // Fecha
-  worksheet.mergeCells('A2:G2');
-  const fechaCell = worksheet.getCell('A2');
-  fechaCell.value = `Generado: ${fecha}`;
-  fechaCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF555555' } };
-  fechaCell.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFECF0F1' }
-  };
-  fechaCell.alignment = { vertical: 'middle', horizontal: 'center' };
-  worksheet.getRow(2).height = 20;
-  
-  // Encabezados
-  const encabezados = ['ID', 'Cliente', 'Email', 'Teléfono', 'Total', 'Estado', 'Fecha Pedido'];
-  const headerRow = worksheet.getRow(4);
-  headerRow.values = encabezados;
-  headerRow.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-  headerRow.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FF9B59B6' }
-  };
-  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-  headerRow.height = 25;
-  headerRow.eachCell((cell) => {
-    cell.border = {
-      top: { style: 'medium' },
-      bottom: { style: 'medium' },
-      left: { style: 'thin' },
-      right: { style: 'thin' }
-    };
-  });
-  
-  // Datos
-  let rowIndex = 5;
+  const headers = ['ID', 'Cliente', 'Email', 'Teléfono', 'Total', 'Estado', 'Fecha Pedido'];
   let totalVentas = 0;
-  
-  pedidos.forEach(ped => {
+
+  const rows = pedidos.map(ped => {
     totalVentas += Number(ped.total);
-    const row = worksheet.getRow(rowIndex);
-    row.values = [
+    return [
       ped.id,
       ped.usuario?.nombre || ped.Usuario?.nombre || '',
       ped.usuario?.email || ped.Usuario?.email || '',
-      ped.telefono,
-      Number(ped.total),
+      ped.telefono || '-',
+      `$${Number(ped.total).toLocaleString('es-CO')}`,
       ped.estado,
       new Date(ped.createdAt).toLocaleDateString('es-CO')
     ];
-    row.alignment = { vertical: 'middle' };
-    row.eachCell((cell, colNumber) => {
-      if (colNumber === 5) {
-        cell.numFmt = '$#,##0';
-      }
-    });
-    rowIndex++;
   });
-  
-  // Resumen
-  rowIndex++;
-  const resumenRow = worksheet.getRow(rowIndex);
-  resumenRow.getCell(1).value = '📊 RESUMEN';
-  resumenRow.getCell(1).font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
-  resumenRow.getCell(1).fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FF27AE60' }
-  };
-  resumenRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
-  resumenRow.height = 25;
-  
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['Total de pedidos:', pedidos.length];
-  worksheet.getRow(rowIndex).font = { bold: true };
-  
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['🕒 Pendientes:', pedidos.filter(p => p.estado === 'pendiente').length];
-  worksheet.getRow(rowIndex).font = { bold: true };
-  
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['💳 Pagados:', pedidos.filter(p => p.estado === 'pagado').length];
-  worksheet.getRow(rowIndex).font = { bold: true };
-  
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['🚚 Enviados:', pedidos.filter(p => p.estado === 'enviado').length];
-  worksheet.getRow(rowIndex).font = { bold: true };
-  
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['✓ Entregados:', pedidos.filter(p => p.estado === 'entregado').length];
-  worksheet.getRow(rowIndex).getCell(1).font = { color: { argb: 'FF27AE60' } };
-  
-  rowIndex++;
-  worksheet.getRow(rowIndex).values = ['✗ Cancelados:', pedidos.filter(p => p.estado === 'cancelado').length];
-  worksheet.getRow(rowIndex).getCell(1).font = { color: { argb: 'FFE74C3C' } };
-  
-  rowIndex++;
-  const ventasRow = worksheet.getRow(rowIndex);
-  ventasRow.values = ['💵 Ventas totales:', totalVentas];
-  ventasRow.font = { bold: true };
-  ventasRow.getCell(2).numFmt = '$#,##0';
-  
-  // Anchos de columna
-  worksheet.columns = [
-    { width: 8 },
-    { width: 30 },
-    { width: 35 },
-    { width: 18 },
-    { width: 15 },
-    { width: 15 },
-    { width: 18 }
+
+  const summaryLines = [
+    ['Total de pedidos:', pedidos.length],
+    ['🕒 Pendientes:', pedidos.filter(p => p.estado === 'pendiente').length],
+    ['💳 Pagados:', pedidos.filter(p => p.estado === 'pagado').length],
+    ['🚚 Enviados:', pedidos.filter(p => p.estado === 'enviado').length],
+    ['✓ Entregados:', pedidos.filter(p => p.estado === 'entregado').length],
+    ['✗ Cancelados:', pedidos.filter(p => p.estado === 'cancelado').length],
+    ['💵 Ventas totales:', `$${totalVentas.toLocaleString('es-CO')}`],
   ];
-  
-  // Descargar archivo
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `pedidos_${Date.now()}.xlsx`;
-  a.click();
-  window.URL.revokeObjectURL(url);
+
+  const columnWidths = [8, 30, 35, 18, 15, 15, 18];
+
+  await exportToExcel({
+    sheetName: 'Pedidos',
+    title: 'REPORTE DE PEDIDOS',
+    headers,
+    rows,
+    summaryLines,
+    columnWidths,
+    headerColor: 'FF9B59B6',
+    titleColor: 'FF9B59B6',
+    filename: `pedidos_${Date.now()}.xlsx`,
+  });
 };
