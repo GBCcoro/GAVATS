@@ -520,7 +520,7 @@ const AdminSubcategoriasPage = () => {
           <Table responsive hover className="admin-table align-middle mb-0">
             <thead>
               <tr>
-                <th style={{ width: '50px' }}>ID</th>
+                <th style={{ width: '70px', minWidth: '60px' }}>ID</th>
                 <th>Nombre</th>
                 <th className="d-none d-sm-table-cell">Categoría</th>
                 <th className="d-none d-md-table-cell">Descripción</th>
@@ -551,11 +551,16 @@ const AdminSubcategoriasPage = () => {
                             className={`bi bi-${estaSeleccionado ? 'check-circle-fill text-danger' : 'circle text-muted'} fs-6 d-inline-block`}
                             style={{ cursor: 'pointer' }}
                           />
-                          <span>{sub.id}</span>
+                          <span>#{sub.id}</span>
                         </div>
                       </td>
                       <td className="align-middle fw-bold">
-                        <TextoTruncado as="div" texto={sub.nombre} limite={30} maxWidth="220px" />
+                        <div className="d-flex align-items-center gap-2 flex-wrap">
+                          <TextoTruncado as="span" texto={sub.nombre} limite={30} maxWidth="220px" />
+                          <Badge bg={sub.activo ? 'success' : 'secondary'} className="d-md-none" style={{ fontSize: '0.68rem' }}>
+                            {sub.activo ? 'Activo' : 'Inactivo'}
+                          </Badge>
+                        </div>
                         <TextoTruncado 
                           as="small" 
                           className="d-sm-none text-muted d-block" 

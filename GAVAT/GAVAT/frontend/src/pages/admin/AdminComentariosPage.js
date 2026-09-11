@@ -458,11 +458,11 @@ const AdminComentariosPage = () => {
           <Table responsive hover className="admin-table align-middle mb-0">
             <thead>
               <tr>
-                <th style={{ width: '140px' }}>Usuario</th>
+                <th style={{ width: '130px', minWidth: '95px' }}>Usuario</th>
                 <th>Producto</th>
-                <th style={{ width: '110px' }}>Calificación</th>
+                <th className="d-none d-sm-table-cell" style={{ width: '110px' }}>Calificación</th>
                 <th className="d-none d-sm-table-cell">Comentario</th>
-                <th style={{ width: '100px' }}>Estado</th>
+                <th className="d-none d-sm-table-cell" style={{ width: '100px' }}>Estado</th>
                 <th className="d-none d-md-table-cell" style={{ width: '120px' }}>Fecha</th>
                 <th className="text-center col-acciones" style={{ minWidth: '95px' }}>Acciones</th>
               </tr>
@@ -494,9 +494,15 @@ const AdminComentariosPage = () => {
                         </div>
                       </td>
                       <td className="align-middle fw-medium">
-                        <TextoTruncado texto={comentario.producto?.nombre || 'Producto'} limite={30} maxWidth="220px" />
+                        <TextoTruncado as="div" texto={comentario.producto?.nombre || 'Producto'} limite={30} maxWidth="220px" />
+                        <div className="d-sm-none small mt-1 d-flex align-items-center gap-2 flex-wrap">
+                          <div className="d-flex gap-1">{renderizarEstrellas(comentario.calificacion)}</div>
+                          <Badge bg={comentario.estado ? 'success' : 'warning'} style={{ fontSize: '0.68rem' }}>
+                            {comentario.estado ? 'Visible' : 'Oculto'}
+                          </Badge>
+                        </div>
                       </td>
-                      <td className="align-middle">
+                      <td className="align-middle d-none d-sm-table-cell">
                         <div className="d-flex gap-1">
                           {renderizarEstrellas(comentario.calificacion)}
                         </div>
@@ -504,7 +510,7 @@ const AdminComentariosPage = () => {
                       <td className="align-middle d-none d-sm-table-cell">
                         <TextoTruncado texto={comentario.comentario} limite={50} maxWidth="320px" />
                       </td>
-                      <td className="align-middle">
+                      <td className="align-middle d-none d-sm-table-cell">
                         <Badge bg={comentario.estado ? 'success' : 'warning'}>
                           {comentario.estado ? 'Visible' : 'Oculto'}
                         </Badge>

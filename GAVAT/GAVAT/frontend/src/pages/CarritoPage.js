@@ -134,9 +134,11 @@ const ItemFilaCarrito = memo(({ item, onAumentar, onDisminuir, onInputChange, on
             {categoriaNombre && (
               <TextoTruncado as="small" className="text-muted d-block" texto={categoriaNombre} limite={20} maxWidth="160px" />
             )}
-            <small className="text-muted d-sm-none d-block mt-1">
-              {formatCurrency(precio)} c/u
-            </small>
+            <div className="d-sm-none mt-1">
+              <small className="text-muted">{formatCurrency(precio)} c/u</small>
+              <span className="mx-1 text-muted">·</span>
+              <strong className="text-dark">{formatCurrency(subtotal)}</strong>
+            </div>
           </div>
         </div>
       </td>
@@ -183,7 +185,7 @@ const ItemFilaCarrito = memo(({ item, onAumentar, onDisminuir, onInputChange, on
           </Button>
         </div>
       </td>
-      <td className="text-center align-middle fw-bold">
+      <td className="text-center align-middle fw-bold d-none d-sm-table-cell">
         {formatCurrency(subtotal)}
       </td>
       <td className="text-center align-middle col-acciones">
@@ -560,7 +562,7 @@ const CarritoPage = () => {
                       <th scope="col">Producto</th>
                       <th scope="col" className="text-center d-none d-sm-table-cell" style={{ width: '110px' }}>Precio</th>
                       <th scope="col" className="text-center" style={{ width: '130px', minWidth: '105px' }}>Cantidad</th>
-                      <th scope="col" className="text-center" style={{ width: '115px', minWidth: '90px' }}>Subtotal</th>
+                      <th scope="col" className="text-center d-none d-sm-table-cell" style={{ width: '115px', minWidth: '90px' }}>Subtotal</th>
                       <th scope="col" className="text-center col-acciones" style={{ width: '70px', minWidth: '55px' }}>
                         <span className="d-none d-sm-inline">Acciones</span>
                       </th>

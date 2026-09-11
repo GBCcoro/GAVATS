@@ -341,7 +341,7 @@ const AdminFacturasPage = () => {
               <tr>
                 <th style={{ minWidth: '100px' }}>Número Factura</th>
                 <th>Cliente</th>
-                <th style={{ width: '110px' }}>Monto</th>
+                <th className="d-none d-sm-table-cell" style={{ width: '110px' }}>Monto</th>
                 <th className="d-none d-sm-table-cell" style={{ width: '100px' }}>Estado</th>
                 <th className="d-none d-md-table-cell" style={{ width: '130px' }}>Fecha</th>
                 <th className="text-center col-acciones" style={{ minWidth: '95px' }}>Acciones</th>
@@ -377,8 +377,14 @@ const AdminFacturasPage = () => {
                       <td className="align-middle">
                         <TextoTruncado as="div" className="fw-bold" texto={factura.clienteNombre || factura.cliente_nombre || '-'} limite={28} maxWidth="220px" />
                         <TextoTruncado as="small" className="text-muted d-block" texto={factura.clienteEmail || factura.cliente_email || ''} limite={28} maxWidth="220px" fallback="" />
+                        <div className="d-sm-none small mt-1 d-flex align-items-center gap-2 flex-wrap">
+                          <strong className="text-dark">{formatearPrecio(factura.total)}</strong>
+                          <Badge bg={getBadgeEstado(factura.estado)} style={{ fontSize: '0.68rem' }}>
+                            {factura.estado}
+                          </Badge>
+                        </div>
                       </td>
-                      <td className="align-middle fw-bold">{formatearPrecio(factura.total)}</td>
+                      <td className="align-middle fw-bold d-none d-sm-table-cell">{formatearPrecio(factura.total)}</td>
                       <td className="align-middle d-none d-sm-table-cell">
                         <Badge bg={getBadgeEstado(factura.estado)}>
                           {factura.estado}

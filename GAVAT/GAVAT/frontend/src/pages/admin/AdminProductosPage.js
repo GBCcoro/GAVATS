@@ -279,7 +279,12 @@ function FilaProducto({ prod, estaSeleccionado, onToggleSeleccionar, onEditar, o
         <ProductImage imagen={prod.imagen} nombre={prod.nombre} />
       </td>
       <td className="align-middle fw-bold">
-        <TextoTruncado as="div" texto={prod.nombre} limite={32} maxWidth="250px" />
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          <TextoTruncado as="span" texto={prod.nombre} limite={32} maxWidth="250px" />
+          <Badge bg={prod.activo ? 'success' : 'secondary'} className="d-md-none" style={{ fontSize: '0.68rem' }}>
+            {prod.activo ? 'Activo' : 'Inactivo'}
+          </Badge>
+        </div>
         <TextoTruncado 
           as="small" 
           className="d-lg-none text-muted d-block" 
@@ -287,6 +292,9 @@ function FilaProducto({ prod, estaSeleccionado, onToggleSeleccionar, onEditar, o
           limite={25} 
           maxWidth="200px" 
         />
+        <div className="d-sm-none text-muted small mt-1">
+          <strong className="text-dark">{formatearPrecio(prod.precio)}</strong> · Stock: {prod.stock}
+        </div>
       </td>
       <td className="align-middle d-none d-lg-table-cell">
         <Badge bg="info">
@@ -1445,7 +1453,7 @@ const AdminProductosPage = () => {
           <Table responsive hover className="admin-table align-middle mb-0">
             <thead>
               <tr>
-                <th style={{ width: '50px' }}>ID</th>
+                <th style={{ width: '70px', minWidth: '60px' }}>ID</th>
                 <th className="d-none d-sm-table-cell" style={{ width: '65px' }}>Imagen</th>
                 <th>Nombre</th>
                 <th className="d-none d-lg-table-cell" style={{ width: '160px' }}>Categoría</th>

@@ -222,8 +222,8 @@ const MisPedidosPage = () => {
                 <tr>
                   <th>Pedido</th>
                   <th className="d-none d-sm-table-cell">Fecha</th>
-                  <th>Estado</th>
-                  <th className="text-end">Total</th>
+                  <th className="d-none d-sm-table-cell">Estado</th>
+                  <th className="text-end d-none d-sm-table-cell">Total</th>
                   <th className="text-center col-acciones" style={{ minWidth: '95px' }}>Acciones</th>
                 </tr>
               </thead>
@@ -232,7 +232,15 @@ const MisPedidosPage = () => {
                   <tr key={pedido.id}>
                     <td className="align-middle">
                       <div>
-                        <strong className="pedido-id">#{pedido.id}</strong>
+                        <div className="d-flex align-items-center gap-2 flex-wrap">
+                          <strong className="pedido-id">#{pedido.id}</strong>
+                          <Badge bg={getEstadoBadge(pedido.estado)} className="d-sm-none" style={{ fontSize: '0.68rem' }}>
+                            {getEstadoTexto(pedido.estado)}
+                          </Badge>
+                          <strong className="pedido-total d-sm-none ms-auto text-dark">
+                            {formatearPrecio(pedido.total)}
+                          </strong>
+                        </div>
                         <div className="small text-muted d-sm-none">
                           {formatearFecha(pedido.createdAt)}
                         </div>
@@ -253,12 +261,12 @@ const MisPedidosPage = () => {
                     <td className="align-middle d-none d-sm-table-cell">
                       {formatearFecha(pedido.createdAt)}
                     </td>
-                    <td className="align-middle">
+                    <td className="align-middle d-none d-sm-table-cell">
                       <Badge bg={getEstadoBadge(pedido.estado)}>
                         {getEstadoTexto(pedido.estado)}
                       </Badge>
                     </td>
-                    <td className="align-middle text-end">
+                    <td className="align-middle text-end d-none d-sm-table-cell">
                       <strong className="pedido-total">{formatearPrecio(pedido.total)}</strong>
                     </td>
                     <td className="align-middle text-center col-acciones">

@@ -878,6 +878,25 @@ p.cell-truncate {
   background-color: #fdf2f2 !important;
 }
 
+/* Priorización de columnas esenciales: ID, Nombre y Acciones durante reducción de pantalla */
+.admin-table th:first-child,
+.admin-table td:first-child,
+.pedidos-table th:first-child,
+.pedidos-table td:first-child {
+  white-space: nowrap !important;
+}
+
+.admin-table td:first-child .d-flex,
+.pedidos-table td:first-child .d-flex {
+  flex-wrap: nowrap !important;
+}
+
+.admin-table td:nth-child(2),
+.pedidos-table td:nth-child(1),
+.carrito-table td:first-child {
+  min-width: 130px;
+}
+
 /* Grupo de botones de acción en tabla */
 .action-btn-group {
   display: inline-flex !important;

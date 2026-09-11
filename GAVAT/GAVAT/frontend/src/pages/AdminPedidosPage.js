@@ -257,10 +257,16 @@ function FilaPedido({ pedido, estaSeleccionado, onToggleSeleccionar, onVerDetall
       <td className="align-middle">
         <TextoTruncado as="div" className="fw-bold" texto={pedido.usuario?.nombre || 'Usuario desconocido'} limite={28} maxWidth="220px" />
         <TextoTruncado as="small" className="text-muted d-block" texto={pedido.usuario?.email} limite={28} maxWidth="220px" fallback="" />
+        <div className="d-sm-none small mt-1 d-flex align-items-center gap-2 flex-wrap">
+          <Badge bg={getBadgeEstado(pedido.estado)} style={{ fontSize: '0.68rem' }}>
+            {pedido.estado}
+          </Badge>
+          <strong className="text-dark">{formatearPrecio(pedido.total)}</strong>
+        </div>
       </td>
       <td className="align-middle d-none d-sm-table-cell">{formatearFecha(pedido.createdAt)}</td>
-      <td className="align-middle fw-bold">{formatearPrecio(pedido.total)}</td>
-      <td className="align-middle">
+      <td className="align-middle fw-bold d-none d-sm-table-cell">{formatearPrecio(pedido.total)}</td>
+      <td className="align-middle d-none d-sm-table-cell">
         <Badge bg={getBadgeEstado(pedido.estado)}>
           {pedido.estado}
         </Badge>
@@ -993,11 +999,11 @@ function AdminPedidosPage() {
           <Table responsive hover className="admin-table align-middle mb-0">
             <thead>
               <tr>
-                <th style={{ width: '90px' }}>ID</th>
+                <th style={{ width: '90px', minWidth: '75px' }}>ID</th>
                 <th>Cliente</th>
                 <th className="d-none d-sm-table-cell">Fecha</th>
-                <th>Total</th>
-                <th>Estado</th>
+                <th className="d-none d-sm-table-cell">Total</th>
+                <th className="d-none d-sm-table-cell">Estado</th>
                 <th className="text-center col-acciones" style={{ minWidth: '95px' }}>Acciones</th>
               </tr>
             </thead>

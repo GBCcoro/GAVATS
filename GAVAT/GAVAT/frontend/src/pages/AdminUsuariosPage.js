@@ -295,11 +295,19 @@ function FilaUsuario({ usuario, estaSeleccionado, onToggle, onEditar, onCambiarE
             style={{ cursor: 'pointer' }}
             aria-hidden="true"
           />
-          <span>{usuario.id}</span>
+          <span>#{usuario.id}</span>
         </div>
       </td>
       <td className="align-middle fw-bold">
-        <TextoTruncado as="div" texto={`${usuario.nombre} ${usuario.apellido || ''}`.trim()} limite={28} maxWidth="220px" />
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          <TextoTruncado as="span" texto={`${usuario.nombre} ${usuario.apellido || ''}`.trim()} limite={28} maxWidth="220px" />
+          <Badge bg={getRolBadgeVariant(usuario.rol)} className="d-sm-none" style={{ fontSize: '0.68rem' }}>
+            {usuario.rol}
+          </Badge>
+          <Badge bg={usuario.activo ? 'success' : 'secondary'} className="d-sm-none" style={{ fontSize: '0.68rem' }}>
+            {usuario.activo ? 'Activo' : 'Inactivo'}
+          </Badge>
+        </div>
         <TextoTruncado as="small" className="d-sm-none text-muted d-block" texto={usuario.email} limite={24} maxWidth="160px" fallback="" />
         <TextoTruncado as="small" className="d-lg-none text-muted d-block" texto={usuario.telefono || ''} limite={15} maxWidth="150px" fallback="" />
       </td>
@@ -309,7 +317,7 @@ function FilaUsuario({ usuario, estaSeleccionado, onToggle, onEditar, onCambiarE
       <td className="align-middle d-none d-lg-table-cell">
         <TextoTruncado texto={usuario.telefono || '-'} limite={15} maxWidth="140px" />
       </td>
-      <td className="align-middle">
+      <td className="align-middle d-none d-sm-table-cell">
         <Badge bg={getRolBadgeVariant(usuario.rol)}>
           {usuario.rol}
         </Badge>
@@ -339,11 +347,11 @@ function TablaUsuarios({ usuarios, seleccionados, onToggle, onEditar, onCambiarE
         <Table responsive hover className="admin-table align-middle mb-0">
           <thead>
             <tr>
-              <th style={{ width: '50px' }}>ID</th>
+              <th style={{ width: '70px', minWidth: '60px' }}>ID</th>
               <th>Nombre</th>
               <th className="d-none d-sm-table-cell">Email</th>
               <th className="d-none d-lg-table-cell" style={{ width: '130px' }}>Teléfono</th>
-              <th style={{ width: '110px' }}>Rol</th>
+              <th className="d-none d-sm-table-cell" style={{ width: '110px' }}>Rol</th>
               <th className="d-none d-sm-table-cell" style={{ width: '100px' }}>Estado</th>
               <th className="text-center col-acciones" style={{ minWidth: '95px' }}>Acciones</th>
             </tr>

@@ -464,7 +464,7 @@ const AdminCategoriasPage = () => {
           <Table responsive hover className="admin-table align-middle mb-0">
             <thead>
               <tr>
-                <th style={{ width: '50px' }}>ID</th>
+                <th style={{ width: '70px', minWidth: '60px' }}>ID</th>
                 <th>Nombre</th>
                 <th className="d-none d-sm-table-cell">Descripción</th>
                 <th className="d-none d-md-table-cell" style={{ width: '110px' }}>Estado</th>
@@ -494,11 +494,16 @@ const AdminCategoriasPage = () => {
                             className={`bi bi-${estaSeleccionado ? 'check-circle-fill text-danger' : 'circle text-muted'} fs-6 d-inline-block`}
                             style={{ cursor: 'pointer' }}
                           />
-                          <span>{cat.id}</span>
+                          <span>#{cat.id}</span>
                         </div>
                       </td>
                       <td className="align-middle fw-bold">
-                        <TextoTruncado as="div" texto={cat.nombre} limite={30} maxWidth="220px" />
+                        <div className="d-flex align-items-center gap-2 flex-wrap">
+                          <TextoTruncado as="span" texto={cat.nombre} limite={30} maxWidth="220px" />
+                          <Badge bg={cat.activo ? 'success' : 'secondary'} className="d-md-none" style={{ fontSize: '0.68rem' }}>
+                            {cat.activo ? 'Activo' : 'Inactivo'}
+                          </Badge>
+                        </div>
                         {cat.descripcion && (
                           <TextoTruncado 
                             as="small" 
