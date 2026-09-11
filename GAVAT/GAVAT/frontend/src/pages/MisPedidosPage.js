@@ -13,11 +13,23 @@ import pedidoService from '../services/pedidoService';
 import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import FloatingToast from '../components/FloatingToast';
+import ModalConfirmacion from '../components/ModalConfirmacion';
 
 const MisPedidosPage = () => {
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
+  const [modalConfirmacion, setModalConfirmacion] = useState({
+    show: false,
+    titulo: '',
+    mensaje: '',
+    tipo: 'danger',
+    icono: 'x-circle-fill',
+    textoConfirmar: 'Sí, cancelar',
+    textoCancelar: 'Mantener pedido',
+    onConfirm: null,
+    onCancel: null
+  });
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -70,6 +82,7 @@ const MisPedidosPage = () => {
   const getEstadoBadge = (estado) => {
     const badges = {
       'pendiente': 'warning',
+      'pagado': 'info',
       'confirmado': 'info',
       'en_proceso': 'primary',
       'enviado': 'secondary',
@@ -131,6 +144,36 @@ const MisPedidosPage = () => {
     }
   };
 
+  const handleSolicitarCancelar = (pedido) => {
+    setModalConfirmacion({
+      show: true,
+      titulo: `¿Cancelar Pedido #${pedido.id}?`,
+      mensaje: `¿Estás seguro de que deseas cancelar el Pedido #${pedido.id} por valor de ${formatearPrecio(pedido.total)}? Esta acción cancelará tu pedido y devolverá los productos reservados al inventario.`,
+      tipo: 'danger',
+      icono: 'x-circle-fill',
+      textoConfirmar: 'Sí, cancelar pedido',
+      textoCancelar: 'Mantener pedido',
+      onConfirm: async () => {
+        try {
+          const res = await pedidoService.cancelarPedido(pedido.id);
+          setMensaje({
+            tipo: 'success',
+            texto: res.message || `El Pedido #${pedido.id} ha sido cancelado exitosamente.`
+          });
+          setPedidos((prev) =>
+            prev.map((p) => (p.id === pedido.id ? { ...p, estado: 'cancelado' } : p))
+          );
+        } catch (error) {
+          console.error('Error al cancelar pedido:', error);
+          setMensaje({
+            tipo: 'danger',
+            texto: error.message || error.error || 'No se pudo cancelar el pedido'
+          });
+        }
+      }
+    });
+  };
+
   if (loading) {
     return <LoadingSpinner message="Cargando pedidos..." />;
   }
@@ -151,6 +194,11 @@ const MisPedidosPage = () => {
       <FloatingToast
         mensaje={mensaje}
         onClose={() => setMensaje({ tipo: '', texto: '' })}
+      />
+
+      <ModalConfirmacion
+        modal={modalConfirmacion}
+        onClose={() => setModalConfirmacion((prev) => ({ ...prev, show: false }))}
       />
 
       {pedidos.length === 0 ? (
@@ -201,26 +249,39 @@ const MisPedidosPage = () => {
                       <strong className="pedido-total">{formatearPrecio(pedido.total)}</strong>
                     </td>
                     <td className="align-middle text-center">
-                      <Button
-                        className="btn-ver-detalle"
-                        size="sm"
-                        onClick={() => navigate(`/pedido-confirmado/${pedido.id}`)}
-                        title="Ver detalles del pedido"
-                      >
-                        <i className="bi bi-eye-fill me-1"></i>{' '}
-                        Ver Detalle
-                      </Button>
-                      {pedido.estado === 'pagado' && (
+                      <div className="d-flex justify-content-center align-items-center gap-2 flex-wrap">
                         <Button
-                          className="btn-descargar ms-2"
+                          className="btn-ver-detalle"
                           size="sm"
-                          onClick={() => handleDescargarFactura(pedido.id)}
-                          title="Descargar factura en PDF"
+                          onClick={() => navigate(`/pedido-confirmado/${pedido.id}`)}
+                          title="Ver detalles del pedido"
                         >
-                          <i className="bi bi-file-earmark-pdf-fill me-1"></i>{' '}
-                          Factura
+                          <i className="bi bi-eye-fill me-1"></i>{' '}
+                          Ver Detalle
                         </Button>
-                      )}
+                        {pedido.estado === 'pagado' && (
+                          <Button
+                            className="btn-descargar"
+                            size="sm"
+                            onClick={() => handleDescargarFactura(pedido.id)}
+                            title="Descargar factura en PDF"
+                          >
+                            <i className="bi bi-file-earmark-pdf-fill me-1"></i>{' '}
+                            Factura
+                          </Button>
+                        )}
+                        {['pendiente', 'pagado'].includes(pedido.estado) && (
+                          <Button
+                            className="btn-cancelar-pedido"
+                            size="sm"
+                            onClick={() => handleSolicitarCancelar(pedido)}
+                            title="Cancelar este pedido"
+                          >
+                            <i className="bi bi-x-circle-fill me-1"></i>{' '}
+                            Cancelar
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -330,6 +391,20 @@ const MisPedidosPage = () => {
         .btn-descargar:hover {
           background: var(--bs-success, #2d8659);
           color: var(--fnt-white, #ffffff);
+          transform: translateY(-1px);
+        }
+        .btn-cancelar-pedido {
+          background: transparent;
+          border: 2px solid var(--bs-danger, #dc3545);
+          color: var(--bs-danger, #dc3545);
+          border-radius: 0.75rem;
+          padding: 0.375rem 0.75rem;
+          font-weight: 500;
+          transition: all 0.3s ease;
+        }
+        .btn-cancelar-pedido:hover {
+          background: var(--bs-danger, #dc3545);
+          color: #ffffff;
           transform: translateY(-1px);
         }
         /* Ajuste para badges de estado (Bootstrap mantiene sus colores semánticos) */

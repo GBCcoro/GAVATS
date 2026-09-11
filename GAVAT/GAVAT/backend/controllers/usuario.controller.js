@@ -33,15 +33,22 @@ const getUsuarios = async (req, res) => {
     if (activo !== undefined && activo !== '' && activo !== 'todos') {
       where.activo = activo === "true" || activo === true || activo === 'activo';
     }
-    // Búsqueda por texto en nombre, apellido o email
+    // Búsqueda por texto en nombre, email, teléfono, dirección o ID
     if (buscar && typeof buscar === 'string' && buscar.trim()) {
       const term = buscar.trim();
+      const cleanId = term.replace(/^[#\s]+/, '').trim();
+      const numId = Number.parseInt(cleanId, 10);
       const { Op } = require("sequelize");
-      where[Op.or] = [
+      const orConditions = [
         { nombre: { [Op.like]: `%${term}%` } },
-        { apellido: { [Op.like]: `%${term}%` } },
         { email: { [Op.like]: `%${term}%` } },
+        { telefono: { [Op.like]: `%${term}%` } },
+        { direccion: { [Op.like]: `%${term}%` } },
       ];
+      if (!Number.isNaN(numId) && String(numId) === cleanId) {
+        orConditions.push({ id: numId });
+      }
+      where[Op.or] = orConditions;
     }
     // Calcula el offset para paginación (cuántos registros saltar)
     const paginaNumero = Math.max(1, Number.parseInt(pagina, 10) || 1);

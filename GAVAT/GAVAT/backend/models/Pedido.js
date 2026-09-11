@@ -330,9 +330,14 @@ Pedido.prototype.puedeSerCancelado = function() {
  * 4. Cambia el estado a 'cancelado'
  * @returns {Promise<Pedido>} Pedido cancelado
  */
-Pedido.prototype.cancelar = async function(transaction = null) {
-  // Si no se puede cancelar (ya enviado/entregado), lanza error
-  if (!this.puedeSerCancelado()) {
+Pedido.prototype.cancelar = async function(transaction = null, esAdmin = false) {
+  // Si el pedido ya está cancelado, no se puede volver a cancelar
+  if (this.estado === 'cancelado') {
+    throw new Error('El pedido ya se encuentra cancelado');
+  }
+
+  // Si no es admin y no se puede cancelar (ya enviado/entregado), lanza error
+  if (!esAdmin && !this.puedeSerCancelado()) {
     throw new Error('Este pedido no puede ser cancelado');
   }
   

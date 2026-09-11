@@ -15,6 +15,7 @@ import pedidoService from '../services/pedidoService';
 import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import FloatingToast from '../components/FloatingToast';
+import ModalConfirmacion from '../components/ModalConfirmacion';
 import { getImageUrl, formatCurrency, formatDateTime } from '../utils/helpers';
 
 const BADGES_ESTADO = {
@@ -65,7 +66,19 @@ const PedidoConfirmadoPage = () => {
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
   const [descargandoFactura, setDescargandoFactura] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '', accion: null });
+  const [modalConfirmacion, setModalConfirmacion] = useState({
+    show: false,
+    titulo: '',
+    mensaje: '',
+    tipo: 'danger',
+    icono: 'x-circle-fill',
+    textoConfirmar: 'Sí, cancelar',
+    textoCancelar: 'Mantener pedido',
+    onConfirm: null,
+    onCancel: null
+  });
   const { id } = useParams();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -131,6 +144,38 @@ const PedidoConfirmadoPage = () => {
     }
   };
 
+  const handleSolicitarCancelar = () => {
+    if (!pedido) return;
+    setModalConfirmacion({
+      show: true,
+      titulo: `¿Cancelar Pedido #${pedido.id}?`,
+      mensaje: `¿Estás seguro de que deseas cancelar el Pedido #${pedido.id} por un valor de ${formatCurrency(pedido.total)}? Esta acción cancelará la orden y liberará los productos reservados al inventario.`,
+      tipo: 'danger',
+      icono: 'x-circle-fill',
+      textoConfirmar: 'Sí, cancelar pedido',
+      textoCancelar: 'Mantener pedido',
+      onConfirm: async () => {
+        setCancelando(true);
+        try {
+          const res = await pedidoService.cancelarPedido(pedido.id);
+          setMensaje({
+            tipo: 'success',
+            texto: res.message || `El Pedido #${pedido.id} ha sido cancelado exitosamente.`
+          });
+          setPedido((prev) => (prev ? { ...prev, estado: 'cancelado' } : prev));
+        } catch (error) {
+          console.error('Error al cancelar pedido:', error);
+          setMensaje({
+            tipo: 'danger',
+            texto: error.message || error.error || 'No se pudo cancelar el pedido'
+          });
+        } finally {
+          setCancelando(false);
+        }
+      }
+    });
+  };
+
   if (loading) {
     return (
       <div className="py-5">
@@ -166,6 +211,12 @@ const PedidoConfirmadoPage = () => {
         <FloatingToast
           mensaje={mensaje}
           onClose={() => setMensaje({ tipo: '', texto: '', accion: null })}
+        />
+
+        {/* Diálogo de Confirmación */}
+        <ModalConfirmacion
+          modal={modalConfirmacion}
+          onClose={() => setModalConfirmacion((prev) => ({ ...prev, show: false }))}
         />
 
         {/* ========================================================================= */}
@@ -377,6 +428,19 @@ const PedidoConfirmadoPage = () => {
                     </Button>
                   )}
 
+                  {['pendiente', 'pagado'].includes(pedido.estado) && (
+                    <Button
+                      type="button"
+                      variant="outline-danger"
+                      className="btn-accion-pedido btn-cancelar-detalle d-flex align-items-center justify-content-center gap-2 py-2 fw-semibold"
+                      onClick={handleSolicitarCancelar}
+                      disabled={cancelando}
+                    >
+                      <span className="bi bi-x-circle-fill" aria-hidden="true" />
+                      <span>{cancelando ? 'Cancelando...' : 'Cancelar Pedido'}</span>
+                    </Button>
+                  )}
+
                   <Button
                     type="button"
                     variant="outline-secondary"
@@ -467,6 +531,19 @@ const PedidoConfirmadoPage = () => {
           background-color: #e0e7ff;
           color: #3730a3;
           border: 1px solid #c7d2fe;
+        }
+        .btn-factura:hover {
+          background-color: #10b981;
+          color: #ffffff;
+        }
+        .btn-cancelar-detalle {
+          border-color: #dc3545;
+          color: #dc3545;
+        }
+        .btn-cancelar-detalle:hover {
+          background-color: #dc3545;
+          color: #ffffff;
+          transform: translateY(-1px);
         }
         .badge-estado-proceso {
           background-color: #fef9c3;

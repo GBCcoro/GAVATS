@@ -16,6 +16,7 @@ import ModalConfirmacion from '../components/ModalConfirmacion';
 import ToolbarSeleccionLote from '../components/ToolbarSeleccionLote';
 
 const TITULOS_ESTADO = {
+  pendiente: '¿Marcar pedido como pendiente?',
   pagado: '¿Marcar pedido como pagado?',
   enviado: '¿Marcar pedido como enviado?',
   entregado: '¿Marcar pedido como entregado?',
@@ -23,6 +24,7 @@ const TITULOS_ESTADO = {
 };
 
 const ICONOS_ESTADO = {
+  pendiente: 'clock-history',
   pagado: 'cash-stack',
   enviado: 'truck',
   entregado: 'check-circle-fill',
@@ -30,6 +32,7 @@ const ICONOS_ESTADO = {
 };
 
 const TIPOS_ESTADO = {
+  pendiente: 'warning',
   pagado: 'info',
   enviado: 'primary',
   entregado: 'success',
@@ -160,30 +163,70 @@ function AccionesPedido({ pedido, onVerDetalle, onCambiarEstado }) {
       )}
 
       {pedido.estado === 'pagado' && (
-        <Button 
-          type="button"
-          variant="outline-primary" 
-          size="sm" 
-          className="btn-action-table" 
-          onClick={(e) => handleAccion(e, () => onCambiarEstado(pedido.id, 'enviado'))} 
-          title="Marcar como enviado"
-        >
-          <span className="bi bi-truck" aria-hidden="true" />
-          <span className="btn-text">Enviar</span>
-        </Button>
+        <>
+          <Button 
+            type="button"
+            variant="outline-primary" 
+            size="sm" 
+            className="btn-action-table" 
+            onClick={(e) => handleAccion(e, () => onCambiarEstado(pedido.id, 'enviado'))} 
+            title="Marcar como enviado"
+          >
+            <span className="bi bi-truck" aria-hidden="true" />
+            <span className="btn-text">Enviar</span>
+          </Button>
+          <Button 
+            type="button"
+            variant="outline-danger" 
+            size="sm" 
+            className="btn-action-table" 
+            onClick={(e) => handleAccion(e, () => onCambiarEstado(pedido.id, 'cancelado'))} 
+            title="Cancelar pedido"
+          >
+            <span className="bi bi-x-circle" aria-hidden="true" />
+            <span className="btn-text">Cancelar</span>
+          </Button>
+        </>
       )}
 
       {pedido.estado === 'enviado' && (
+        <>
+          <Button 
+            type="button"
+            variant="outline-success" 
+            size="sm" 
+            className="btn-action-table" 
+            onClick={(e) => handleAccion(e, () => onCambiarEstado(pedido.id, 'entregado'))} 
+            title="Marcar como entregado"
+          >
+            <span className="bi bi-check-circle" aria-hidden="true" />
+            <span className="btn-text">Entregar</span>
+          </Button>
+          <Button 
+            type="button"
+            variant="outline-danger" 
+            size="sm" 
+            className="btn-action-table" 
+            onClick={(e) => handleAccion(e, () => onCambiarEstado(pedido.id, 'cancelado'))} 
+            title="Cancelar pedido"
+          >
+            <span className="bi bi-x-circle" aria-hidden="true" />
+            <span className="btn-text">Cancelar</span>
+          </Button>
+        </>
+      )}
+
+      {pedido.estado === 'entregado' && (
         <Button 
           type="button"
-          variant="outline-success" 
+          variant="outline-danger" 
           size="sm" 
           className="btn-action-table" 
-          onClick={(e) => handleAccion(e, () => onCambiarEstado(pedido.id, 'entregado'))} 
-          title="Marcar como entregado"
+          onClick={(e) => handleAccion(e, () => onCambiarEstado(pedido.id, 'cancelado'))} 
+          title="Cancelar pedido entregado (devolución y reposición de stock)"
         >
-          <span className="bi bi-check-circle" aria-hidden="true" />
-          <span className="btn-text">Entregar</span>
+          <span className="bi bi-x-circle" aria-hidden="true" />
+          <span className="btn-text">Cancelar</span>
         </Button>
       )}
     </div>
@@ -253,6 +296,17 @@ function FiltrosPedidos({ filtros, onChangeFiltro, onLimpiar }) {
                   value={filtros.busqueda}
                   onChange={(e) => onChangeFiltro('busqueda', e.target.value)}
                 />
+                {filtros.busqueda && (
+                  <Button
+                    type="button"
+                    variant="outline-secondary"
+                    className="border-start-0 bg-transparent"
+                    onClick={() => onChangeFiltro('busqueda', '')}
+                    title="Limpiar búsqueda"
+                  >
+                    <span className="bi bi-x-lg" aria-hidden="true" />
+                  </Button>
+                )}
               </InputGroup>
             </Form.Group>
           </Col>
@@ -464,21 +518,36 @@ function ModalDetallePedido({ show, pedido, onCerrar, onCambiarEstado }) {
 
         <div>
           <span className="small fw-semibold text-secondary d-block mb-2">Cambiar Estado Directo:</span>
-          <div className="d-flex flex-wrap gap-2">
-            {ESTADOS_DISPONIBLES.map((est) => (
-              <Button
-                key={est}
-                type="button"
-                variant={pedido.estado === est ? 'primary' : 'outline-secondary'}
-                size="sm"
-                onClick={() => onCambiarEstado(pedido.id, est)}
-                disabled={pedido.estado === est}
-                className="text-capitalize"
-              >
-                {est}
-              </Button>
-            ))}
-          </div>
+          {pedido.estado === 'cancelado' ? (
+            <div className="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-0">
+              <span className="bi bi-x-circle-fill" aria-hidden="true" />
+              <span>Este pedido se encuentra <strong>cancelado</strong>. El stock de los productos ya fue retornado al inventario y no admite más cambios.</span>
+            </div>
+          ) : (
+            <div className="d-flex flex-wrap gap-2">
+              {ESTADOS_DISPONIBLES.map((est) => (
+                <Button
+                  key={est}
+                  type="button"
+                  variant={pedido.estado === est ? 'primary' : est === 'cancelado' ? 'outline-danger' : 'outline-secondary'}
+                  size="sm"
+                  onClick={() => onCambiarEstado(pedido.id, est)}
+                  disabled={pedido.estado === est}
+                  className="text-capitalize"
+                  title={est === 'cancelado' ? 'Cancelar pedido y devolver stock a inventario' : `Cambiar estado a ${est}`}
+                >
+                  {est === 'cancelado' ? (
+                    <>
+                      <span className="bi bi-x-circle me-1" aria-hidden="true" />
+                      <span>Cancelar</span>
+                    </>
+                  ) : (
+                    est
+                  )}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
       </Modal.Body>
 
@@ -564,41 +633,49 @@ function AdminPedidosPage() {
     }
   }, [busquedaDebounced, filtros]);
 
-  const cargarPedidos = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = construirParametrosBusqueda({
-        pagina: paginaActual,
-        limite: registrosPorPagina,
-        busqueda: busquedaDebounced,
-        estado: filtros.estado,
-        fechaInicio: filtros.fechaInicio,
-        fechaFin: filtros.fechaFin
-      });
-
-      const res = await pedidoService.obtenerTodosPedidosPaginados(params);
-      const peds = res.data?.pedidos || res.pedidos || res.data || [];
-      const paginacion = res.data?.paginacion || res.paginacion || {};
-
-      setPedidos(Array.isArray(peds) ? peds : []);
-      const total = paginacion.total !== undefined ? paginacion.total : peds.length;
-      const numPags = paginacion.totalPaginas || Math.max(1, Math.ceil(total / registrosPorPagina));
-      setTotalPedidos(total);
-      setTotalPaginas(numPags);
-    } catch (error) {
-      console.error('Error al cargar pedidos:', error);
-      setMensaje({ tipo: 'danger', texto: 'Error al cargar los pedidos' });
-      setPedidos([]);
-      setTotalPedidos(0);
-      setTotalPaginas(1);
-    } finally {
-      setLoading(false);
-    }
-  }, [paginaActual, busquedaDebounced, filtros.estado, filtros.fechaInicio, filtros.fechaFin]);
-
   useEffect(() => {
-    cargarPedidos();
-  }, [cargarPedidos, reloadKey]);
+    let activo = true;
+    const ejecutarCarga = async () => {
+      setLoading(true);
+      try {
+        const params = construirParametrosBusqueda({
+          pagina: paginaActual,
+          limite: registrosPorPagina,
+          busqueda: busquedaDebounced,
+          estado: filtros.estado,
+          fechaInicio: filtros.fechaInicio,
+          fechaFin: filtros.fechaFin
+        });
+
+        const res = await pedidoService.obtenerTodosPedidosPaginados(params);
+        if (!activo) return;
+        const peds = res.data?.pedidos || res.pedidos || res.data || [];
+        const paginacion = res.data?.paginacion || res.paginacion || {};
+
+        setPedidos(Array.isArray(peds) ? peds : []);
+        const total = paginacion.total !== undefined ? paginacion.total : peds.length;
+        const numPags = paginacion.totalPaginas || Math.max(1, Math.ceil(total / registrosPorPagina));
+        setTotalPedidos(total);
+        setTotalPaginas(numPags);
+      } catch (error) {
+        if (!activo) return;
+        console.error('Error al cargar pedidos:', error);
+        setMensaje({ tipo: 'danger', texto: 'Error al cargar los pedidos' });
+        setPedidos([]);
+        setTotalPedidos(0);
+        setTotalPaginas(1);
+      } finally {
+        if (activo) {
+          setLoading(false);
+        }
+      }
+    };
+
+    ejecutarCarga();
+    return () => {
+      activo = false;
+    };
+  }, [paginaActual, busquedaDebounced, filtros.estado, filtros.fechaInicio, filtros.fechaFin, reloadKey]);
 
   const recargarPedidos = useCallback(() => {
     setReloadKey(prev => prev + 1);
@@ -616,28 +693,29 @@ function AdminPedidosPage() {
 
   // Cambio de estado con confirmación modal
   const solicitarCambioEstado = (pedidoId, nuevoEstado) => {
+    const esCancelacion = nuevoEstado === 'cancelado';
     setModalConfirmacion({
       show: true,
       titulo: TITULOS_ESTADO[nuevoEstado] || `¿Cambiar estado a "${nuevoEstado}"?`,
-      mensaje: `¿Deseas cambiar el estado del Pedido #${pedidoId} a "${nuevoEstado.toUpperCase()}"?`,
+      mensaje: esCancelacion
+        ? `¿Deseas cancelar el Pedido #${pedidoId}? Esta acción cancelará la orden y devolverá el stock de los productos al inventario.`
+        : `¿Deseas cambiar el estado del Pedido #${pedidoId} a "${nuevoEstado.toUpperCase()}"?`,
       tipo: TIPOS_ESTADO[nuevoEstado] || 'primary',
       icono: ICONOS_ESTADO[nuevoEstado] || 'arrow-repeat',
-      textoConfirmar: nuevoEstado === 'cancelado' ? 'Cancelar Pedido' : 'Actualizar Estado',
+      textoConfirmar: esCancelacion ? 'Sí, cancelar pedido' : 'Actualizar Estado',
       textoCancelar: 'Cerrar',
       onConfirm: async () => {
         try {
-          actualizarPedidoEnEstado(pedidoId, nuevoEstado);
           const response = await pedidoService.actualizarEstadoPedido(pedidoId, nuevoEstado);
           setMensaje({ tipo: 'success', texto: `Pedido #${pedidoId} actualizado a "${nuevoEstado}" exitosamente` });
           
           const pedidoActualizado = response?.data?.pedido || response?.pedido || response?.data || null;
-          if (pedidoActualizado) {
-            actualizarPedidoEnEstado(pedidoId, nuevoEstado, pedidoActualizado);
-          }
+          actualizarPedidoEnEstado(pedidoId, nuevoEstado, pedidoActualizado);
           recargarPedidos();
         } catch (error) {
           console.error('Error al cambiar estado del pedido:', error);
-          setMensaje({ tipo: 'danger', texto: 'Error al cambiar estado del pedido' });
+          const errorMsg = error?.response?.data?.message || error?.message || 'Error al cambiar estado del pedido';
+          setMensaje({ tipo: 'danger', texto: errorMsg });
           recargarPedidos();
         }
       }
@@ -649,35 +727,44 @@ function AdminPedidosPage() {
     const count = seleccionados.size;
     if (count === 0) return;
 
+    const esCancelacion = nuevoEstado === 'cancelado';
     setModalConfirmacion({
       show: true,
       titulo: `¿Marcar ${count} pedido${count !== 1 ? 's' : ''} como "${nuevoEstado}"?`,
-      mensaje: `Se actualizará el estado de los ${count} pedidos seleccionados a "${nuevoEstado.toUpperCase()}".`,
-      tipo: nuevoEstado === 'cancelado' ? 'danger' : 'primary',
-      icono: nuevoEstado === 'cancelado' ? 'x-circle-fill' : 'arrow-repeat',
-      textoConfirmar: 'Confirmar',
+      mensaje: esCancelacion
+        ? `Se cancelarán los ${count} pedidos seleccionados y se devolverá el stock de sus productos al inventario.`
+        : `Se actualizará el estado de los ${count} pedidos seleccionados a "${nuevoEstado.toUpperCase()}".`,
+      tipo: esCancelacion ? 'danger' : 'primary',
+      icono: esCancelacion ? 'x-circle-fill' : 'arrow-repeat',
+      textoConfirmar: esCancelacion ? 'Sí, cancelar pedidos' : 'Confirmar',
       textoCancelar: 'Cancelar',
       onConfirm: async () => {
         try {
           const ids = Array.from(seleccionados);
           setSeleccionados(new Set());
-          
-          setPedidos(prev => 
-            prev.map(p => ids.includes(p.id) ? { ...p, estado: nuevoEstado } : p)
-          );
 
           const resultados = await Promise.allSettled(ids.map(id => pedidoService.actualizarEstadoPedido(id, nuevoEstado)));
           const exitosos = resultados.filter(r => r.status === 'fulfilled').length;
+          const fallidos = resultados.filter(r => r.status === 'rejected');
           
-          setMensaje({ 
-            tipo: exitosos > 0 ? 'success' : 'danger', 
-            texto: `${exitosos} de ${ids.length} pedidos actualizados a "${nuevoEstado}" exitosamente` 
-          });
+          if (fallidos.length === 0) {
+            setMensaje({ 
+              tipo: 'success', 
+              texto: `${exitosos} pedido${exitosos !== 1 ? 's' : ''} actualizado${exitosos !== 1 ? 's' : ''} a "${nuevoEstado}" exitosamente` 
+            });
+          } else {
+            const primerError = fallidos[0]?.reason?.response?.data?.message || fallidos[0]?.reason?.message || '';
+            setMensaje({ 
+              tipo: exitosos > 0 ? 'warning' : 'danger', 
+              texto: `${exitosos} de ${ids.length} pedidos actualizados.${primerError ? ` Detalle: ${primerError}` : ''}` 
+            });
+          }
           
           recargarPedidos();
         } catch (error) {
           console.error('Error al cambiar estado masivo:', error);
-          setMensaje({ tipo: 'danger', texto: 'Error al procesar el cambio de estado masivo' });
+          const errorMsg = error?.response?.data?.message || error?.message || 'Error al procesar el cambio de estado masivo';
+          setMensaje({ tipo: 'danger', texto: errorMsg });
           recargarPedidos();
         }
       }

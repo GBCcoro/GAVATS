@@ -206,6 +206,20 @@ const Producto = sequelize.define('Producto', {
     type: DataTypes.BOOLEAN,           // TINYINT(1) en MySQL
     allowNull: false,                  // Obligatorio
     defaultValue: true                 // Se crea activo por defecto
+  },
+
+  // Columna 'desactivadoPorCategoria' → Indica si fue desactivado en cascada por su categoría padre
+  desactivadoPorCategoria: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+
+  // Columna 'desactivadoPorSubcategoria' → Indica si fue desactivado en cascada por su subcategoría padre
+  desactivadoPorSubcategoria: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   }
 
 }, {

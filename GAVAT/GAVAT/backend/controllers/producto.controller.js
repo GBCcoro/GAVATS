@@ -371,7 +371,11 @@ const actualizarProducto = async (req, res) => {
       producto.categoriaId = Number.parseInt(categoriaId);
     if (subcategoriaId !== undefined)
       producto.subcategoriaId = Number.parseInt(subcategoriaId);
-    if (activo !== undefined) producto.activo = activo;
+    if (activo !== undefined) {
+      producto.activo = activo;
+      producto.desactivadoPorCategoria = false;
+      producto.desactivadoPorSubcategoria = false;
+    }
     await producto.save();
     await producto.reload({
       include: [
@@ -451,6 +455,8 @@ const toggleProducto = async (req, res) => {
 
     // Invierte el estado: true → false, false → true
     producto.activo = !producto.activo;
+    producto.desactivadoPorCategoria = false;
+    producto.desactivadoPorSubcategoria = false;
     await producto.save();
     
     // Responde indicando el nuevo estado

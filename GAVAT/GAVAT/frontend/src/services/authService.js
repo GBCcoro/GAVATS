@@ -32,7 +32,8 @@ const authService = {
    */
   login: async (email, password) => {
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const emailNormalizado = typeof email === 'string' ? email.trim().toLowerCase() : email;
+      const response = await api.post('/auth/login', { email: emailNormalizado, password });
       
       // Guardar token y usuario en localStorage
       if (response.data.success) {

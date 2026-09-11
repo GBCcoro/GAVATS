@@ -11,6 +11,7 @@ import { Button, Form, Alert, Modal } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import comentariosService from '../services/comentariosService';
 import LoadingSpinner from './LoadingSpinner';
+import ModalConfirmacion from './ModalConfirmacion';
 import './ProductoComentarios.css';
 
 const ProductoComentarios = ({ productoId, onComentarioCreado }) => {
@@ -32,6 +33,18 @@ const ProductoComentarios = ({ productoId, onComentarioCreado }) => {
   const [textoEdicion, setTextoEdicion] = useState('');
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [eliminandoComentarioId, setEliminandoComentarioId] = useState(null);
+
+  // Modal de confirmación para eliminar comentario
+  const [modalConfirmacion, setModalConfirmacion] = useState({
+    show: false,
+    titulo: '',
+    mensaje: '',
+    tipo: 'danger',
+    icono: 'trash3-fill',
+    textoConfirmar: 'Eliminar',
+    textoCancelar: 'Cancelar',
+    onConfirm: null
+  });
   
   // Paginación
   const [paginaActual, setPaginaActual] = useState(1);
@@ -151,23 +164,30 @@ const ProductoComentarios = ({ productoId, onComentarioCreado }) => {
     }
   };
 
-  const handleEliminarComentario = async (comentario) => {
-    if (!window.confirm('¿Seguro que deseas eliminar tu comentario?')) {
-      return;
-    }
-
-    setEliminandoComentarioId(comentario.id);
-    try {
-      await comentariosService.eliminarComentarioPropio(comentario.id);
-      setMensaje({ tipo: 'success', texto: 'Comentario eliminado exitosamente' });
-      cargarComentarios();
-      if (onComentarioCreado) onComentarioCreado();
-    } catch (error) {
-      console.error('Error al eliminar comentario:', error);
-      setMensaje({ tipo: 'danger', texto: error.message || 'Error al eliminar comentario' });
-    } finally {
-      setEliminandoComentarioId(null);
-    }
+  const handleEliminarComentario = (comentario) => {
+    setModalConfirmacion({
+      show: true,
+      titulo: '¿Eliminar comentario?',
+      mensaje: '¿Estás seguro de que deseas eliminar tu comentario? Esta acción no se puede deshacer.',
+      tipo: 'danger',
+      icono: 'trash3-fill',
+      textoConfirmar: 'Sí, eliminar',
+      textoCancelar: 'Cancelar',
+      onConfirm: async () => {
+        setEliminandoComentarioId(comentario.id);
+        try {
+          await comentariosService.eliminarComentarioPropio(comentario.id);
+          setMensaje({ tipo: 'success', texto: 'Comentario eliminado exitosamente' });
+          cargarComentarios();
+          if (onComentarioCreado) onComentarioCreado();
+        } catch (error) {
+          console.error('Error al eliminar comentario:', error);
+          setMensaje({ tipo: 'danger', texto: error.message || 'Error al eliminar comentario' });
+        } finally {
+          setEliminandoComentarioId(null);
+        }
+      }
+    });
   };
 
   const esComentarioPropio = (comentario) => {
@@ -410,6 +430,12 @@ const ProductoComentarios = ({ productoId, onComentarioCreado }) => {
           </Button>
         </div>
       )}
+
+      {/* Modal de confirmación para eliminar comentario */}
+      <ModalConfirmacion
+        modal={modalConfirmacion}
+        onClose={() => setModalConfirmacion(prev => ({ ...prev, show: false }))}
+      />
     </div>
   );
 };

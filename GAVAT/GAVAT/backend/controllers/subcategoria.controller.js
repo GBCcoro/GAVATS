@@ -319,7 +319,10 @@ const actualizarSubcategoria = async (req, res) => {
     if (nombre !== undefined) subcategoria.nombre = nombre;
     if (descripcion !== undefined) subcategoria.descripcion = descripcion;
     if (categoriaId !== undefined) subcategoria.categoriaId = categoriaId;
-    if (activo !== undefined) subcategoria.activo = activo;
+    if (activo !== undefined) {
+      subcategoria.activo = activo;
+      subcategoria.desactivadoPorPadre = false;
+    }
 
     await subcategoria.save();
 
@@ -394,6 +397,7 @@ const toggleSubcategoria = async (req, res) => {
     }
 
     subcategoria.activo = nuevoEstado;
+    subcategoria.desactivadoPorPadre = false;
     
     // save() guarda y dispara el hook afterUpdate que desactiva productos en cascada
     await subcategoria.save();

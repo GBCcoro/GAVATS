@@ -79,6 +79,13 @@ const Subcategoria = sequelize.define('Subcategoria', {
     type: DataTypes.BOOLEAN,           // TINYINT(1) en MySQL → true (1) o false (0)
     allowNull: false,                  // Obligatorio
     defaultValue: true                 // Se crea activa por defecto
+  },
+
+  // Columna 'desactivadoPorPadre' → Indica si fue desactivada en cascada por su categoría padre
+  desactivadoPorPadre: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   }
 
 }, {
@@ -156,41 +163,72 @@ const Subcategoria = sequelize.define('Subcategoria', {
     },
 
     /**
-     * afterUpdate → Se ejecuta DESPUÉS de actualizar una subcategoría
-     * Implementa DESACTIVACIÓN EN CASCADA:
-     * Si activo cambia a false → desactiva TODOS los productos de esta subcategoría.
+     * afterUpdate → Se ejecuta DESPUÉS de actualizar una subcategoría.
+     * Implementa DESACTIVACIÓN Y REACTIVACIÓN EN CASCADA CON MEMORIA DE ESTADO:
+     * - Al desactivar: desactiva los productos activos y los marca con desactivadoPorSubcategoria = true.
+     * - Al activar: reactiva ÚNICAMENTE los productos que estuvieron activos antes de desactivar la subcategoría.
      */
     afterUpdate: async (subcategoria, options) => {
-      // changed('activo') retorna true si el campo fue modificado
-      // && !subcategoria.activo → solo si cambió a false (desactivación)
-      if (subcategoria.changed('activo') && !subcategoria.activo) {
-        console.log(`⚠️ Desactivando subcategoría: ${subcategoria.nombre}`);
-        
-        // Importa modelo Producto
+      if (subcategoria.changed('activo')) {
         const Producto = require('./Producto');
-        
-        try {
-          // Busca TODOS los productos que pertenecen a esta subcategoría
-          const productos = await Producto.findAll({
-            where: { subcategoriaId: subcategoria.id }
-          });
-          
-          // Desactiva cada producto uno por uno
-          for (const producto of productos) {
-            // update() → UPDATE productos SET activo = 0 WHERE id = ?
-            await producto.update({ activo: false }, { transaction: options.transaction });
-            console.log(`  ↳ Producto desactivado: ${producto.nombre}`);
+        const transaction = options.transaction;
+
+        if (!subcategoria.activo) {
+          console.log(`⚠️ Desactivando subcategoría en cascada: ${subcategoria.nombre}`);
+          try {
+            const productos = await Producto.findAll({
+              where: { subcategoriaId: subcategoria.id },
+              transaction
+            });
+
+            for (const producto of productos) {
+              if (producto.activo) {
+                await producto.update({
+                  activo: false,
+                  desactivadoPorSubcategoria: true
+                }, { transaction, hooks: false });
+                console.log(`  ↳ Producto desactivado por subcategoría: ${producto.nombre}`);
+              }
+            }
+            console.log(`✅ Subcategoría y productos relacionados desactivados correctamente`);
+          } catch (error) {
+            console.error('❌ Error al desactivar productos relacionados:', error.message);
+            throw error;
           }
-          
-          console.log(`✅ Subcategoría y productos relacionados desactivados correctamente`);
-        } catch (error) {
-          console.error('❌ Error al desactivar productos relacionados:', error.message);
-          throw error;   // Relanza para que la operación falle y no quede inconsistente
+        } else {
+          console.log(`✅ Activando subcategoría en cascada: ${subcategoria.nombre}`);
+          try {
+            const Categoria = require('./Categoria');
+            const categoria = await Categoria.findByPk(subcategoria.categoriaId, { transaction });
+
+            if (categoria && categoria.activo) {
+              const productosRestaurables = await Producto.findAll({
+                where: {
+                  subcategoriaId: subcategoria.id,
+                  desactivadoPorSubcategoria: true
+                },
+                transaction
+              });
+
+              for (const producto of productosRestaurables) {
+                // Solo se reactiva si su categoría padre tampoco lo tiene desactivado
+                const puedeReactivar = !producto.desactivadoPorCategoria;
+                await producto.update({
+                  activo: puedeReactivar,
+                  desactivadoPorSubcategoria: false
+                }, { transaction, hooks: false });
+                if (puedeReactivar) {
+                  console.log(`  ↳ Producto reactivado por subcategoría: ${producto.nombre}`);
+                }
+              }
+              console.log(`✅ Subcategoría y productos previamente activos reactivados correctamente`);
+            }
+          } catch (error) {
+            console.error('❌ Error al reactivar productos de subcategoría:', error.message);
+            throw error;
+          }
         }
       }
-      
-      // NOTA: Si se ACTIVA una subcategoría, NO se reactivan automáticamente los productos.
-      // El administrador debe activarlos manualmente si lo desea.
     }
   }
 });

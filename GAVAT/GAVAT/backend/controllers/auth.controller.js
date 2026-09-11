@@ -124,7 +124,7 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     // Extrae email y password del body de la petición
-    const { email, password } = req.body;
+    let { email, password } = req.body;
     // VALIDACIÓN 1: Verifica que se enviaron ambos campos
     if (!email || !password) {
       return res.status(400).json({
@@ -132,12 +132,13 @@ const login = async (req, res) => {
         message: "Email y contraseña son requeridos",
       });
     }
+    const emailNormalizado = String(email).trim().toLowerCase();
     // VALIDACIÓN 2: Busca el usuario por email en la BD.
     // .scope('withPassword') es un scope definido en el modelo Usuario
     // que INCLUYE el campo password (normalmente está excluido por seguridad).
     // Se necesita el password aquí para poder compararlo con el que envió el usuario.
     const usuario = await Usuario.scope("withPassword").findOne({
-      where: { email }, // Busca donde el email coincida
+      where: { email: emailNormalizado }, // Busca donde el email coincida
     });
     // Si no encontró ningún usuario con ese email
     if (!usuario) {

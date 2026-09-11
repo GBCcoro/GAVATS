@@ -37,6 +37,19 @@ const getBadgeStockBg = (stock) => {
   return 'danger';
 };
 
+const getIconoMensaje = (tipo) => {
+  switch (tipo) {
+    case 'success':
+      return 'check-circle-fill text-success';
+    case 'danger':
+      return 'exclamation-octagon-fill text-danger';
+    case 'warning':
+      return 'exclamation-triangle-fill text-warning';
+    default:
+      return 'info-circle-fill text-info';
+  }
+};
+
 // Componente memoizado para imágenes de productos
 const ProductImage = memo(({ imagen, nombre }) => {
   const [imgSrc, setImgSrc] = useState(() => getImageUrl(imagen));

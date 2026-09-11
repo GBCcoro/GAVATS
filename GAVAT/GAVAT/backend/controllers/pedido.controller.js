@@ -496,15 +496,19 @@ const getAllPedidos = async (req, res) => {
       }
     }
 
-    // Búsqueda por ID, nombre o email del usuario
+    // Búsqueda por ID, nombre o email del usuario, teléfono, dirección o producto
     if (buscar && typeof buscar === 'string' && buscar.trim()) {
       const term = buscar.trim();
-      const numId = Number.parseInt(term, 10);
+      const cleanTerm = term.replace(/^[#\s]+|pedido\s*#?/i, '').trim();
+      const numId = Number.parseInt(cleanTerm, 10);
       const orConditions = [
         { '$usuario.nombre$': { [Op.like]: `%${term}%` } },
-        { '$usuario.email$': { [Op.like]: `%${term}%` } }
+        { '$usuario.email$': { [Op.like]: `%${term}%` } },
+        { telefono: { [Op.like]: `%${term}%` } },
+        { direccionEnvio: { [Op.like]: `%${term}%` } },
+        { '$detalles.producto.nombre$': { [Op.like]: `%${term}%` } }
       ];
-      if (!Number.isNaN(numId) && String(numId) === term) {
+      if (!Number.isNaN(numId) && String(numId) === cleanTerm) {
         orConditions.push({ id: numId });
       }
       where[Op.or] = orConditions;
@@ -536,7 +540,8 @@ const getAllPedidos = async (req, res) => {
       limit: limiteNumero,
       offset,
       order: [['createdAt', 'DESC']], // Más recientes primero
-      distinct: true
+      distinct: true,
+      subQuery: false
     });
     
     // Responde con todos los pedidos y la paginación
@@ -598,23 +603,31 @@ const actualizarEstadoPedido = async (req, res) => {
 
     // Si el admin solicita cancelar el pedido, usa transacción para restaurar stock
     if (estado === 'cancelado') {
-      if (!pedido.puedeSerCancelado()) {
+      if (pedido.estado === 'cancelado') {
         return res.status(400).json({
           success: false,
-          message: `No se puede cancelar un pedido en estado '${pedido.estado}'`
+          message: 'El pedido ya se encuentra cancelado'
         });
       }
       
       // Usa transacción solo para cancelar
       const t = await sequelize.transaction();
       try {
-        await pedido.cancelar(t);
+        await pedido.cancelar(t, true); // true = esAdmin (permite al administrador anular cualquier pedido activo y reponer inventario)
         await t.commit();
       } catch (error) {
         await t.rollback();
         throw error;
       }
     } else {
+      // Un pedido cancelado ya devolvió su stock y no debe cambiarse arbitrariamente
+      if (pedido.estado === 'cancelado') {
+        return res.status(400).json({
+          success: false,
+          message: 'No se puede reactivar o cambiar el estado de un pedido ya cancelado'
+        });
+      }
+
       // Para otros estados, no usa transacción (evita deadlock)
       pedido.estado = estado;
       await pedido.save();

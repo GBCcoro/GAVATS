@@ -74,10 +74,21 @@ function BarraFiltrosUsuarios({ filtros, setFiltros }) {
                   <span className="bi bi-search" aria-hidden="true" />
                 </InputGroup.Text>
                 <Form.Control
-                  placeholder="Buscar por nombre o email..."
+                  placeholder="Nombre, email, teléfono o #ID..."
                   value={filtros.busqueda}
                   onChange={(e) => setFiltros(prev => ({ ...prev, busqueda: e.target.value }))}
                 />
+                {filtros.busqueda && (
+                  <Button
+                    type="button"
+                    variant="outline-secondary"
+                    className="border-start-0 bg-transparent"
+                    onClick={() => setFiltros(prev => ({ ...prev, busqueda: '' }))}
+                    title="Limpiar búsqueda"
+                  >
+                    <span className="bi bi-x-lg" aria-hidden="true" />
+                  </Button>
+                )}
               </InputGroup>
             </Form.Group>
           </Col>
@@ -334,8 +345,9 @@ function TablaUsuarios({ usuarios, seleccionados, onToggle, onEditar, onCambiarE
           <tbody>
             {usuarios.length === 0 ? (
               <tr>
-                <td colSpan="7" className="text-center py-4 text-muted">
-                  No hay usuarios registrados
+                <td colSpan="7" className="text-center py-5 text-muted">
+                  <span className="bi bi-person-x fs-1 d-block mb-2 text-gold opacity-50" aria-hidden="true" />
+                  <span>No se encontraron usuarios registrados con los filtros actuales</span>
                 </td>
               </tr>
             ) : (
@@ -711,42 +723,50 @@ function AdminUsuariosPage() {
     }
   }, [busquedaDebounced, filtros.rol, filtros.estado]);
 
-  const cargarUsuarios = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = {
-        pagina: paginaActual,
-        limite: REGISTROS_POR_PAGINA
-      };
-      if (busquedaDebounced.trim()) params.buscar = busquedaDebounced.trim();
-      if (filtros.rol && filtros.rol !== 'todos') params.rol = filtros.rol;
-      if (filtros.estado && filtros.estado !== 'todos') {
-        params.activo = filtros.estado === 'activo';
-      }
-
-      const res = await usuarioService.obtenerUsuariosPaginados(params);
-      const usus = res.data?.usuarios || res.usuarios || res.data || [];
-      const paginacion = res.data?.paginacion || res.paginacion || {};
-
-      setUsuarios(Array.isArray(usus) ? usus : []);
-      const total = paginacion.total !== undefined ? paginacion.total : usus.length;
-      const numPags = paginacion.totalPaginas || Math.max(1, Math.ceil(total / REGISTROS_POR_PAGINA));
-      setTotalUsuarios(total);
-      setTotalPaginas(numPags);
-    } catch (error) {
-      console.error('Error al cargar usuarios:', error);
-      setMensaje({ tipo: 'danger', texto: 'Error al cargar los usuarios' });
-      setUsuarios([]);
-      setTotalUsuarios(0);
-      setTotalPaginas(1);
-    } finally {
-      setLoading(false);
-    }
-  }, [paginaActual, busquedaDebounced, filtros.rol, filtros.estado]);
-
   useEffect(() => {
-    cargarUsuarios();
-  }, [cargarUsuarios, reloadKey]);
+    let activo = true;
+    const ejecutarCarga = async () => {
+      setLoading(true);
+      try {
+        const params = {
+          pagina: paginaActual,
+          limite: REGISTROS_POR_PAGINA
+        };
+        if (busquedaDebounced.trim()) params.buscar = busquedaDebounced.trim();
+        if (filtros.rol && filtros.rol !== 'todos') params.rol = filtros.rol;
+        if (filtros.estado && filtros.estado !== 'todos') {
+          params.activo = filtros.estado === 'activo';
+        }
+
+        const res = await usuarioService.obtenerUsuariosPaginados(params);
+        if (!activo) return;
+        const usus = res.data?.usuarios || res.usuarios || res.data || [];
+        const paginacion = res.data?.paginacion || res.paginacion || {};
+
+        setUsuarios(Array.isArray(usus) ? usus : []);
+        const total = paginacion.total !== undefined ? paginacion.total : usus.length;
+        const numPags = paginacion.totalPaginas || Math.max(1, Math.ceil(total / REGISTROS_POR_PAGINA));
+        setTotalUsuarios(total);
+        setTotalPaginas(numPags);
+      } catch (error) {
+        if (!activo) return;
+        console.error('Error al cargar usuarios:', error);
+        setMensaje({ tipo: 'danger', texto: 'Error al cargar los usuarios' });
+        setUsuarios([]);
+        setTotalUsuarios(0);
+        setTotalPaginas(1);
+      } finally {
+        if (activo) {
+          setLoading(false);
+        }
+      }
+    };
+
+    ejecutarCarga();
+    return () => {
+      activo = false;
+    };
+  }, [paginaActual, busquedaDebounced, filtros.rol, filtros.estado, reloadKey]);
 
   const recargarUsuarios = useCallback(() => {
     setReloadKey(prev => prev + 1);

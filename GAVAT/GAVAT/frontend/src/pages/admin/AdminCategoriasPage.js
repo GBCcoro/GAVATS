@@ -233,7 +233,9 @@ const AdminCategoriasPage = () => {
     setModalConfirmacion({
       show: true,
       titulo: nuevoEstado ? '¿Activar categoría?' : '¿Desactivar categoría?',
-      mensaje: `¿Deseas cambiar el estado de "${categoria.nombre}" a "${nuevoEstado ? 'Activo' : 'Inactivo'}"?`,
+      mensaje: nuevoEstado
+        ? `¿Deseas activar la categoría "${categoria.nombre}"? Se reactivarán las subcategorías y productos que estuvieron activos al momento de desactivarla.`
+        : `¿Deseas desactivar la categoría "${categoria.nombre}"? Esto desactivará automáticamente sus subcategorías y productos activos.`,
       tipo: nuevoEstado ? 'success' : 'warning',
       icono: nuevoEstado ? 'check-circle-fill' : 'x-circle-fill',
       textoConfirmar: nuevoEstado ? 'Activar' : 'Desactivar',
