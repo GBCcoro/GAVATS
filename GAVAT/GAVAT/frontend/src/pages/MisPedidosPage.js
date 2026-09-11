@@ -14,6 +14,7 @@ import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import FloatingToast from '../components/FloatingToast';
 import ModalConfirmacion from '../components/ModalConfirmacion';
+import TextoTruncado from '../components/TextoTruncado';
 
 const MisPedidosPage = () => {
   const [pedidos, setPedidos] = useState([]);
@@ -238,6 +239,15 @@ const MisPedidosPage = () => {
                         <div className="small text-muted">
                           {pedido.detalles?.length || 0} producto(s)
                         </div>
+                        {pedido.detalles && pedido.detalles.length > 0 && (
+                          <TextoTruncado
+                            as="div"
+                            className="small text-secondary mt-1"
+                            texto={pedido.detalles.map(d => d.producto?.nombre || d.nombre || 'Producto').join(', ')}
+                            limite={28}
+                            maxWidth="200px"
+                          />
+                        )}
                       </div>
                     </td>
                     <td className="align-middle d-none d-sm-table-cell">
@@ -337,9 +347,17 @@ const MisPedidosPage = () => {
           background: linear-gradient(135deg, var(--bs-gold-dark, #c7984e), var(--bs-oldGold-bg, #916934));
           transform: translateY(-2px);
         }
+        .pedidos-card {
+          border-radius: 1.25rem !important;
+          border: 1px solid rgba(0, 0, 0, 0.08) !important;
+          background: #ffffff !important;
+          box-shadow: 0 4px 20px rgba(25, 40, 71, 0.06) !important;
+          overflow: hidden !important;
+        }
         .pedidos-table {
-          border-radius: 1.5rem;
-          overflow: hidden;
+          width: 100%;
+          border-collapse: separate !important;
+          border-spacing: 0 !important;
         }
         .pedidos-table-header {
           background: var(--bg-positiva, #DBE1ED);
@@ -370,12 +388,16 @@ const MisPedidosPage = () => {
         }
         .btn-ver-detalle {
           background: transparent;
-          border: 2px solid var(--bs-gold, #f5c271);
+          border: 1.5px solid var(--bs-gold, #f5c271);
           color: var(--bs-gold-dark, #c7984e);
-          border-radius: 0.75rem;
-          padding: 0.375rem 0.75rem;
+          border-radius: 0.6rem;
+          padding: 0.35rem 0.65rem;
           font-weight: 500;
-          transition: all 0.3s ease;
+          transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          white-space: nowrap;
         }
         .btn-ver-detalle:hover {
           background: var(--bs-gold, #f5c271);
@@ -384,12 +406,16 @@ const MisPedidosPage = () => {
         }
         .btn-descargar {
           background: transparent;
-          border: 2px solid var(--bs-success, #2d8659);
+          border: 1.5px solid var(--bs-success, #2d8659);
           color: var(--bs-success, #2d8659);
-          border-radius: 0.75rem;
-          padding: 0.375rem 0.75rem;
+          border-radius: 0.6rem;
+          padding: 0.35rem 0.65rem;
           font-weight: 500;
-          transition: all 0.3s ease;
+          transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          white-space: nowrap;
         }
         .btn-descargar:hover {
           background: var(--bs-success, #2d8659);
@@ -398,17 +424,49 @@ const MisPedidosPage = () => {
         }
         .btn-cancelar-pedido {
           background: transparent;
-          border: 2px solid var(--bs-danger, #dc3545);
+          border: 1.5px solid var(--bs-danger, #dc3545);
           color: var(--bs-danger, #dc3545);
-          border-radius: 0.75rem;
-          padding: 0.375rem 0.75rem;
+          border-radius: 0.6rem;
+          padding: 0.35rem 0.65rem;
           font-weight: 500;
-          transition: all 0.3s ease;
+          transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          white-space: nowrap;
         }
         .btn-cancelar-pedido:hover {
           background: var(--bs-danger, #dc3545);
           color: #ffffff;
           transform: translateY(-1px);
+        }
+        @media (max-width: 1200px) {
+          .btn-ver-detalle,
+          .btn-descargar,
+          .btn-cancelar-pedido {
+            padding: 0.32rem 0.45rem !important;
+            min-width: 32px !important;
+            height: 32px !important;
+          }
+          .btn-ver-detalle .btn-text,
+          .btn-descargar .btn-text,
+          .btn-cancelar-pedido .btn-text {
+            display: none !important;
+          }
+        }
+        @media (max-width: 576px) {
+          .pedidos-table td,
+          .pedidos-table-header th {
+            padding: 0.75rem 0.4rem !important;
+            font-size: 0.84rem !important;
+          }
+          .btn-ver-detalle,
+          .btn-descargar,
+          .btn-cancelar-pedido {
+            padding: 0.28rem 0.38rem !important;
+            min-width: 28px !important;
+            height: 28px !important;
+          }
         }
         /* Ajuste para badges de estado (Bootstrap mantiene sus colores semánticos) */
         :global(.badge.bg-warning) {

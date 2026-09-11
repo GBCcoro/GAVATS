@@ -123,25 +123,28 @@ const ItemFilaCarrito = memo(({ item, onAumentar, onDisminuir, onInputChange, on
           <img
             src={imagen}
             alt={nombre}
-            className="rounded me-3 carrito-item-img"
+            className="rounded me-2 me-sm-3 carrito-item-img"
             onError={(e) => {
               e.currentTarget.onerror = null;
               e.currentTarget.src = '/producto-default.jpg';
             }}
           />
-          <div>
-            <TextoTruncado as="div" className="fw-bold" texto={nombre} limite={35} maxWidth="260px" />
+          <div className="min-w-0 flex-grow-1">
+            <TextoTruncado as="div" className="fw-bold" texto={nombre} limite={28} maxWidth="200px" />
             {categoriaNombre && (
-              <TextoTruncado as="small" className="text-muted d-block" texto={categoriaNombre} limite={25} maxWidth="200px" />
+              <TextoTruncado as="small" className="text-muted d-block" texto={categoriaNombre} limite={20} maxWidth="160px" />
             )}
+            <small className="text-muted d-sm-none d-block mt-1">
+              {formatCurrency(precio)} c/u
+            </small>
           </div>
         </div>
       </td>
-      <td className="text-center align-middle">
+      <td className="text-center align-middle d-none d-sm-table-cell">
         {formatCurrency(precio)}
       </td>
       <td className="text-center align-middle">
-        <div className="d-flex justify-content-center align-items-center">
+        <div className="d-flex justify-content-center align-items-center flex-nowrap">
           <Button
             type="button"
             className="btn-cantidad"
@@ -155,7 +158,7 @@ const ItemFilaCarrito = memo(({ item, onAumentar, onDisminuir, onInputChange, on
           </Button>
           <input
             type="number"
-            className="cantidad-input mx-2"
+            className="cantidad-input mx-1 mx-sm-2"
             value={item.cantidad}
             min="1"
             max={maxStock}
@@ -183,13 +186,13 @@ const ItemFilaCarrito = memo(({ item, onAumentar, onDisminuir, onInputChange, on
       <td className="text-center align-middle fw-bold">
         {formatCurrency(subtotal)}
       </td>
-      <td className="text-center align-middle">
+      <td className="text-center align-middle col-acciones">
         <Button
           type="button"
           className="btn-eliminar d-inline-flex align-items-center justify-content-center"
           size="sm"
           onClick={() => onEliminar(item)}
-          title="Eliminar item"
+          title="Eliminar item del carrito"
           aria-label={`Eliminar ${nombre} del carrito`}
         >
           <SvgIcon name="trash" />
@@ -555,10 +558,12 @@ const CarritoPage = () => {
                   <thead className="carrito-table-header">
                     <tr>
                       <th scope="col">Producto</th>
-                      <th scope="col" className="text-center">Precio</th>
-                      <th scope="col" className="text-center">Cantidad</th>
-                      <th scope="col" className="text-center">Subtotal</th>
-                      <th scope="col" className="text-center">Acciones</th>
+                      <th scope="col" className="text-center d-none d-sm-table-cell" style={{ width: '110px' }}>Precio</th>
+                      <th scope="col" className="text-center" style={{ width: '130px', minWidth: '105px' }}>Cantidad</th>
+                      <th scope="col" className="text-center" style={{ width: '115px', minWidth: '90px' }}>Subtotal</th>
+                      <th scope="col" className="text-center col-acciones" style={{ width: '70px', minWidth: '55px' }}>
+                        <span className="d-none d-sm-inline">Acciones</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -637,8 +642,9 @@ const CarritoPage = () => {
           transform: translateY(-1px);
         }
         .carrito-table {
-          border-radius: 1.5rem;
-          overflow: hidden;
+          width: 100%;
+          border-collapse: separate !important;
+          border-spacing: 0 !important;
         }
         .carrito-table-header {
           background: var(--bg-positiva, #DBE1ED);
@@ -700,16 +706,46 @@ const CarritoPage = () => {
         }
         .btn-eliminar {
           background: transparent;
-          border: 1px solid #dc3545;
+          border: 1.5px solid #dc3545;
           color: #dc3545;
-          border-radius: 0.5rem;
-          padding: 0.25rem 0.5rem;
+          border-radius: 0.55rem;
+          padding: 0.35rem 0.55rem;
           transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 32px;
+          height: 32px;
         }
         .btn-eliminar:hover {
           background: #dc3545;
           color: white;
           transform: translateY(-1px);
+        }
+        @media (max-width: 576px) {
+          .carrito-item-img {
+            width: 44px !important;
+            height: 44px !important;
+            object-fit: cover !important;
+          }
+          .cantidad-input {
+            width: 38px !important;
+            height: 30px !important;
+            font-size: 0.85rem !important;
+          }
+          .btn-cantidad {
+            padding: 0.2rem 0.35rem !important;
+          }
+          .carrito-table td,
+          .carrito-table-header th {
+            padding: 0.65rem 0.35rem !important;
+            font-size: 0.84rem !important;
+          }
+          .btn-eliminar {
+            padding: 0.25rem 0.4rem !important;
+            min-width: 28px !important;
+            height: 28px !important;
+          }
         }
         .resumen-hr {
           background-color: var(--gray-300, #d1d5db);

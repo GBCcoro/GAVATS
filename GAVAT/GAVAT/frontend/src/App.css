@@ -835,20 +835,26 @@ p.cell-truncate {
 .admin-table td.col-acciones,
 .admin-table th:last-child,
 .admin-table td:last-child,
+.pedidos-table th.col-acciones,
+.pedidos-table td.col-acciones,
 .pedidos-table th:last-child,
 .pedidos-table td:last-child,
+.carrito-table th.col-acciones,
+.carrito-table td.col-acciones,
 .carrito-table th:last-child,
 .carrito-table td:last-child {
   position: sticky !important;
   right: 0 !important;
   z-index: 4;
-  background-color: #ffffff;
+  background-color: #ffffff !important;
   box-shadow: -4px 0 8px rgba(25, 40, 71, 0.08);
 }
 
 .admin-table thead th.col-acciones,
 .admin-table thead th:last-child,
+.pedidos-table thead th.col-acciones,
 .pedidos-table thead th:last-child,
+.carrito-table thead th.col-acciones,
 .carrito-table thead th:last-child {
   z-index: 6 !important;
   background-color: var(--bg-positiva, #DBE1ED) !important;
@@ -858,7 +864,9 @@ p.cell-truncate {
 .admin-table tbody tr:hover td:last-child,
 .admin-table tbody tr:hover td.col-acciones,
 .pedidos-table tbody tr:hover td:last-child,
-.carrito-table tbody tr:hover td:last-child {
+.pedidos-table tbody tr:hover td.col-acciones,
+.carrito-table tbody tr:hover td:last-child,
+.carrito-table tbody tr:hover td.col-acciones {
   background-color: #fbf6ee !important;
 }
 
