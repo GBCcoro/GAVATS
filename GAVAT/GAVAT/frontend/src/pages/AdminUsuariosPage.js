@@ -300,9 +300,10 @@ function FilaUsuario({ usuario, estaSeleccionado, onToggle, onEditar, onCambiarE
       </td>
       <td className="align-middle fw-bold">
         <TextoTruncado as="div" texto={`${usuario.nombre} ${usuario.apellido || ''}`.trim()} limite={28} maxWidth="220px" />
+        <TextoTruncado as="small" className="d-sm-none text-muted d-block" texto={usuario.email} limite={24} maxWidth="160px" fallback="" />
         <TextoTruncado as="small" className="d-lg-none text-muted d-block" texto={usuario.telefono || ''} limite={15} maxWidth="150px" fallback="" />
       </td>
-      <td className="align-middle">
+      <td className="align-middle d-none d-sm-table-cell">
         <TextoTruncado texto={usuario.email} limite={28} maxWidth="220px" />
       </td>
       <td className="align-middle d-none d-lg-table-cell">
@@ -318,7 +319,7 @@ function FilaUsuario({ usuario, estaSeleccionado, onToggle, onEditar, onCambiarE
           {usuario.activo ? 'Activo' : 'Inactivo'}
         </Badge>
       </td>
-      <td className="align-middle text-center" onClick={(e) => e.stopPropagation()}>
+      <td className="align-middle text-center col-acciones" onClick={(e) => e.stopPropagation()}>
         <AccionesUsuario
           usuario={usuario}
           onEditar={onEditar}
@@ -340,11 +341,11 @@ function TablaUsuarios({ usuarios, seleccionados, onToggle, onEditar, onCambiarE
             <tr>
               <th style={{ width: '50px' }}>ID</th>
               <th>Nombre</th>
-              <th>Email</th>
+              <th className="d-none d-sm-table-cell">Email</th>
               <th className="d-none d-lg-table-cell" style={{ width: '130px' }}>Teléfono</th>
               <th style={{ width: '110px' }}>Rol</th>
               <th className="d-none d-sm-table-cell" style={{ width: '100px' }}>Estado</th>
-              <th className="text-center" style={{ width: '130px', minWidth: '100px' }}>Acciones</th>
+              <th className="text-center col-acciones" style={{ minWidth: '95px' }}>Acciones</th>
             </tr>
           </thead>
           <tbody>

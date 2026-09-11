@@ -749,7 +749,13 @@ img {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 650px;
+  min-width: 100%;
+}
+
+@media (min-width: 768px) {
+  .admin-table {
+    min-width: 650px;
+  }
 }
 
 .admin-table thead th,
@@ -824,13 +830,55 @@ p.cell-truncate {
   max-width: 450px;
 }
 
+/* Columna de acciones SIEMPRE visible mediante sticky a la derecha en responsive */
+.admin-table th.col-acciones,
+.admin-table td.col-acciones,
+.admin-table th:last-child,
+.admin-table td:last-child,
+.pedidos-table th:last-child,
+.pedidos-table td:last-child,
+.carrito-table th:last-child,
+.carrito-table td:last-child {
+  position: sticky !important;
+  right: 0 !important;
+  z-index: 4;
+  background-color: #ffffff;
+  box-shadow: -4px 0 8px rgba(25, 40, 71, 0.08);
+}
+
+.admin-table thead th.col-acciones,
+.admin-table thead th:last-child,
+.pedidos-table thead th:last-child,
+.carrito-table thead th:last-child {
+  z-index: 6 !important;
+  background-color: var(--bg-positiva, #DBE1ED) !important;
+}
+
+/* En hover de fila, la celda sticky debe adoptar el color hover */
+.admin-table tbody tr:hover td:last-child,
+.admin-table tbody tr:hover td.col-acciones,
+.pedidos-table tbody tr:hover td:last-child,
+.carrito-table tbody tr:hover td:last-child {
+  background-color: #fbf6ee !important;
+}
+
+/* En filas seleccionadas, preservar color de selección en celda sticky */
+.admin-table tbody tr.fila-admin-seleccionada td:last-child,
+.admin-table tbody tr.fila-admin-seleccionada td.col-acciones,
+.admin-table tbody tr.fila-producto-seleccionada td:last-child,
+.admin-table tbody tr.fila-producto-seleccionada td.col-acciones {
+  background-color: #fdf2f2 !important;
+}
+
 /* Grupo de botones de acción en tabla */
 .action-btn-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  justify-content: center;
-  flex-wrap: nowrap;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  justify-content: center !important;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 /* Botones de acción responsivos */
@@ -841,18 +889,21 @@ p.cell-truncate {
   justify-content: center !important;
   font-size: 0.84rem !important;
   font-weight: 600 !important;
-  padding: 0.45rem 0.75rem !important;
-  border-radius: 0.6rem !important;
+  padding: 0.42rem 0.65rem !important;
+  border-radius: 0.55rem !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
   white-space: nowrap !important;
   line-height: 1.2 !important;
   text-decoration: none !important;
   cursor: pointer;
   border: 1px solid transparent;
+  flex-shrink: 0 !important;
 }
 
 .btn-action-table i,
-.btn-action i {
+.btn-action-table span.bi,
+.btn-action i,
+.btn-action span.bi {
   font-size: 0.95rem;
   line-height: 1;
 }
@@ -878,16 +929,62 @@ p.cell-truncate {
   margin-left: 0.35rem;
 }
 
-/* En pantallas reducidas, ocultar el texto y mostrar solo el icono */
+/* En pantallas < 1200px, ocultar texto de los botones y mostrar solo iconos */
 @media (max-width: 1200px) {
   .btn-action-table .btn-text,
-  .btn-action .btn-text {
+  .btn-action .btn-text,
+  .btn-ver-detalle .btn-text,
+  .btn-descargar .btn-text,
+  .btn-cancelar-pedido .btn-text {
     display: none !important;
   }
   .btn-action-table,
   .btn-action {
-    padding: 0.4rem 0.55rem !important;
-    min-width: 32px;
+    padding: 0.35rem 0.48rem !important;
+    min-width: 32px !important;
+    height: 32px !important;
+  }
+  .btn-action-table i,
+  .btn-action-table span.bi,
+  .btn-action i,
+  .btn-action span.bi {
+    margin: 0 !important;
+    font-size: 0.95rem !important;
+  }
+  .action-btn-group {
+    gap: 0.25rem !important;
+  }
+}
+
+/* En pantallas móviles < 576px */
+@media (max-width: 576px) {
+  .action-btn-group {
+    gap: 0.2rem !important;
+    flex-wrap: nowrap !important;
+  }
+  .btn-action-table,
+  .btn-action {
+    padding: 0.28rem 0.38rem !important;
+    font-size: 0.78rem !important;
+    min-width: 28px !important;
+    height: 28px !important;
+  }
+  .btn-action-table i,
+  .btn-action-table span.bi,
+  .btn-action i,
+  .btn-action span.bi {
+    font-size: 0.85rem !important;
+  }
+  
+  .admin-table tbody td,
+  .admin-table td {
+    padding: 0.75rem 0.5rem !important;
+    font-size: 0.86rem !important;
+  }
+  .admin-table thead th,
+  .admin-table th {
+    padding: 0.75rem 0.5rem !important;
+    font-size: 0.78rem !important;
   }
 }
 

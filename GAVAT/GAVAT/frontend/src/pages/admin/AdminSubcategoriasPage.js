@@ -525,7 +525,7 @@ const AdminSubcategoriasPage = () => {
                 <th className="d-none d-sm-table-cell">Categoría</th>
                 <th className="d-none d-md-table-cell">Descripción</th>
                 <th className="d-none d-md-table-cell" style={{ width: '110px' }}>Estado</th>
-                <th className="text-center" style={{ width: '130px', minWidth: '100px' }}>Acciones</th>
+                <th className="text-center col-acciones" style={{ minWidth: '95px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -577,7 +577,7 @@ const AdminSubcategoriasPage = () => {
                           {sub.activo ? 'Activo' : 'Inactivo'}
                         </Badge>
                       </td>
-                      <td className="align-middle text-center" onClick={(e) => e.stopPropagation()}>
+                      <td className="align-middle text-center col-acciones" onClick={(e) => e.stopPropagation()}>
                         <div className="action-btn-group">
                           <Button
                             variant="outline-primary"

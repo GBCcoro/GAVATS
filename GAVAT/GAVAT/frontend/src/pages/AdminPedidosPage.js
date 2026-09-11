@@ -265,7 +265,7 @@ function FilaPedido({ pedido, estaSeleccionado, onToggleSeleccionar, onVerDetall
           {pedido.estado}
         </Badge>
       </td>
-      <td className="align-middle text-center" onClick={(e) => e.stopPropagation()}>
+      <td className="align-middle text-center col-acciones" onClick={(e) => e.stopPropagation()}>
         <AccionesPedido 
           pedido={pedido} 
           onVerDetalle={onVerDetalle} 
@@ -998,7 +998,7 @@ function AdminPedidosPage() {
                 <th className="d-none d-sm-table-cell">Fecha</th>
                 <th>Total</th>
                 <th>Estado</th>
-                <th className="text-center" style={{ width: '220px' }}>Acciones</th>
+                <th className="text-center col-acciones" style={{ minWidth: '95px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>

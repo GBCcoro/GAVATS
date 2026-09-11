@@ -464,7 +464,7 @@ const AdminComentariosPage = () => {
                 <th className="d-none d-sm-table-cell">Comentario</th>
                 <th style={{ width: '100px' }}>Estado</th>
                 <th className="d-none d-md-table-cell" style={{ width: '120px' }}>Fecha</th>
-                <th className="text-center" style={{ width: '140px', minWidth: '100px' }}>Acciones</th>
+                <th className="text-center col-acciones" style={{ minWidth: '95px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -510,7 +510,7 @@ const AdminComentariosPage = () => {
                         </Badge>
                       </td>
                       <td className="align-middle d-none d-md-table-cell">{formatearFecha(comentario.fecha)}</td>
-                      <td className="align-middle text-center" onClick={(e) => e.stopPropagation()}>
+                      <td className="align-middle text-center col-acciones" onClick={(e) => e.stopPropagation()}>
                         <div className="action-btn-group">
                           <Button 
                             variant="outline-primary" 

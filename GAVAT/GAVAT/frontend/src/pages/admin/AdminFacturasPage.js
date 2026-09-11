@@ -339,12 +339,12 @@ const AdminFacturasPage = () => {
           <Table responsive hover className="admin-table align-middle mb-0">
             <thead>
               <tr>
-                <th style={{ width: '160px' }}>Número Factura</th>
+                <th style={{ minWidth: '100px' }}>Número Factura</th>
                 <th>Cliente</th>
-                <th style={{ width: '120px' }}>Monto</th>
+                <th style={{ width: '110px' }}>Monto</th>
                 <th className="d-none d-sm-table-cell" style={{ width: '100px' }}>Estado</th>
                 <th className="d-none d-md-table-cell" style={{ width: '130px' }}>Fecha</th>
-                <th className="text-center" style={{ width: '150px', minWidth: '110px' }}>Acciones</th>
+                <th className="text-center col-acciones" style={{ minWidth: '95px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -385,7 +385,7 @@ const AdminFacturasPage = () => {
                         </Badge>
                       </td>
                       <td className="align-middle d-none d-md-table-cell">{formatearFecha(factura.fechaEmision || factura.created_at)}</td>
-                      <td className="align-middle text-center" onClick={(e) => e.stopPropagation()}>
+                      <td className="align-middle text-center col-acciones" onClick={(e) => e.stopPropagation()}>
                         <div className="action-btn-group">
                           <Button 
                             variant="outline-primary" 

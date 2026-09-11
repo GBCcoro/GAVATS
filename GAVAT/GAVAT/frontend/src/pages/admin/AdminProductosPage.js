@@ -310,7 +310,7 @@ function FilaProducto({ prod, estaSeleccionado, onToggleSeleccionar, onEditar, o
           {prod.activo ? 'Activo' : 'Inactivo'}
         </Badge>
       </td>
-      <td className="align-middle text-center">
+      <td className="align-middle text-center col-acciones">
         <AccionesProducto
           prod={prod}
           onEditar={onEditar}
@@ -1452,7 +1452,7 @@ const AdminProductosPage = () => {
                 <th className="d-none d-sm-table-cell" style={{ width: '115px' }}>Precio</th>
                 <th className="d-none d-md-table-cell" style={{ width: '80px' }}>Stock</th>
                 <th className="d-none d-md-table-cell" style={{ width: '95px' }}>Estado</th>
-                <th className="text-center" style={{ width: '130px', minWidth: '100px' }}>Acciones</th>
+                <th className="text-center col-acciones" style={{ minWidth: '95px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -1572,19 +1572,6 @@ const AdminProductosPage = () => {
         }
         .fila-producto-seleccionada {
           background-color: rgba(220, 53, 69, 0.06) !important;
-        }
-        .action-btn-group {
-          display: inline-flex;
-          gap: 0.35rem;
-          justify-content: center;
-        }
-        .btn-action-table {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.25rem;
-          padding: 0.25rem 0.5rem;
-          font-size: 0.8rem;
-          border-radius: 6px;
         }
         .product-minimal-header {
           display: flex;

@@ -220,10 +220,10 @@ const MisPedidosPage = () => {
               <thead className="pedidos-table-header">
                 <tr>
                   <th>Pedido</th>
-                  <th>Fecha</th>
+                  <th className="d-none d-sm-table-cell">Fecha</th>
                   <th>Estado</th>
                   <th className="text-end">Total</th>
-                  <th className="text-center">Acciones</th>
+                  <th className="text-center col-acciones" style={{ minWidth: '95px' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -232,12 +232,15 @@ const MisPedidosPage = () => {
                     <td className="align-middle">
                       <div>
                         <strong className="pedido-id">#{pedido.id}</strong>
+                        <div className="small text-muted d-sm-none">
+                          {formatearFecha(pedido.createdAt)}
+                        </div>
                         <div className="small text-muted">
                           {pedido.detalles?.length || 0} producto(s)
                         </div>
                       </div>
                     </td>
-                    <td className="align-middle">
+                    <td className="align-middle d-none d-sm-table-cell">
                       {formatearFecha(pedido.createdAt)}
                     </td>
                     <td className="align-middle">
@@ -248,37 +251,37 @@ const MisPedidosPage = () => {
                     <td className="align-middle text-end">
                       <strong className="pedido-total">{formatearPrecio(pedido.total)}</strong>
                     </td>
-                    <td className="align-middle text-center">
-                      <div className="d-flex justify-content-center align-items-center gap-2 flex-wrap">
+                    <td className="align-middle text-center col-acciones">
+                      <div className="action-btn-group d-flex justify-content-center align-items-center gap-1 flex-nowrap">
                         <Button
-                          className="btn-ver-detalle"
+                          className="btn-ver-detalle btn-action-table"
                           size="sm"
                           onClick={() => navigate(`/pedido-confirmado/${pedido.id}`)}
                           title="Ver detalles del pedido"
                         >
-                          <i className="bi bi-eye-fill me-1"></i>{' '}
-                          Ver Detalle
+                          <i className="bi bi-eye-fill"></i>
+                          <span className="btn-text ms-1">Ver Detalle</span>
                         </Button>
                         {pedido.estado === 'pagado' && (
                           <Button
-                            className="btn-descargar"
+                            className="btn-descargar btn-action-table"
                             size="sm"
                             onClick={() => handleDescargarFactura(pedido.id)}
                             title="Descargar factura en PDF"
                           >
-                            <i className="bi bi-file-earmark-pdf-fill me-1"></i>{' '}
-                            Factura
+                            <i className="bi bi-file-earmark-pdf-fill"></i>
+                            <span className="btn-text ms-1">Factura</span>
                           </Button>
                         )}
                         {['pendiente', 'pagado'].includes(pedido.estado) && (
                           <Button
-                            className="btn-cancelar-pedido"
+                            className="btn-cancelar-pedido btn-action-table"
                             size="sm"
                             onClick={() => handleSolicitarCancelar(pedido)}
                             title="Cancelar este pedido"
                           >
-                            <i className="bi bi-x-circle-fill me-1"></i>{' '}
-                            Cancelar
+                            <i className="bi bi-x-circle-fill"></i>
+                            <span className="btn-text ms-1">Cancelar</span>
                           </Button>
                         )}
                       </div>
