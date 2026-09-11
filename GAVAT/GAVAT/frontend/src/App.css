@@ -747,15 +747,9 @@ img {
 
 .admin-table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
   min-width: 100%;
-}
-
-@media (min-width: 768px) {
-  .admin-table {
-    min-width: 650px;
-  }
 }
 
 .admin-table thead th,
@@ -845,7 +839,7 @@ p.cell-truncate {
 .carrito-table td:last-child {
   position: sticky !important;
   right: 0 !important;
-  z-index: 4;
+  z-index: 5 !important;
   background-color: #ffffff !important;
   box-shadow: -4px 0 8px rgba(25, 40, 71, 0.08);
 }

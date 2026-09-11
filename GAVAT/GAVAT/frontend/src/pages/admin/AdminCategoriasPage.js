@@ -466,7 +466,7 @@ const AdminCategoriasPage = () => {
               <tr>
                 <th style={{ width: '70px', minWidth: '60px' }}>ID</th>
                 <th>Nombre</th>
-                <th className="d-none d-sm-table-cell">Descripción</th>
+                <th className="d-none d-md-table-cell">Descripción</th>
                 <th className="d-none d-md-table-cell" style={{ width: '110px' }}>Estado</th>
                 <th className="text-center col-acciones" style={{ minWidth: '95px' }}>Acciones</th>
               </tr>
@@ -507,14 +507,14 @@ const AdminCategoriasPage = () => {
                         {cat.descripcion && (
                           <TextoTruncado 
                             as="small" 
-                            className="d-sm-none text-muted d-block" 
+                            className="d-md-none text-muted d-block" 
                             texto={cat.descripcion} 
                             limite={35} 
                             maxWidth="220px" 
                           />
                         )}
                       </td>
-                      <td className="align-middle d-none d-sm-table-cell">
+                      <td className="align-middle d-none d-md-table-cell">
                         <TextoTruncado texto={cat.descripcion} limite={45} maxWidth="320px" fallback="-" />
                       </td>
                       <td className="align-middle d-none d-md-table-cell">

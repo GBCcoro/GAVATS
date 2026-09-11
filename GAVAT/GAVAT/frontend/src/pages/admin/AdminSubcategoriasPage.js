@@ -522,8 +522,8 @@ const AdminSubcategoriasPage = () => {
               <tr>
                 <th style={{ width: '70px', minWidth: '60px' }}>ID</th>
                 <th>Nombre</th>
-                <th className="d-none d-sm-table-cell">Categoría</th>
-                <th className="d-none d-md-table-cell">Descripción</th>
+                <th className="d-none d-md-table-cell">Categoría</th>
+                <th className="d-none d-lg-table-cell">Descripción</th>
                 <th className="d-none d-md-table-cell" style={{ width: '110px' }}>Estado</th>
                 <th className="text-center col-acciones" style={{ minWidth: '95px' }}>Acciones</th>
               </tr>
@@ -563,18 +563,18 @@ const AdminSubcategoriasPage = () => {
                         </div>
                         <TextoTruncado 
                           as="small" 
-                          className="d-sm-none text-muted d-block" 
+                          className="d-md-none text-muted d-block" 
                           texto={obtenerNombreCategoria(sub.categoriaId)} 
                           limite={25} 
                           maxWidth="200px" 
                         />
                       </td>
-                      <td className="align-middle d-none d-sm-table-cell">
+                      <td className="align-middle d-none d-md-table-cell">
                         <Badge bg="info">
                           <TextoTruncado texto={obtenerNombreCategoria(sub.categoriaId)} limite={25} maxWidth="180px" />
                         </Badge>
                       </td>
-                      <td className="align-middle d-none d-md-table-cell">
+                      <td className="align-middle d-none d-lg-table-cell">
                         <TextoTruncado texto={sub.descripcion} limite={45} maxWidth="320px" fallback="-" />
                       </td>
                       <td className="align-middle d-none d-md-table-cell">
