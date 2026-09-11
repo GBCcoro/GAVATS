@@ -789,6 +789,41 @@ img {
   text-align: center !important;
 }
 
+/* Utilidades de truncamiento de texto en celdas de tablas */
+.cell-truncate {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+div.cell-truncate,
+p.cell-truncate {
+  display: block;
+}
+
+.cell-truncate-xs {
+  max-width: 90px;
+}
+
+.cell-truncate-sm {
+  max-width: 140px;
+}
+
+.cell-truncate-md {
+  max-width: 220px;
+}
+
+.cell-truncate-lg {
+  max-width: 320px;
+}
+
+.cell-truncate-xl {
+  max-width: 450px;
+}
+
 /* Grupo de botones de acción en tabla */
 .action-btn-group {
   display: inline-flex;

@@ -15,6 +15,7 @@ import ToolbarSeleccionLote from '../../components/ToolbarSeleccionLote';
 import PaginacionTabla from '../../components/PaginacionTabla';
 import AdminPageHeader from '../../components/AdminPageHeader';
 import AdminFiltrosCard from '../../components/AdminFiltrosCard';
+import TextoTruncado from '../../components/TextoTruncado';
 import { exportarCategoriasAPDF, exportarCategoriasAExcel } from '../../utils/exportUtils';
 
 const AdminCategoriasPage = () => {
@@ -497,12 +498,20 @@ const AdminCategoriasPage = () => {
                         </div>
                       </td>
                       <td className="align-middle fw-bold">
-                        <div>{cat.nombre}</div>
+                        <TextoTruncado as="div" texto={cat.nombre} limite={30} maxWidth="220px" />
                         {cat.descripcion && (
-                          <small className="d-sm-none text-muted d-block">{cat.descripcion}</small>
+                          <TextoTruncado 
+                            as="small" 
+                            className="d-sm-none text-muted d-block" 
+                            texto={cat.descripcion} 
+                            limite={35} 
+                            maxWidth="220px" 
+                          />
                         )}
                       </td>
-                      <td className="align-middle d-none d-sm-table-cell">{cat.descripcion || '-'}</td>
+                      <td className="align-middle d-none d-sm-table-cell">
+                        <TextoTruncado texto={cat.descripcion} limite={45} maxWidth="320px" fallback="-" />
+                      </td>
                       <td className="align-middle d-none d-md-table-cell">
                         <Badge bg={cat.activo ? 'success' : 'secondary'}>
                           {cat.activo ? 'Activo' : 'Inactivo'}

@@ -13,6 +13,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import SvgIcon from '../components/SvgIcon';
 import FloatingToast from '../components/FloatingToast';
+import TextoTruncado from '../components/TextoTruncado';
 import { getImageUrl, formatCurrency } from '../utils/helpers';
 
 const BG_MODAL_CONFIRMACION = Object.freeze({
@@ -129,9 +130,9 @@ const ItemFilaCarrito = memo(({ item, onAumentar, onDisminuir, onInputChange, on
             }}
           />
           <div>
-            <div className="fw-bold">{nombre}</div>
+            <TextoTruncado as="div" className="fw-bold" texto={nombre} limite={35} maxWidth="260px" />
             {categoriaNombre && (
-              <small className="text-muted">{categoriaNombre}</small>
+              <TextoTruncado as="small" className="text-muted d-block" texto={categoriaNombre} limite={25} maxWidth="200px" />
             )}
           </div>
         </div>

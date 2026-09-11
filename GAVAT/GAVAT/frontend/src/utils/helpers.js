@@ -140,3 +140,20 @@ export const getEstadoTexto = (estado) => {
   };
   return textos[estado] || estado;
 };
+
+/**
+ * Truncar texto si supera un límite de caracteres, agregando '...' al final.
+ * Si el texto es nulo o indefinido, devuelve el valor de fallback ('-' por defecto).
+ *
+ * @param {string|number} texto - Texto a truncar
+ * @param {number} limite - Cantidad máxima de caracteres permitidos (default: 30)
+ * @param {string} fallback - Valor si el texto está vacío (default: '-')
+ * @returns {string} Texto truncado o fallback
+ */
+export const truncarTexto = (texto, limite = 30, fallback = '-') => {
+  if (texto === null || texto === undefined || texto === '') return fallback;
+  const str = String(texto).trim();
+  if (str.length === 0) return fallback;
+  if (str.length <= limite) return str;
+  return `${str.substring(0, limite).trim()}...`;
+};

@@ -15,6 +15,7 @@ import ModalConfirmacion from '../../components/ModalConfirmacion';
 import BotonExportar from '../../components/BotonExportar';
 import ToolbarSeleccionLote from '../../components/ToolbarSeleccionLote';
 import PaginacionTabla from '../../components/PaginacionTabla';
+import TextoTruncado from '../../components/TextoTruncado';
 import { exportarComentariosAPDF, exportarComentariosAExcel } from '../../utils/exportUtils';
 
 const normalizarComentario = (comentario) => ({
@@ -489,19 +490,19 @@ const AdminComentariosPage = () => {
                             className={`bi bi-${estaSeleccionado ? 'check-circle-fill text-danger' : 'circle text-muted'} fs-6 d-inline-block`}
                             style={{ cursor: 'pointer' }}
                           />
-                          <span>{comentario.usuario?.nombre || 'Usuario'}</span>
+                          <TextoTruncado texto={comentario.usuario?.nombre || 'Usuario'} limite={20} maxWidth="140px" />
                         </div>
                       </td>
-                      <td className="align-middle fw-medium">{comentario.producto?.nombre || 'Producto'}</td>
+                      <td className="align-middle fw-medium">
+                        <TextoTruncado texto={comentario.producto?.nombre || 'Producto'} limite={30} maxWidth="220px" />
+                      </td>
                       <td className="align-middle">
                         <div className="d-flex gap-1">
                           {renderizarEstrellas(comentario.calificacion)}
                         </div>
                       </td>
                       <td className="align-middle d-none d-sm-table-cell">
-                        <div style={{ maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {comentario.comentario}
-                        </div>
+                        <TextoTruncado texto={comentario.comentario} limite={50} maxWidth="320px" />
                       </td>
                       <td className="align-middle">
                         <Badge bg={comentario.estado ? 'success' : 'warning'}>

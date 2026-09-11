@@ -15,6 +15,7 @@ import ModalConfirmacion from '../../components/ModalConfirmacion';
 import BotonExportar from '../../components/BotonExportar';
 import ToolbarSeleccionLote from '../../components/ToolbarSeleccionLote';
 import PaginacionTabla from '../../components/PaginacionTabla';
+import TextoTruncado from '../../components/TextoTruncado';
 import { exportarSubcategoriasAPDF, exportarSubcategoriasAExcel } from '../../utils/exportUtils';
 
 const AdminSubcategoriasPage = () => {
@@ -554,17 +555,23 @@ const AdminSubcategoriasPage = () => {
                         </div>
                       </td>
                       <td className="align-middle fw-bold">
-                        <div>{sub.nombre}</div>
-                        <small className="d-sm-none text-muted d-block">
-                          {obtenerNombreCategoria(sub.categoriaId)}
-                        </small>
+                        <TextoTruncado as="div" texto={sub.nombre} limite={30} maxWidth="220px" />
+                        <TextoTruncado 
+                          as="small" 
+                          className="d-sm-none text-muted d-block" 
+                          texto={obtenerNombreCategoria(sub.categoriaId)} 
+                          limite={25} 
+                          maxWidth="200px" 
+                        />
                       </td>
                       <td className="align-middle d-none d-sm-table-cell">
                         <Badge bg="info">
-                          {obtenerNombreCategoria(sub.categoriaId)}
+                          <TextoTruncado texto={obtenerNombreCategoria(sub.categoriaId)} limite={25} maxWidth="180px" />
                         </Badge>
                       </td>
-                      <td className="align-middle d-none d-md-table-cell">{sub.descripcion || '-'}</td>
+                      <td className="align-middle d-none d-md-table-cell">
+                        <TextoTruncado texto={sub.descripcion} limite={45} maxWidth="320px" fallback="-" />
+                      </td>
                       <td className="align-middle d-none d-md-table-cell">
                         <Badge bg={sub.activo ? 'success' : 'secondary'}>
                           {sub.activo ? 'Activo' : 'Inactivo'}

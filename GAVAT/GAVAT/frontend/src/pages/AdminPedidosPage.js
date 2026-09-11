@@ -14,6 +14,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import FloatingToast from '../components/FloatingToast';
 import ModalConfirmacion from '../components/ModalConfirmacion';
 import ToolbarSeleccionLote from '../components/ToolbarSeleccionLote';
+import TextoTruncado from '../components/TextoTruncado';
 
 const TITULOS_ESTADO = {
   pendiente: '¿Marcar pedido como pendiente?',
@@ -254,8 +255,8 @@ function FilaPedido({ pedido, estaSeleccionado, onToggleSeleccionar, onVerDetall
         </div>
       </td>
       <td className="align-middle">
-        <div className="fw-bold">{pedido.usuario?.nombre || 'Usuario desconocido'}</div>
-        <small className="text-muted d-block">{pedido.usuario?.email}</small>
+        <TextoTruncado as="div" className="fw-bold" texto={pedido.usuario?.nombre || 'Usuario desconocido'} limite={28} maxWidth="220px" />
+        <TextoTruncado as="small" className="text-muted d-block" texto={pedido.usuario?.email} limite={28} maxWidth="220px" fallback="" />
       </td>
       <td className="align-middle d-none d-sm-table-cell">{formatearFecha(pedido.createdAt)}</td>
       <td className="align-middle fw-bold">{formatearPrecio(pedido.total)}</td>
@@ -478,7 +479,7 @@ function ModalDetallePedido({ show, pedido, onCerrar, onCambiarEstado }) {
           <div className="mb-3">
             <span className="small fw-semibold text-secondary d-block mb-1">Notas del Cliente:</span>
             <div className="p-2 px-3 rounded-3 bg-info-subtle border border-info-subtle small text-navy">
-              {pedido.notas}
+              <TextoTruncado as="div" texto={pedido.notas} limite={100} maxWidth="100%" />
             </div>
           </div>
         )}
@@ -499,7 +500,9 @@ function ModalDetallePedido({ show, pedido, onCerrar, onCambiarEstado }) {
                 const detalleKey = getDetalleKey(detalle);
                 return (
                   <tr key={detalleKey}>
-                    <td className="py-2 fw-medium">{getDetalleNombre(detalle)}</td>
+                    <td className="py-2 fw-medium">
+                      <TextoTruncado texto={getDetalleNombre(detalle)} limite={35} maxWidth="280px" />
+                    </td>
                     <td className="py-2 text-center">{formatearPrecio(detalle.precioUnitario)}</td>
                     <td className="py-2 text-center">{detalle.cantidad}</td>
                     <td className="py-2 text-end fw-bold">{formatearPrecio(detalle.subtotal)}</td>

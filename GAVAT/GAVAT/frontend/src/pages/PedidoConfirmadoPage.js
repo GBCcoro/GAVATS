@@ -16,6 +16,7 @@ import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import FloatingToast from '../components/FloatingToast';
 import ModalConfirmacion from '../components/ModalConfirmacion';
+import TextoTruncado from '../components/TextoTruncado';
 import { getImageUrl, formatCurrency, formatDateTime } from '../utils/helpers';
 
 const BADGES_ESTADO = {
@@ -292,13 +293,21 @@ const PedidoConfirmadoPage = () => {
                                   }}
                                 />
                                 <div>
-                                  <div className="fw-bold text-navy">
-                                    {producto?.nombre || 'Producto no especificado'}
-                                  </div>
+                                  <TextoTruncado 
+                                    as="div" 
+                                    className="fw-bold text-navy" 
+                                    texto={producto?.nombre || 'Producto no especificado'} 
+                                    limite={35} 
+                                    maxWidth="320px" 
+                                  />
                                   {producto?.categoria && (
-                                    <small className="text-muted d-block">
-                                      {producto.categoria.nombre}
-                                    </small>
+                                    <TextoTruncado 
+                                      as="small" 
+                                      className="text-muted d-block" 
+                                      texto={producto.categoria.nombre} 
+                                      limite={25} 
+                                      maxWidth="200px" 
+                                    />
                                   )}
                                 </div>
                               </div>

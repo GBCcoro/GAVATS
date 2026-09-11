@@ -15,6 +15,7 @@ import ToolbarSeleccionLote from '../../components/ToolbarSeleccionLote';
 import PaginacionTabla from '../../components/PaginacionTabla';
 import AdminPageHeader from '../../components/AdminPageHeader';
 import AdminFiltrosCard from '../../components/AdminFiltrosCard';
+import TextoTruncado from '../../components/TextoTruncado';
 import { exportarFacturasAPDF, exportarFacturasAExcel } from '../../utils/exportUtils';
 
 const BADGE_ESTADOS = Object.freeze({
@@ -370,12 +371,12 @@ const AdminFacturasPage = () => {
                             className={`bi bi-${estaSeleccionado ? 'check-circle-fill text-danger' : 'circle text-muted'} fs-6 d-inline-block`}
                             style={{ cursor: 'pointer' }}
                           />
-                          <span>{numFactura}</span>
+                          <TextoTruncado texto={numFactura} limite={24} maxWidth="160px" />
                         </div>
                       </td>
                       <td className="align-middle">
-                        <div className="fw-bold">{factura.clienteNombre || factura.cliente_nombre || '-'}</div>
-                        <small className="text-muted d-block">{factura.clienteEmail || factura.cliente_email || ''}</small>
+                        <TextoTruncado as="div" className="fw-bold" texto={factura.clienteNombre || factura.cliente_nombre || '-'} limite={28} maxWidth="220px" />
+                        <TextoTruncado as="small" className="text-muted d-block" texto={factura.clienteEmail || factura.cliente_email || ''} limite={28} maxWidth="220px" fallback="" />
                       </td>
                       <td className="align-middle fw-bold">{formatearPrecio(factura.total)}</td>
                       <td className="align-middle d-none d-sm-table-cell">

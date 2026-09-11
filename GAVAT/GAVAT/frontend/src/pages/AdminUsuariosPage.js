@@ -12,6 +12,7 @@ import usuarioService from '../services/usuarioService';
 import { exportarUsuariosAPDF, exportarUsuariosAExcel } from '../utils/exportUtils';
 import LoadingSpinner from '../components/LoadingSpinner';
 import FloatingToast from '../components/FloatingToast';
+import TextoTruncado from '../components/TextoTruncado';
 
 const BG_MODAL_CONFIRMACION = Object.freeze({
   danger: 'danger-subtle',
@@ -298,11 +299,15 @@ function FilaUsuario({ usuario, estaSeleccionado, onToggle, onEditar, onCambiarE
         </div>
       </td>
       <td className="align-middle fw-bold">
-        <div>{usuario.nombre} {usuario.apellido || ''}</div>
-        <small className="d-lg-none text-muted d-block">{usuario.telefono || ''}</small>
+        <TextoTruncado as="div" texto={`${usuario.nombre} ${usuario.apellido || ''}`.trim()} limite={28} maxWidth="220px" />
+        <TextoTruncado as="small" className="d-lg-none text-muted d-block" texto={usuario.telefono || ''} limite={15} maxWidth="150px" fallback="" />
       </td>
-      <td className="align-middle">{usuario.email}</td>
-      <td className="align-middle d-none d-lg-table-cell">{usuario.telefono || '-'}</td>
+      <td className="align-middle">
+        <TextoTruncado texto={usuario.email} limite={28} maxWidth="220px" />
+      </td>
+      <td className="align-middle d-none d-lg-table-cell">
+        <TextoTruncado texto={usuario.telefono || '-'} limite={15} maxWidth="140px" />
+      </td>
       <td className="align-middle">
         <Badge bg={getRolBadgeVariant(usuario.rol)}>
           {usuario.rol}

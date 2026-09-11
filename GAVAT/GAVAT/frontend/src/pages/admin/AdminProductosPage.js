@@ -14,6 +14,7 @@ import api from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ModalConfirmacion from '../../components/ModalConfirmacion';
 import ToolbarSeleccionLote from '../../components/ToolbarSeleccionLote';
+import TextoTruncado from '../../components/TextoTruncado';
 import { getImageUrl } from '../../utils/helpers';
 import { exportarProductosAPDF, exportarProductosAExcel } from '../../utils/exportUtils';
 
@@ -278,15 +279,24 @@ function FilaProducto({ prod, estaSeleccionado, onToggleSeleccionar, onEditar, o
         <ProductImage imagen={prod.imagen} nombre={prod.nombre} />
       </td>
       <td className="align-middle fw-bold">
-        <div>{prod.nombre}</div>
-        <small className="d-lg-none text-muted d-block">
-          {prod.categoria?.nombre || 'Sin categoría'}
-        </small>
+        <TextoTruncado as="div" texto={prod.nombre} limite={32} maxWidth="250px" />
+        <TextoTruncado 
+          as="small" 
+          className="d-lg-none text-muted d-block" 
+          texto={prod.categoria?.nombre || 'Sin categoría'} 
+          limite={25} 
+          maxWidth="200px" 
+        />
       </td>
       <td className="align-middle d-none d-lg-table-cell">
-        <Badge bg="info">{prod.categoria?.nombre || 'N/A'}</Badge>
+        <Badge bg="info">
+          <TextoTruncado texto={prod.categoria?.nombre || 'N/A'} limite={22} maxWidth="140px" />
+        </Badge>
         {prod.subcategoria && (
-          <><br /><small className="text-muted">{prod.subcategoria.nombre}</small></>
+          <>
+            <br />
+            <TextoTruncado as="small" className="text-muted" texto={prod.subcategoria.nombre} limite={20} maxWidth="140px" />
+          </>
         )}
       </td>
       <td className="align-middle d-none d-sm-table-cell">{formatearPrecio(prod.precio)}</td>
