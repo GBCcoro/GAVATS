@@ -98,7 +98,7 @@ const getCategoriaById = async (req, res) => {
         {
           model: Producto,
           as: 'productos',
-          attributes: ['id']   // Solo traemos el id para contar
+          attributes: ['id', 'nombre', 'precio', 'stock', 'activo', 'imagen']
         }
       ]
     });
@@ -114,9 +114,7 @@ const getCategoriaById = async (req, res) => {
     // Convierte la instancia Sequelize a un objeto JavaScript plano
     const categoriaJSON = categoria.toJSON();
     // Agrega un campo totalProductos contando los productos incluidos
-    categoriaJSON.totalProductos = categoriaJSON.productos.length;
-    // Elimina el array de productos para no enviar la lista completa, solo el contador
-    delete categoriaJSON.productos;
+    categoriaJSON.totalProductos = categoriaJSON.productos?.length || 0;
     
     // Responde con la categoría y sus subcategorías
     res.json({
@@ -355,6 +353,7 @@ const toggleCategoria = async (req, res) => {
 const eliminarCategoria = async (req, res) => {
   try {
     const { id } = req.params;
+    const eliminarHijos = req.query.eliminarHijos === 'true' || req.body?.eliminarHijos === true;
     
     // Busca la categoría por ID
     const categoria = await Categoria.findByPk(id);
@@ -366,41 +365,78 @@ const eliminarCategoria = async (req, res) => {
       });
     }
     
-    // VALIDACIÓN 1: Cuenta subcategorías asociadas a esta categoría
-    const subcategorias = await Subcategoria.count({
+    // Cuenta subcategorías y productos asociados
+    const totalSubcategorias = await Subcategoria.count({
       where: { categoriaId: id }
     });
     
-    // Si tiene subcategorías, no se puede eliminar (integridad referencial)
-    if (subcategorias > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `No se puede eliminar la categoría porque tiene ${subcategorias} subcategoría(s) asociada(s)`,
-        sugerencia: 'Usa PATCH /api/admin/categorias/:id/toggle para desactivarla en lugar de eliminarla'
-      });
-    }
-    
-    // VALIDACIÓN 2: Cuenta productos asociados a esta categoría
-    const productos = await Producto.count({
+    const totalProductos = await Producto.count({
       where: { categoriaId: id }
     });
-    
-    // Si tiene productos, no se puede eliminar
-    if (productos > 0) {
+
+    // Si tiene elementos asociados y NO se confirmó la eliminación en cascada
+    if ((totalSubcategorias > 0 || totalProductos > 0) && !eliminarHijos) {
       return res.status(400).json({
         success: false,
-        message: `No se puede eliminar la categoría porque tiene ${productos} producto(s) asociado(s)`,
-        sugerencia: 'Usa PATCH /api/admin/categorias/:id/toggle para desactivarla en lugar de eliminarla'
+        tieneHijos: true,
+        subcategorias: totalSubcategorias,
+        productos: totalProductos,
+        message: `No se puede eliminar la categoría porque tiene ${totalSubcategorias} subcategoría(s) y ${totalProductos} producto(s) asociado(s)`,
+        sugerencia: 'Confirme la eliminación en cascada de subcategorías y productos o manténgalos desactivados.'
       });
     }
-    
+
+    // Si se confirmó eliminar en cascada
+    if (eliminarHijos && (totalSubcategorias > 0 || totalProductos > 0)) {
+      const DetallePedido = require('../models/DetallePedido');
+      const Carrito = require('../models/Carrito');
+      const Comentario = require('../models/Comentario');
+      const path = require('node:path');
+      const fs = require('node:fs').promises;
+
+      const productos = await Producto.findAll({
+        where: { categoriaId: id }
+      });
+
+      for (const prod of productos) {
+        try {
+          await DetallePedido.destroy({ where: { productoId: prod.id } });
+        } catch (e) {
+          console.warn('Advertencia al limpiar DetallePedido:', e.message);
+        }
+        try {
+          await Carrito.destroy({ where: { productoId: prod.id } });
+        } catch (e) {
+          console.warn('Advertencia al limpiar Carrito:', e.message);
+        }
+        try {
+          await Comentario.destroy({ where: { productoId: prod.id } });
+        } catch (e) {
+          console.warn('Advertencia al limpiar Comentario:', e.message);
+        }
+        if (prod.imagen && typeof prod.imagen === 'string' && !prod.imagen.startsWith('data:') && !prod.imagen.startsWith('http')) {
+          const rutaImagen = path.join(__dirname, '../uploads', prod.imagen);
+          try {
+            await fs.unlink(rutaImagen);
+          } catch (err) {
+            // Ignorar
+          }
+        }
+        await prod.destroy();
+      }
+
+      await Subcategoria.destroy({ where: { categoriaId: id } });
+    }
+
     // destroy() ejecuta DELETE FROM Categoria WHERE id = :id
     await categoria.destroy();
     
     // Responde confirmando la eliminación
     res.json({
       success: true,
-      message: 'Categoría eliminada exitosamente'
+      message: eliminarHijos && (totalSubcategorias > 0 || totalProductos > 0)
+        ? `Categoría, ${totalSubcategorias} subcategoría(s) y ${totalProductos} producto(s) asociados eliminados exitosamente`
+        : 'Categoría eliminada exitosamente'
     });
     
   } catch (error) {

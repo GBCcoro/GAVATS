@@ -16,6 +16,7 @@ import PaginacionTabla from '../../components/PaginacionTabla';
 import AdminPageHeader from '../../components/AdminPageHeader';
 import AdminFiltrosCard from '../../components/AdminFiltrosCard';
 import TextoTruncado from '../../components/TextoTruncado';
+import DesplegableElementosVinculados from '../../components/DesplegableElementosVinculados';
 import { exportarCategoriasAPDF, exportarCategoriasAExcel } from '../../utils/exportUtils';
 
 const AdminCategoriasPage = () => {
@@ -27,6 +28,7 @@ const AdminCategoriasPage = () => {
   const [seleccionados, setSeleccionados] = useState(new Set());
   const [modalConfirmacion, setModalConfirmacion] = useState({ show: false });
   const [filtros, setFiltros] = useState({ busqueda: '', estado: 'todos' });
+  const [elementosVinculadosModal, setElementosVinculadosModal] = useState({ subcategorias: [], productos: [], loading: false });
   
   const [formData, setFormData] = useState({
     nombre: '',
@@ -85,7 +87,7 @@ const AdminCategoriasPage = () => {
   const loadCategorias = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get('/admin/categorias');
+      const response = await api.get('/admin/categorias?incluirSubcategorias=true');
       const categoriasData = response.data?.data?.categorias || response.data?.categorias || response.data?.data || [];
       setCategorias(Array.isArray(categoriasData) ? categoriasData : []);
     } catch (error) {
@@ -109,6 +111,23 @@ const AdminCategoriasPage = () => {
         descripcion: categoria.descripcion || '',
         activo: Boolean(categoria.activo)
       });
+      setElementosVinculadosModal({
+        subcategorias: Array.isArray(categoria.subcategorias) ? categoria.subcategorias : [],
+        productos: [],
+        loading: true
+      });
+      api.get(`/admin/categorias/${categoria.id}`)
+        .then(res => {
+          const cat = res.data?.data?.categoria || res.data?.categoria || {};
+          setElementosVinculadosModal({
+            subcategorias: cat.subcategorias || [],
+            productos: cat.productos || [],
+            loading: false
+          });
+        })
+        .catch(() => {
+          setElementosVinculadosModal(prev => ({ ...prev, loading: false }));
+        });
     } else {
       setEditando(null);
       setFormData({
@@ -116,6 +135,7 @@ const AdminCategoriasPage = () => {
         descripcion: '',
         activo: true
       });
+      setElementosVinculadosModal({ subcategorias: [], productos: [], loading: false });
     }
     setShowModal(true);
   };
@@ -128,6 +148,7 @@ const AdminCategoriasPage = () => {
       descripcion: '',
       activo: true
     });
+    setElementosVinculadosModal({ subcategorias: [], productos: [], loading: false });
   };
 
   const handleChange = (e) => {
@@ -193,19 +214,22 @@ const AdminCategoriasPage = () => {
     });
   };
 
-  // Eliminar individual con modal
-  const solicitarEliminar = (categoria) => {
+  const abrirModalEliminarConHijos = (categoria, totalSub, totalProd) => {
+    const detalleHijos = [];
+    if (totalSub > 0) detalleHijos.push(`${totalSub} subcategoría(s)`);
+    if (totalProd > 0) detalleHijos.push(`${totalProd} producto(s)`);
+    const textoHijos = detalleHijos.join(' y ') || 'elementos asociados';
+
     setModalConfirmacion({
       show: true,
-      titulo: '¿Eliminar categoría?',
-      mensaje: `¿Estás seguro de que deseas eliminar permanentemente la categoría "${categoria.nombre}"? Esta acción no se puede deshacer.`,
+      titulo: '¿Eliminar categoría y sus elementos vinculados?',
+      mensaje: `La categoría "${categoria.nombre}" tiene ${textoHijos}. ¿Deseas eliminar también los productos y subcategorías vinculados? Si no aceptas, no se borrarán y quedarán desactivados.`,
       tipo: 'danger',
-      icono: 'trash3-fill',
-      textoConfirmar: 'Borrar',
-      textoCancelar: 'Cancelar',
+      icono: 'exclamation-triangle-fill',
+      textoConfirmar: 'Sí, eliminar todo',
+      textoCancelar: 'No eliminar (desactivar)',
       onConfirm: async () => {
         try {
-          // Eliminación inmediata de estado local
           setCategorias(prev => prev.filter(c => c.id !== categoria.id));
           setSeleccionados(prev => {
             const next = new Set(prev);
@@ -213,19 +237,103 @@ const AdminCategoriasPage = () => {
             return next;
           });
 
-          await api.delete(`/admin/categorias/${categoria.id}`);
-          setMensaje({ tipo: 'success', texto: `Categoría "${categoria.nombre}" eliminada exitosamente` });
+          const res = await api.delete(`/admin/categorias/${categoria.id}?eliminarHijos=true`);
+          setMensaje({ 
+            tipo: 'success', 
+            texto: res.data?.message || `Categoría "${categoria.nombre}", subcategorías y productos eliminados exitosamente` 
+          });
           await loadCategorias();
         } catch (error) {
-          console.error('Error al eliminar categoría:', error);
+          console.error('Error al eliminar categoría con hijos:', error);
           setMensaje({ 
             tipo: 'danger', 
-            texto: error.response?.data?.message || 'Error al eliminar la categoría' 
+            texto: error.response?.data?.message || 'Error al eliminar la categoría y sus elementos' 
           });
           await loadCategorias();
         }
+      },
+      onCancel: async () => {
+        try {
+          if (categoria.activo) {
+            await api.patch(`/admin/categorias/${categoria.id}/toggle`);
+            await loadCategorias();
+          }
+          setMensaje({
+            tipo: 'warning',
+            texto: 'Los productos y subcategorías no fueron borrados y están desactivados'
+          });
+        } catch (e) {
+          setMensaje({
+            tipo: 'info',
+            texto: 'Los productos y subcategorías no fueron borrados y están desactivados'
+          });
+        }
       }
     });
+  };
+
+  // Eliminar individual con modal y opción de cascada
+  const solicitarEliminar = async (categoria) => {
+    try {
+      let totalSub = Array.isArray(categoria.subcategorias) ? categoria.subcategorias.length : 0;
+      let totalProd = 0;
+
+      try {
+        const statsRes = await api.get(`/admin/categorias/${categoria.id}/stats`);
+        const stats = statsRes?.data?.data || statsRes?.data || {};
+        const est = stats.estadisticas || stats;
+        totalSub = est.subcategorias?.total ?? est.totalSubcategorias ?? stats.totalSubcategorias ?? totalSub;
+        totalProd = est.productos?.total ?? est.totalProductos ?? stats.totalProductos ?? 0;
+      } catch (errStats) {
+        console.warn('No se pudieron obtener estadísticas previas:', errStats);
+      }
+
+      const tieneHijos = totalSub > 0 || totalProd > 0;
+
+      if (tieneHijos) {
+        abrirModalEliminarConHijos(categoria, totalSub, totalProd);
+        return;
+      }
+
+      setModalConfirmacion({
+        show: true,
+        titulo: '¿Eliminar categoría?',
+        mensaje: `¿Estás seguro de que deseas eliminar permanentemente la categoría "${categoria.nombre}"? Esta acción no se puede deshacer.`,
+        tipo: 'danger',
+        icono: 'trash3-fill',
+        textoConfirmar: 'Borrar',
+        textoCancelar: 'Cancelar',
+        onConfirm: async () => {
+          try {
+            await api.delete(`/admin/categorias/${categoria.id}`);
+            setCategorias(prev => prev.filter(c => c.id !== categoria.id));
+            setSeleccionados(prev => {
+              const next = new Set(prev);
+              next.delete(categoria.id);
+              return next;
+            });
+
+            setMensaje({ tipo: 'success', texto: `Categoría "${categoria.nombre}" eliminada exitosamente` });
+            await loadCategorias();
+          } catch (error) {
+            console.error('Error al eliminar categoría:', error);
+            if (error.response?.data?.tieneHijos || error.response?.status === 400) {
+              const subCount = error.response?.data?.subcategorias || totalSub || 1;
+              const prodCount = error.response?.data?.productos || totalProd || 1;
+              abrirModalEliminarConHijos(categoria, subCount, prodCount);
+              return;
+            }
+            setMensaje({ 
+              tipo: 'danger', 
+              texto: error.response?.data?.message || 'Error al eliminar la categoría' 
+            });
+            await loadCategorias();
+          }
+        }
+      });
+    } catch (err) {
+      console.error('Error al preparar eliminación de categoría:', err);
+    }
   };
 
   // Toggle estado individual con modal

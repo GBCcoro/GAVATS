@@ -58,9 +58,15 @@ const ModalConfirmacion = ({
       onHide={handleCancelar} 
       centered
       backdrop="static"
-      dialogClassName="modal-confirmacion-compacto"
+      dialogClassName={modal.dialogClassName || (modal.contenidoExtra ? 'modal-confirmacion-ampliado' : 'modal-confirmacion-compacto')}
     >
-      <Modal.Body className="text-center p-3 p-sm-4">
+      <Modal.Body className="text-center p-3 p-sm-4 position-relative">
+        <button 
+          type="button" 
+          className="btn-close position-absolute top-0 end-0 m-3" 
+          onClick={cerrar}
+          aria-label="Cerrar modal"
+        />
         <div 
           className={`confirm-icon-wrapper mb-3 mx-auto bg-${bgClass} text-${modal.tipo || 'primary'}`}
         >
@@ -71,9 +77,15 @@ const ModalConfirmacion = ({
           {modal.titulo}
         </h5>
         
-        <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: '340px', margin: '0 auto' }}>
+        <p className="text-muted small mb-3 mb-sm-4 px-1" style={{ maxWidth: modal.contenidoExtra ? '440px' : '340px', margin: '0 auto' }}>
           {modal.mensaje}
         </p>
+
+        {modal.contenidoExtra && (
+          <div className="mb-3 text-start w-100">
+            {modal.contenidoExtra}
+          </div>
+        )}
 
         {modal.requierePassword && (
           <div className="mb-3 text-start px-2" style={{ maxWidth: '340px', margin: '0 auto' }}>

@@ -386,51 +386,42 @@ function TablaUsuarios({ usuarios, seleccionados, onToggle, onEditar, onCambiarE
 
 /** Subcomponente: Paginación */
 function PaginacionUsuarios({ paginaActual, totalPaginas, totalUsuarios, registrosPorPagina, setPaginaActual, loading }) {
+  if (totalPaginas <= 1 && (!totalUsuarios || totalUsuarios <= 0)) return null;
+
   const inicio = totalUsuarios === 0 ? 0 : (paginaActual - 1) * registrosPorPagina + 1;
-  const fin = Math.min(paginaActual * registrosPorPagina, totalUsuarios);
+  const fin = totalUsuarios > 0 ? Math.min(paginaActual * registrosPorPagina, totalUsuarios) : 0;
 
   return (
-    <div className="d-flex justify-content-between align-items-center mt-3">
-      <small className="text-muted">
-        Página <strong>{paginaActual}</strong> de <strong>{totalPaginas || 1}</strong> — Mostrando <strong>{inicio}-{fin}</strong> de <strong>{totalUsuarios}</strong> registros
+    <div className="d-flex justify-content-between align-items-center text-muted bg-white p-3 rounded shadow-sm mt-3">
+      <small>
+        <span className="bi bi-file-text me-1" aria-hidden="true" />
+        <span>Mostrando <strong>{totalUsuarios === 0 ? '0-0' : `${inicio}-${fin}`}</strong> de <strong>{totalUsuarios}</strong> registros</span>
       </small>
-      <ButtonGroup size="sm">
+      <div className="d-flex gap-2 align-items-center">
         <Button 
           type="button" 
-          variant="outline-primary" 
-          onClick={() => setPaginaActual(1)} 
-          disabled={paginaActual === 1 || loading}
-        >
-          ««
-        </Button>
-        <Button 
-          type="button" 
-          variant="outline-primary" 
+          variant="outline-secondary" 
+          size="sm"
           onClick={() => setPaginaActual(p => Math.max(1, p - 1))} 
           disabled={paginaActual === 1 || loading}
+          title="Página anterior"
         >
-          Anterior
+          <span className="bi bi-arrow-left" aria-hidden="true" />
         </Button>
-        <Button type="button" variant="primary" disabled>
-          {paginaActual} / {totalPaginas || 1}
-        </Button>
+        <span className="text-nowrap small">
+          Página <strong>{paginaActual}</strong> de <strong>{totalPaginas || 1}</strong>
+        </span>
         <Button 
           type="button" 
-          variant="outline-primary" 
-          onClick={() => setPaginaActual(p => p + 1)} 
+          variant="outline-secondary" 
+          size="sm"
+          onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))} 
           disabled={paginaActual >= totalPaginas || loading}
+          title="Página siguiente"
         >
-          Siguiente
+          <span className="bi bi-arrow-right" aria-hidden="true" />
         </Button>
-        <Button 
-          type="button" 
-          variant="outline-primary" 
-          onClick={() => setPaginaActual(totalPaginas)} 
-          disabled={paginaActual >= totalPaginas || loading}
-        >
-          »»
-        </Button>
-      </ButtonGroup>
+      </div>
     </div>
   );
 }

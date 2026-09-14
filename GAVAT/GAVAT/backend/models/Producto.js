@@ -358,13 +358,13 @@ Producto.prototype.hayStock = function(cantidad = 1) {
  * @param {number} cantidad - Unidades a restar
  * @returns {Promise<Producto>} Producto actualizado
  */
-Producto.prototype.reducirStock = async function(cantidad) {
+Producto.prototype.reducirStock = async function(cantidad, transaction = null) {
   if (!this.hayStock(cantidad)) {          // Valida que haya suficiente stock
     throw new Error('Stock insuficiente');
   }
   
   this.stock -= cantidad;                  // Resta la cantidad del stock
-  return await this.save();                // save() ejecuta UPDATE en la BD
+  return await this.save(transaction ? { transaction } : {});                // save() ejecuta UPDATE en la BD
 };
 
 /**

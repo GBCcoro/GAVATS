@@ -101,7 +101,7 @@ const getSubcategoriaById = async (req, res) => {
         {
           model: Producto,
           as: 'productos',
-          attributes: ['id']     // Solo trae el ID para contar
+          attributes: ['id', 'nombre', 'precio', 'stock', 'activo', 'imagen']
         }
       ]
     });
@@ -115,9 +115,7 @@ const getSubcategoriaById = async (req, res) => {
     
     // Convierte a objeto plano y agrega el contador de productos
     const subcategoriaJSON = subcategoria.toJSON();
-    subcategoriaJSON.totalProductos = subcategoriaJSON.productos.length;
-    // Elimina el array de productos para no enviar la lista, solo el número
-    delete subcategoriaJSON.productos;
+    subcategoriaJSON.totalProductos = subcategoriaJSON.productos?.length || 0;
     
     // Responde con la subcategoría
     res.json({
@@ -436,6 +434,7 @@ const toggleSubcategoria = async (req, res) => {
 const eliminarSubcategoria = async (req, res) => {
   try {
     const { id } = req.params;
+    const eliminarProductos = req.query.eliminarProductos === 'true' || req.body?.eliminarProductos === true;
     
     const subcategoria = await Subcategoria.findByPk(id);
     
@@ -446,26 +445,70 @@ const eliminarSubcategoria = async (req, res) => {
       });
     }
     
-    // VALIDACIÓN: Cuenta productos asociados (integridad referencial)
-    const productos = await Producto.count({
+    // Cuenta productos asociados
+    const totalProductos = await Producto.count({
       where: { subcategoriaId: id }
     });
     
-    // Si tiene productos, no se puede eliminar
-    if (productos > 0) {
+    // Si tiene productos y NO se confirmó la eliminación en cascada
+    if (totalProductos > 0 && !eliminarProductos) {
       return res.status(400).json({
         success: false,
-        message: `No se puede eliminar la subcategoría porque tiene ${productos} producto(s) asociado(s)`,
-        sugerencia: 'Usa PATCH /api/admin/subcategorias/:id/toggle para desactivarla'
+        tieneProductos: true,
+        productos: totalProductos,
+        message: `No se puede eliminar la subcategoría porque tiene ${totalProductos} producto(s) asociado(s)`,
+        sugerencia: 'Confirme la eliminación en cascada de los productos o manténgalos desactivados.'
       });
     }
-    
+
+    // Si se confirmó eliminar productos
+    if (eliminarProductos && totalProductos > 0) {
+      const DetallePedido = require('../models/DetallePedido');
+      const Carrito = require('../models/Carrito');
+      const Comentario = require('../models/Comentario');
+      const path = require('node:path');
+      const fs = require('node:fs').promises;
+
+      const productos = await Producto.findAll({
+        where: { subcategoriaId: id }
+      });
+
+      for (const prod of productos) {
+        try {
+          await DetallePedido.destroy({ where: { productoId: prod.id } });
+        } catch (e) {
+          console.warn('Advertencia al limpiar DetallePedido:', e.message);
+        }
+        try {
+          await Carrito.destroy({ where: { productoId: prod.id } });
+        } catch (e) {
+          console.warn('Advertencia al limpiar Carrito:', e.message);
+        }
+        try {
+          await Comentario.destroy({ where: { productoId: prod.id } });
+        } catch (e) {
+          console.warn('Advertencia al limpiar Comentario:', e.message);
+        }
+        if (prod.imagen && typeof prod.imagen === 'string' && !prod.imagen.startsWith('data:') && !prod.imagen.startsWith('http')) {
+          const rutaImagen = path.join(__dirname, '../uploads', prod.imagen);
+          try {
+            await fs.unlink(rutaImagen);
+          } catch (err) {
+            // Ignorar
+          }
+        }
+        await prod.destroy();
+      }
+    }
+
     // destroy() ejecuta DELETE FROM Subcategoria WHERE id = :id
     await subcategoria.destroy();
     
     res.json({
       success: true,
-      message: 'Subcategoría eliminada exitosamente'
+      message: eliminarProductos && totalProductos > 0
+        ? `Subcategoría y ${totalProductos} producto(s) asociados eliminados exitosamente`
+        : 'Subcategoría eliminada exitosamente'
     });
     
   } catch (error) {

@@ -230,6 +230,33 @@ function AccionesPedido({ pedido, onVerDetalle, onCambiarEstado }) {
           <span className="btn-text">Cancelar</span>
         </Button>
       )}
+
+      {pedido.estado === 'cancelado' && (
+        <>
+          <Button 
+            type="button"
+            variant="outline-warning" 
+            size="sm" 
+            className="btn-action-table" 
+            onClick={(e) => handleAccion(e, () => onCambiarEstado(pedido.id, 'pendiente'))} 
+            title="Reactivar pedido (marcar como pendiente y re-descontar inventario)"
+          >
+            <span className="bi bi-arrow-repeat" aria-hidden="true" />
+            <span className="btn-text">Reactivar</span>
+          </Button>
+          <Button 
+            type="button"
+            variant="outline-info" 
+            size="sm" 
+            className="btn-action-table" 
+            onClick={(e) => handleAccion(e, () => onCambiarEstado(pedido.id, 'pagado'))} 
+            title="Reactivar como pagado"
+          >
+            <span className="bi bi-cash-stack" aria-hidden="true" />
+            <span className="btn-text">Pagar</span>
+          </Button>
+        </>
+      )}
     </div>
   );
 }
@@ -371,50 +398,42 @@ function FiltrosPedidos({ filtros, onChangeFiltro, onLimpiar }) {
 }
 
 function PaginacionPedidos({ paginaActual, totalPaginas, totalPedidos, totalMostrados, loading, onCambiarPagina }) {
-  if (totalPaginas <= 1) return null;
+  if (totalPaginas <= 1 && (!totalPedidos || totalPedidos <= 0)) return null;
+
+  const inicio = totalPedidos === 0 ? 0 : (paginaActual - 1) * totalMostrados + 1;
+  const fin = totalPedidos > 0 ? Math.min(paginaActual * totalMostrados, totalPedidos) : totalMostrados;
 
   return (
-    <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 mt-4 p-3 bg-white rounded shadow-sm">
-      <small className="text-muted">
-        Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> — Mostrando <strong>{totalMostrados}</strong> de <strong>{totalPedidos}</strong> pedidos
+    <div className="d-flex justify-content-between align-items-center text-muted bg-white p-3 rounded shadow-sm mt-4">
+      <small>
+        <span className="bi bi-file-text me-1" aria-hidden="true" />
+        <span>Mostrando <strong>{totalPedidos === 0 ? '0-0' : `${inicio}-${fin}`}</strong> de <strong>{totalPedidos}</strong> pedidos</span>
       </small>
-      <ButtonGroup size="sm">
+      <div className="d-flex gap-2 align-items-center">
         <Button 
           type="button" 
-          variant="outline-primary" 
-          onClick={() => onCambiarPagina(1)} 
+          variant="outline-secondary" 
+          size="sm"
+          onClick={() => onCambiarPagina(Math.max(1, paginaActual - 1))} 
           disabled={paginaActual === 1 || loading}
+          title="Página anterior"
         >
-          ««
+          <span className="bi bi-arrow-left" aria-hidden="true" />
         </Button>
+        <span className="text-nowrap small">
+          Página <strong>{paginaActual}</strong> de <strong>{totalPaginas || 1}</strong>
+        </span>
         <Button 
           type="button" 
-          variant="outline-primary" 
-          onClick={() => onCambiarPagina(paginaActual - 1)} 
-          disabled={paginaActual === 1 || loading}
-        >
-          Anterior
-        </Button>
-        <Button type="button" variant="primary" disabled>
-          {paginaActual} / {totalPaginas}
-        </Button>
-        <Button 
-          type="button" 
-          variant="outline-primary" 
+          variant="outline-secondary" 
+          size="sm"
           onClick={() => onCambiarPagina(paginaActual + 1)} 
-          disabled={paginaActual === totalPaginas || loading}
+          disabled={paginaActual >= totalPaginas || loading}
+          title="Página siguiente"
         >
-          Siguiente
+          <span className="bi bi-arrow-right" aria-hidden="true" />
         </Button>
-        <Button 
-          type="button" 
-          variant="outline-primary" 
-          onClick={() => onCambiarPagina(totalPaginas)} 
-          disabled={paginaActual === totalPaginas || loading}
-        >
-          »»
-        </Button>
-      </ButtonGroup>
+      </div>
     </div>
   );
 }
@@ -527,36 +546,35 @@ function ModalDetallePedido({ show, pedido, onCerrar, onCambiarEstado }) {
 
         <div>
           <span className="small fw-semibold text-secondary d-block mb-2">Cambiar Estado Directo:</span>
-          {pedido.estado === 'cancelado' ? (
-            <div className="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-0">
-              <span className="bi bi-x-circle-fill" aria-hidden="true" />
-              <span>Este pedido se encuentra <strong>cancelado</strong>. El stock de los productos ya fue retornado al inventario y no admite más cambios.</span>
-            </div>
-          ) : (
-            <div className="d-flex flex-wrap gap-2">
-              {ESTADOS_DISPONIBLES.map((est) => (
-                <Button
-                  key={est}
-                  type="button"
-                  variant={pedido.estado === est ? 'primary' : est === 'cancelado' ? 'outline-danger' : 'outline-secondary'}
-                  size="sm"
-                  onClick={() => onCambiarEstado(pedido.id, est)}
-                  disabled={pedido.estado === est}
-                  className="text-capitalize"
-                  title={est === 'cancelado' ? 'Cancelar pedido y devolver stock a inventario' : `Cambiar estado a ${est}`}
-                >
-                  {est === 'cancelado' ? (
-                    <>
-                      <span className="bi bi-x-circle me-1" aria-hidden="true" />
-                      <span>Cancelar</span>
-                    </>
-                  ) : (
-                    est
-                  )}
-                </Button>
-              ))}
+          {pedido.estado === 'cancelado' && (
+            <div className="alert alert-warning py-2 px-3 small d-flex align-items-center gap-2 mb-2">
+              <span className="bi bi-info-circle-fill" aria-hidden="true" />
+              <span>Este pedido se encuentra <strong>cancelado</strong>. Al seleccionar otro estado como administrador, se validará y descontará nuevamente el stock del inventario.</span>
             </div>
           )}
+          <div className="d-flex flex-wrap gap-2">
+            {ESTADOS_DISPONIBLES.map((est) => (
+              <Button
+                key={est}
+                type="button"
+                variant={pedido.estado === est ? 'primary' : est === 'cancelado' ? 'outline-danger' : 'outline-secondary'}
+                size="sm"
+                onClick={() => onCambiarEstado(pedido.id, est)}
+                disabled={pedido.estado === est}
+                className="text-capitalize"
+                title={est === 'cancelado' ? 'Cancelar pedido y devolver stock a inventario' : `Cambiar estado a ${est}`}
+              >
+                {est === 'cancelado' ? (
+                  <>
+                    <span className="bi bi-x-circle me-1" aria-hidden="true" />
+                    <span>Cancelar</span>
+                  </>
+                ) : (
+                  est
+                )}
+              </Button>
+            ))}
+          </div>
         </div>
       </Modal.Body>
 
@@ -702,16 +720,24 @@ function AdminPedidosPage() {
 
   // Cambio de estado con confirmación modal
   const solicitarCambioEstado = (pedidoId, nuevoEstado) => {
+    const pedidoActual = pedidos.find(p => p.id === pedidoId) || (pedidoSeleccionado?.id === pedidoId ? pedidoSeleccionado : null);
     const esCancelacion = nuevoEstado === 'cancelado';
+    const esReactivacion = pedidoActual?.estado === 'cancelado' && nuevoEstado !== 'cancelado';
+
+    let mensajeModal = `¿Deseas cambiar el estado del Pedido #${pedidoId} a "${nuevoEstado.toUpperCase()}"?`;
+    if (esCancelacion) {
+      mensajeModal = `¿Deseas cancelar el Pedido #${pedidoId}? Esta acción cancelará la orden y devolverá el stock de los productos al inventario.`;
+    } else if (esReactivacion) {
+      mensajeModal = `¿Deseas reactivar el Pedido #${pedidoId} cambiando su estado a "${nuevoEstado.toUpperCase()}"? Se validará y descontará nuevamente el stock de los productos.`;
+    }
+
     setModalConfirmacion({
       show: true,
       titulo: TITULOS_ESTADO[nuevoEstado] || `¿Cambiar estado a "${nuevoEstado}"?`,
-      mensaje: esCancelacion
-        ? `¿Deseas cancelar el Pedido #${pedidoId}? Esta acción cancelará la orden y devolverá el stock de los productos al inventario.`
-        : `¿Deseas cambiar el estado del Pedido #${pedidoId} a "${nuevoEstado.toUpperCase()}"?`,
+      mensaje: mensajeModal,
       tipo: TIPOS_ESTADO[nuevoEstado] || 'primary',
       icono: ICONOS_ESTADO[nuevoEstado] || 'arrow-repeat',
-      textoConfirmar: esCancelacion ? 'Sí, cancelar pedido' : 'Actualizar Estado',
+      textoConfirmar: esCancelacion ? 'Sí, cancelar pedido' : esReactivacion ? 'Sí, reactivar pedido' : 'Actualizar Estado',
       textoCancelar: 'Cerrar',
       onConfirm: async () => {
         try {

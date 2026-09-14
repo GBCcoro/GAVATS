@@ -3,63 +3,80 @@
  * PAGINACIÓN DE TABLA (GAVAT)
  * ============================================
  * Barra de paginación reutilizable para tablas administrativas.
+ * Sigue el mismo esquema y diseño de AdminProductosPage:
+ * - Botones anterior y siguiente secundarios con bi-arrow-left y bi-arrow-right
+ * - Indicador central 'Página X de Y'
+ * - Contador de registros mostrados a la izquierda con icono bi-file-text
  */
 
 import React from 'react';
-import { ButtonGroup, Button } from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
 
 const PaginacionTabla = ({
   paginaActual = 1,
   totalPaginas = 1,
   totalItems,
   itemsActuales = 0,
-  etiquetaItems = 'elementos',
+  etiquetaItems = 'registros',
   onCambiarPagina,
   loading = false,
+  className = ''
 }) => {
-  if (totalPaginas <= 1) return null;
+  if (totalPaginas <= 1 && (!totalItems || totalItems <= 0)) return null;
+
+  const totalNum = totalItems !== undefined ? totalItems : itemsActuales;
+  const itemsPorPagina = itemsActuales > 0 ? itemsActuales : 10;
+  const inicio = totalNum === 0 ? 0 : (paginaActual - 1) * itemsPorPagina + 1;
+  const fin = totalNum > 0 ? Math.min(paginaActual * itemsPorPagina, totalNum) : itemsActuales;
+
+  const handleAnterior = () => {
+    if (typeof onCambiarPagina === 'function') {
+      onCambiarPagina(paginaActual > 1 ? paginaActual - 1 : 1);
+    }
+  };
+
+  const handleSiguiente = () => {
+    if (typeof onCambiarPagina === 'function') {
+      onCambiarPagina(paginaActual < totalPaginas ? paginaActual + 1 : totalPaginas);
+    }
+  };
 
   return (
-    <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 mt-4 p-3 bg-white rounded shadow-sm">
-      <small className="text-muted">
-        Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong>
-        {totalItems !== undefined && (
-          <> — Mostrando <strong>{itemsActuales}</strong> de <strong>{totalItems}</strong> {etiquetaItems}</>
-        )}
+    <div className={`d-flex justify-content-between align-items-center text-muted bg-white p-3 rounded shadow-sm ${className}`}>
+      <small>
+        <span className="bi bi-file-text me-1" aria-hidden="true" />
+        <span>
+          Mostrando <strong>{totalNum === 0 ? '0-0' : `${inicio}-${fin}`}</strong> de <strong>{totalNum}</strong> {etiquetaItems}
+        </span>
       </small>
-      <ButtonGroup size="sm">
+      
+      <div className="d-flex gap-2 align-items-center">
         <Button
-          variant="outline-primary"
-          onClick={() => onCambiarPagina(1)}
+          type="button"
+          variant="outline-secondary"
+          size="sm"
           disabled={paginaActual === 1 || loading}
+          onClick={handleAnterior}
+          title="Página anterior"
         >
-          ««
+          <span className="bi bi-arrow-left" aria-hidden="true" />
         </Button>
+        
+        <span className="text-nowrap small">
+          Página <strong>{paginaActual}</strong> de <strong>{totalPaginas || 1}</strong>
+        </span>
+        
         <Button
-          variant="outline-primary"
-          onClick={() => onCambiarPagina(p => p - 1)}
-          disabled={paginaActual === 1 || loading}
+          type="button"
+          variant="outline-secondary"
+          size="sm"
+          disabled={paginaActual >= totalPaginas || loading}
+          onClick={handleSiguiente}
+          title="Página siguiente"
         >
-          Anterior
+          <span className="bi bi-arrow-right" aria-hidden="true" />
         </Button>
-        <Button variant="primary" disabled>
-          {paginaActual} / {totalPaginas}
-        </Button>
-        <Button
-          variant="outline-primary"
-          onClick={() => onCambiarPagina(p => p + 1)}
-          disabled={paginaActual === totalPaginas || loading}
-        >
-          Siguiente
-        </Button>
-        <Button
-          variant="outline-primary"
-          onClick={() => onCambiarPagina(totalPaginas)}
-          disabled={paginaActual === totalPaginas || loading}
-        >
-          »»
-        </Button>
-      </ButtonGroup>
+      </div>
     </div>
   );
 };

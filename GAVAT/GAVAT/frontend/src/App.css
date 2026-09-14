@@ -1502,6 +1502,30 @@ p.cell-truncate {
   align-items: center !important;
 }
 
+/* Modal de Confirmación Ampliado (para desplegable de elementos vinculados) */
+.modal-confirmacion-ampliado {
+  width: auto !important;
+  max-width: min(94vw, 520px) !important;
+  margin: 1.5rem auto !important;
+  z-index: 1075 !important;
+}
+
+.modal-confirmacion-ampliado .modal-content {
+  border: none !important;
+  border-radius: 1.25rem !important;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25) !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  width: auto !important;
+}
+
+.modal-confirmacion-ampliado .modal-body {
+  padding: 1.5rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
 .confirm-icon-wrapper {
   width: 58px;
   height: 58px;

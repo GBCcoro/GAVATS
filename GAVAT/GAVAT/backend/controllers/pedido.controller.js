@@ -619,16 +619,52 @@ const actualizarEstadoPedido = async (req, res) => {
         await t.rollback();
         throw error;
       }
-    } else {
-      // Un pedido cancelado ya devolvió su stock y no debe cambiarse arbitrariamente
-      if (pedido.estado === 'cancelado') {
-        return res.status(400).json({
-          success: false,
-          message: 'No se puede reactivar o cambiar el estado de un pedido ya cancelado'
+    } else if (pedido.estado === 'cancelado') {
+      // El pedido estaba cancelado y ahora el admin lo reactiva / cambia su estado a un estado activo.
+      // Debe validarse y re-descontar el inventario de los productos de forma atómica.
+      const t = await sequelize.transaction();
+      try {
+        const detalles = await DetallePedido.findAll({
+          where: { pedidoId: pedido.id },
+          include: [{ model: Producto, as: 'producto' }],
+          transaction: t
         });
-      }
 
-      // Para otros estados, no usa transacción (evita deadlock)
+        // 1. Validar que haya stock suficiente para cada producto
+        for (const detalle of detalles) {
+          const prod = detalle.producto || await Producto.findByPk(detalle.productoId, { transaction: t });
+          if (!prod) {
+            await t.rollback();
+            return res.status(400).json({
+              success: false,
+              message: `El producto ID ${detalle.productoId} ya no existe en la base de datos.`
+            });
+          }
+          if (prod.stock < detalle.cantidad) {
+            await t.rollback();
+            return res.status(400).json({
+              success: false,
+              message: `No hay suficiente stock para reactivar el pedido. El producto "${prod.nombre}" requiere ${detalle.cantidad} unidad(es) y solo cuenta con ${prod.stock} disponible(s).`
+            });
+          }
+        }
+
+        // 2. Reducir stock de cada producto
+        for (const detalle of detalles) {
+          const prod = detalle.producto || await Producto.findByPk(detalle.productoId, { transaction: t });
+          await prod.reducirStock(detalle.cantidad, t);
+          console.log(`  ↳ Stock re-descontado por reactivación: ${detalle.cantidad} x ${prod.nombre}`);
+        }
+
+        pedido.estado = estado;
+        await pedido.save({ transaction: t });
+        await t.commit();
+      } catch (error) {
+        await t.rollback();
+        throw error;
+      }
+    } else {
+      // Para otros estados activos, no usa transacción
       pedido.estado = estado;
       await pedido.save();
     }
