@@ -81,7 +81,7 @@ const Factura = require('./Factura');
 Categoria.hasMany(Subcategoria, {
   foreignKey: 'categoriaId',       // Columna FK en la tabla 'subcategorias' que apunta a 'categorias.id'
   as: 'subcategorias',             // Alias para JOINs → Categoria.findAll({ include: ['subcategorias'] })
-  onDelete: 'CASCADE',             // Si se elimina una categoría → se eliminan TODAS sus subcategorías
+  onDelete: 'SET NULL',            // Si se elimina una categoría → subcategorías quedan huérfanas (categoriaId = NULL)
   onUpdate: 'CASCADE'              // Si se actualiza el id de la categoría → se actualiza en subcategorías
 });
 
@@ -90,7 +90,7 @@ Categoria.hasMany(Subcategoria, {
 Subcategoria.belongsTo(Categoria, {
   foreignKey: 'categoriaId',       // Misma FK → conecta con la definición anterior
   as: 'categoria',                 // Alias para JOINs → Subcategoria.findAll({ include: ['categoria'] })
-  onDelete: 'CASCADE',             // Mismas reglas de eliminación
+  onDelete: 'SET NULL',            // Si se elimina la categoría → categoriaId = NULL
   onUpdate: 'CASCADE'              // Mismas reglas de actualización
 });
 
@@ -104,7 +104,7 @@ Subcategoria.belongsTo(Categoria, {
 Categoria.hasMany(Producto, {
   foreignKey: 'categoriaId',       // Columna FK en tabla 'productos' que apunta a 'categorias.id'
   as: 'productos',                 // Alias → Categoria.findAll({ include: ['productos'] })
-  onDelete: 'CASCADE',             // Si se elimina la categoría → se eliminan sus productos
+  onDelete: 'SET NULL',            // Si se elimina la categoría → productos quedan huérfanos (categoriaId = NULL)
   onUpdate: 'CASCADE'              // Si cambia el id → se actualiza en productos
 });
 
@@ -112,7 +112,7 @@ Categoria.hasMany(Producto, {
 Producto.belongsTo(Categoria, {
   foreignKey: 'categoriaId',       // Misma FK
   as: 'categoria',                 // Alias → Producto.findAll({ include: ['categoria'] })
-  onDelete: 'CASCADE',             // Mismas reglas
+  onDelete: 'SET NULL',            // Si se elimina la categoría → categoriaId = NULL
   onUpdate: 'CASCADE'
 });
 
@@ -126,7 +126,7 @@ Producto.belongsTo(Categoria, {
 Subcategoria.hasMany(Producto, {
   foreignKey: 'subcategoriaId',    // Columna FK en tabla 'productos' que apunta a 'subcategorias.id'
   as: 'productos',                 // Alias → Subcategoria.findAll({ include: ['productos'] })
-  onDelete: 'CASCADE',             // Si se elimina la subcategoría → se eliminan sus productos
+  onDelete: 'SET NULL',            // Si se elimina la subcategoría → productos quedan huérfanos de subcategoría (subcategoriaId = NULL)
   onUpdate: 'CASCADE'
 });
 
@@ -134,7 +134,7 @@ Subcategoria.hasMany(Producto, {
 Producto.belongsTo(Subcategoria, {
   foreignKey: 'subcategoriaId',    // Misma FK
   as: 'subcategoria',              // Alias → Producto.findAll({ include: ['subcategoria'] })
-  onDelete: 'CASCADE',
+  onDelete: 'SET NULL',            // Si se elimina la subcategoría → subcategoriaId = NULL
   onUpdate: 'CASCADE'
 });
 

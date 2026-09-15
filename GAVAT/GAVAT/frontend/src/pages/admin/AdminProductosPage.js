@@ -205,9 +205,13 @@ function AccionesProducto({ prod, onEditar, onCambiarEstado, onEliminar }) {
     accion();
   };
 
+  const esHuerfano = !prod.categoriaId || !prod.subcategoriaId;
   const estadoIcono = prod.activo ? 'x-circle' : 'check-circle';
   const estadoTexto = prod.activo ? 'Desactivar' : 'Activar';
   const estadoVariant = prod.activo ? 'outline-warning' : 'outline-success';
+  const estadoTitle = esHuerfano && !prod.activo
+    ? 'Producto huérfano: debe asignarle una categoría y subcategoría activas para poder activarlo'
+    : (prod.activo ? 'Desactivar producto' : 'Activar producto');
 
   return (
     <div className="action-btn-group">
@@ -228,7 +232,7 @@ function AccionesProducto({ prod, onEditar, onCambiarEstado, onEliminar }) {
         size="sm"
         className="btn-action-table"
         onClick={(e) => handleAccion(e, () => onCambiarEstado(prod))}
-        title={prod.activo ? 'Desactivar producto' : 'Activar producto'}
+        title={estadoTitle}
       >
         <span className={`bi bi-${estadoIcono}`} aria-hidden="true" />
         <span className="btn-text">{estadoTexto}</span>
@@ -251,6 +255,7 @@ function AccionesProducto({ prod, onEditar, onCambiarEstado, onEliminar }) {
 function FilaProducto({ prod, estaSeleccionado, onToggleSeleccionar, onEditar, onCambiarEstado, onEliminar }) {
   const iconCls = estaSeleccionado ? 'check-circle-fill text-danger' : 'circle text-muted';
   const rowCls = `fila-producto ${estaSeleccionado ? 'fila-producto-seleccionada' : ''}`;
+  const esHuerfano = !prod.categoriaId || !prod.subcategoriaId;
 
   return (
     <tr 
@@ -281,29 +286,54 @@ function FilaProducto({ prod, estaSeleccionado, onToggleSeleccionar, onEditar, o
       <td className="align-middle fw-bold">
         <div className="d-flex align-items-center gap-2 flex-wrap">
           <TextoTruncado as="span" texto={prod.nombre} limite={32} maxWidth="250px" />
-          <Badge bg={prod.activo ? 'success' : 'secondary'} className="d-md-none" style={{ fontSize: '0.68rem' }}>
-            {prod.activo ? 'Activo' : 'Inactivo'}
+          <Badge bg={esHuerfano ? 'secondary' : (prod.activo ? 'success' : 'secondary')} className="d-md-none" style={{ fontSize: '0.68rem' }}>
+            {esHuerfano ? 'Inactivo (Huérfano)' : (prod.activo ? 'Activo' : 'Inactivo')}
           </Badge>
         </div>
-        <TextoTruncado 
-          as="small" 
-          className="d-lg-none text-muted d-block" 
-          texto={prod.categoria?.nombre || 'Sin categoría'} 
-          limite={25} 
-          maxWidth="200px" 
-        />
+        <div className="d-lg-none text-muted small mt-1">
+          {!prod.categoriaId ? (
+            <span className="text-danger fw-semibold d-block">
+              <i className="bi bi-exclamation-triangle-fill me-1" /> Sin categoría (Huérfano)
+            </span>
+          ) : !prod.subcategoriaId ? (
+            <span className="text-warning fw-semibold d-block">
+              <i className="bi bi-exclamation-triangle-fill me-1" /> Sin subcategoría (Huérfano)
+            </span>
+          ) : (
+            <TextoTruncado 
+              as="small" 
+              className="text-muted d-block" 
+              texto={`${prod.categoria?.nombre || ''} · ${prod.subcategoria?.nombre || ''}`} 
+              limite={25} 
+              maxWidth="200px" 
+            />
+          )}
+        </div>
         <div className="d-sm-none text-muted small mt-1">
           <strong className="text-dark">{formatearPrecio(prod.precio)}</strong> · Stock: {prod.stock}
         </div>
       </td>
       <td className="align-middle d-none d-lg-table-cell">
-        <Badge bg="info">
-          <TextoTruncado texto={prod.categoria?.nombre || 'N/A'} limite={22} maxWidth="140px" />
-        </Badge>
-        {prod.subcategoria && (
+        {prod.categoria ? (
+          <Badge bg="info">
+            <TextoTruncado texto={prod.categoria.nombre} limite={22} maxWidth="140px" />
+          </Badge>
+        ) : (
+          <Badge bg="danger" title="Producto huérfano: sin categoría asignada">
+            <i className="bi bi-exclamation-triangle-fill me-1" /> Sin categoría
+          </Badge>
+        )}
+        {prod.subcategoria ? (
           <>
             <br />
             <TextoTruncado as="small" className="text-muted" texto={prod.subcategoria.nombre} limite={20} maxWidth="140px" />
+          </>
+        ) : (
+          <>
+            <br />
+            <span className="badge bg-warning text-dark mt-1" style={{ fontSize: '0.72rem' }} title="Producto huérfano: sin subcategoría asignada">
+              <i className="bi bi-exclamation-triangle-fill me-1" /> Sin subcategoría
+            </span>
           </>
         )}
       </td>
@@ -314,9 +344,15 @@ function FilaProducto({ prod, estaSeleccionado, onToggleSeleccionar, onEditar, o
         </Badge>
       </td>
       <td className="align-middle d-none d-md-table-cell">
-        <Badge bg={prod.activo ? 'success' : 'secondary'}>
-          {prod.activo ? 'Activo' : 'Inactivo'}
-        </Badge>
+        {esHuerfano ? (
+          <Badge bg="secondary" title="Producto huérfano: debe asignarle una categoría y subcategoría activas para poder activarlo">
+            Inactivo (Huérfano)
+          </Badge>
+        ) : (
+          <Badge bg={prod.activo ? 'success' : 'secondary'}>
+            {prod.activo ? 'Activo' : 'Inactivo'}
+          </Badge>
+        )}
       </td>
       <td className="align-middle text-center col-acciones">
         <AccionesProducto
@@ -764,6 +800,12 @@ function ModalProductoForm({
               name="activo"
               className="small text-secondary fw-medium"
             />
+            {(!formData.categoriaId || !formData.subcategoriaId) && (
+              <small className="text-warning d-block mt-1" style={{ fontSize: '0.78rem' }}>
+                <i className="bi bi-exclamation-triangle me-1" />
+                Para activar el producto, debe tener una categoría y subcategoría asignadas.
+              </small>
+            )}
           </div>
         </Modal.Body>
 
@@ -1057,16 +1099,21 @@ const AdminProductosPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (formData.activo && (!formData.categoriaId || !formData.subcategoriaId)) {
+      setMensaje({
+        tipo: 'danger',
+        texto: 'No se puede activar el producto sin tener una categoría y subcategoría activas asignadas.'
+      });
+      return;
+    }
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('nombre', formData.nombre);
       formDataToSend.append('descripcion', formData.descripcion || '');
       formDataToSend.append('precio', String(Number.parseFloat(formData.precio)));
       formDataToSend.append('stock', String(Number.parseInt(formData.stock, 10)));
-      formDataToSend.append('categoriaId', String(formData.categoriaId));
-      if (formData.subcategoriaId) {
-        formDataToSend.append('subcategoriaId', String(formData.subcategoriaId));
-      }
+      formDataToSend.append('categoriaId', formData.categoriaId ? String(formData.categoriaId) : '');
+      formDataToSend.append('subcategoriaId', formData.subcategoriaId ? String(formData.subcategoriaId) : '');
       formDataToSend.append('activo', String(formData.activo));
 
       if (imagenArchivo) {
@@ -1159,6 +1206,15 @@ const AdminProductosPage = () => {
 
   const solicitarCambioEstado = (producto) => {
     const nuevoEstado = !producto.activo;
+
+    if (nuevoEstado && (!producto.categoriaId || !producto.subcategoriaId)) {
+      setMensaje({
+        tipo: 'warning',
+        texto: `El producto "${producto.nombre}" está huérfano (le falta categoría o subcategoría). Edítalo y asígnale una categoría y subcategoría activas antes de poder activarlo.`
+      });
+      return;
+    }
+
     setModalConfirmacion({
       show: true,
       titulo: nuevoEstado ? '¿Activar producto?' : '¿Desactivar producto?',
@@ -1242,6 +1298,17 @@ const AdminProductosPage = () => {
     const pluralS = count !== 1 ? 's' : '';
     const accionTexto = nuevoEstado ? 'Activar' : 'Desactivar';
     const estadoNombre = nuevoEstado ? 'Activo' : 'Inactivo';
+
+    if (nuevoEstado) {
+      const huerfanos = productosSeleccionados.filter(p => !p.categoriaId || !p.subcategoriaId);
+      if (huerfanos.length > 0) {
+        setMensaje({
+          tipo: 'warning',
+          texto: `No se pueden activar ${huerfanos.length} producto(s) seleccionado(s) porque están huérfanos (les falta categoría o subcategoría). Asígnales una categoría y subcategoría activas primero.`
+        });
+        return;
+      }
+    }
     
     setModalConfirmacion({
       show: true,

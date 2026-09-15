@@ -347,13 +347,18 @@ const toggleCategoria = async (req, res) => {
  * 
  * Ruta: DELETE /api/admin/categorias/:id
  * 
- * Solo se puede eliminar si NO tiene subcategorías ni productos asociados.
- * Si tiene registros hijos, se recomienda desactivar en vez de eliminar.
+/**
+ * Eliminar categoría (admin)
+ * 
+ * Ruta: DELETE /api/admin/categorias/:id
+ * 
+ * Al eliminar la categoría, sus subcategorías y productos asociados
+ * NO se destruyen: quedan huérfanos (categoriaId = null, subcategoriaId = null)
+ * y desactivados (activo = false) hasta que se les asigne una nueva categoría activa.
  */
 const eliminarCategoria = async (req, res) => {
   try {
     const { id } = req.params;
-    const eliminarHijos = req.query.eliminarHijos === 'true' || req.body?.eliminarHijos === true;
     
     // Busca la categoría por ID
     const categoria = await Categoria.findByPk(id);
@@ -364,79 +369,47 @@ const eliminarCategoria = async (req, res) => {
         message: 'Categoría no encontrada'
       });
     }
-    
-    // Cuenta subcategorías y productos asociados
-    const totalSubcategorias = await Subcategoria.count({
-      where: { categoriaId: id }
-    });
-    
-    const totalProductos = await Producto.count({
-      where: { categoriaId: id }
-    });
 
-    // Si tiene elementos asociados y NO se confirmó la eliminación en cascada
-    if ((totalSubcategorias > 0 || totalProductos > 0) && !eliminarHijos) {
-      return res.status(400).json({
-        success: false,
-        tieneHijos: true,
-        subcategorias: totalSubcategorias,
-        productos: totalProductos,
-        message: `No se puede eliminar la categoría porque tiene ${totalSubcategorias} subcategoría(s) y ${totalProductos} producto(s) asociado(s)`,
-        sugerencia: 'Confirme la eliminación en cascada de subcategorías y productos o manténgalos desactivados.'
-      });
-    }
-
-    // Si se confirmó eliminar en cascada
-    if (eliminarHijos && (totalSubcategorias > 0 || totalProductos > 0)) {
-      const DetallePedido = require('../models/DetallePedido');
-      const Carrito = require('../models/Carrito');
-      const Comentario = require('../models/Comentario');
-      const path = require('node:path');
-      const fs = require('node:fs').promises;
-
-      const productos = await Producto.findAll({
-        where: { categoriaId: id }
-      });
-
-      for (const prod of productos) {
-        try {
-          await DetallePedido.destroy({ where: { productoId: prod.id } });
-        } catch (e) {
-          console.warn('Advertencia al limpiar DetallePedido:', e.message);
-        }
-        try {
-          await Carrito.destroy({ where: { productoId: prod.id } });
-        } catch (e) {
-          console.warn('Advertencia al limpiar Carrito:', e.message);
-        }
-        try {
-          await Comentario.destroy({ where: { productoId: prod.id } });
-        } catch (e) {
-          console.warn('Advertencia al limpiar Comentario:', e.message);
-        }
-        if (prod.imagen && typeof prod.imagen === 'string' && !prod.imagen.startsWith('data:') && !prod.imagen.startsWith('http')) {
-          const rutaImagen = path.join(__dirname, '../uploads', prod.imagen);
-          try {
-            await fs.unlink(rutaImagen);
-          } catch (err) {
-            // Ignorar
-          }
-        }
-        await prod.destroy();
+    // 1. Dejar huérfanas e inactivas todas las subcategorías vinculadas a esta categoría
+    const [subcategoriasAfectadas] = await Subcategoria.update(
+      { 
+        categoriaId: null, 
+        activo: false, 
+        desactivadoPorPadre: true 
+      },
+      { 
+        where: { categoriaId: id },
+        hooks: false
       }
+    );
 
-      await Subcategoria.destroy({ where: { categoriaId: id } });
-    }
+    // 2. Dejar huérfanos e inactivos todos los productos vinculados a esta categoría
+    const [productosAfectados] = await Producto.update(
+      { 
+        categoriaId: null, 
+        subcategoriaId: null, 
+        activo: false, 
+        desactivadoPorCategoria: true, 
+        desactivadoPorSubcategoria: true 
+      },
+      { 
+        where: { categoriaId: id },
+        hooks: false
+      }
+    );
 
-    // destroy() ejecuta DELETE FROM Categoria WHERE id = :id
+    // 3. Eliminar la categoría
     await categoria.destroy();
     
-    // Responde confirmando la eliminación
+    // Responde confirmando la eliminación y el estado huérfano de los elementos asociados
     res.json({
       success: true,
-      message: eliminarHijos && (totalSubcategorias > 0 || totalProductos > 0)
-        ? `Categoría, ${totalSubcategorias} subcategoría(s) y ${totalProductos} producto(s) asociados eliminados exitosamente`
-        : 'Categoría eliminada exitosamente'
+      message: `Categoría "${categoria.nombre}" eliminada exitosamente. ${subcategoriasAfectadas} subcategoría(s) y ${productosAfectados} producto(s) asociados quedaron huérfanos y desactivados hasta que se les asigne una nueva categoría activa.`,
+      data: {
+        categoriaId: id,
+        subcategoriasHuerfanas: subcategoriasAfectadas,
+        productosHuerfanos: productosAfectados
+      }
     });
     
   } catch (error) {

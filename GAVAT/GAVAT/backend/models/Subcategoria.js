@@ -56,21 +56,17 @@ const Subcategoria = sequelize.define('Subcategoria', {
   },
 
   // Columna 'categoriaId' → Clave foránea (FK) que apunta a la tabla 'categorias'
-  // Indica A QUÉ categoría padre pertenece esta subcategoría
+  // Indica A QUÉ categoría padre pertenece esta subcategoría. Puede ser NULL si queda huérfana.
   categoriaId: {
     type: DataTypes.INTEGER,           // Tipo INT, coincide con categorias.id
-    allowNull: false,                  // Obligatorio: toda subcategoría tiene categoría padre
+    allowNull: true,                   // Permite NULL cuando la categoría padre es eliminada
+    defaultValue: null,
     references: {                      // Define la FK en MySQL
       model: 'categorias',            // Tabla referenciada → tabla 'categorias'
       key: 'id'                       // Columna referenciada → categorias.id
     },
     onUpdate: 'CASCADE',              // Si cambia categorias.id → actualiza aquí
-    onDelete: 'CASCADE',              // Si se elimina la categoría → elimina subcategorías
-    validate: {
-      notNull: {
-        msg: 'Debe seleccionar una categoría'
-      }
-    }
+    onDelete: 'SET NULL'              // Si se elimina la categoría → queda huérfana (categoriaId = NULL)
   },
 
   // Columna 'activo' → Estado de la subcategoría (visible/oculta)
@@ -107,7 +103,6 @@ const Subcategoria = sequelize.define('Subcategoria', {
       // Índice ÚNICO compuesto → el NOMBRE de la subcategoría debe ser único
       // DENTRO de la misma categoría, pero dos categorías diferentes pueden
       // tener subcategorías con el mismo nombre.
-      // Ejemplo: Categoría "Ropa" → "Hombre". Categoría "Zapatos" → "Hombre" (OK, misma nombre, otra categoría)
       unique: true,                    // UNIQUE → no permite combinaciones repetidas
       fields: ['nombre', 'categoriaId'],  // Columnas del índice compuesto
       name: 'nombre_categoria_unique'     // Nombre del índice en MySQL
@@ -119,22 +114,16 @@ const Subcategoria = sequelize.define('Subcategoria', {
     /**
      * beforeCreate → Se ejecuta ANTES de insertar una nueva subcategoría
      * Valida que la categoría padre exista y esté activa.
-     * No tiene sentido crear una subcategoría en una categoría desactivada.
      */
     beforeCreate: async (subcategoria) => {
-      // Importa el modelo Categoria aquí dentro (evita dependencia circular)
+      if (!subcategoria.categoriaId) {
+        throw new Error('Debe seleccionar una categoría para la subcategoría');
+      }
       const Categoria = require('./Categoria');
-      
-      // Busca la categoría padre en la BD
-      // findByPk → SELECT * FROM categorias WHERE id = subcategoria.categoriaId
       const categoria = await Categoria.findByPk(subcategoria.categoriaId);
-      
-      // Si no existe la categoría → error
       if (!categoria) {
         throw new Error('La categoría seleccionada no existe');
       }
-      
-      // Si la categoría está desactivada → no permite crear subcategoría
       if (!categoria.activo) {
         throw new Error('No se puede crear una subcategoría en una categoría inactiva');
       }
@@ -143,22 +132,26 @@ const Subcategoria = sequelize.define('Subcategoria', {
     /**
      * beforeUpdate → Se ejecuta ANTES de actualizar una subcategoría.
      * Valida que la categoría padre exista y que no se active una subcategoría
-     * dentro de una categoría inactiva.
+     * dentro de una categoría inactiva ni si es huérfana.
      */
     beforeUpdate: async (subcategoria) => {
       const Categoria = require('./Categoria');
-      const categoria = await Categoria.findByPk(subcategoria.categoriaId);
-
-      if (!categoria) {
-        throw new Error('La categoría seleccionada no existe');
-      }
-
-      if (!categoria.activo && subcategoria.activo) {
-        throw new Error('No se puede activar una subcategoría en una categoría inactiva');
-      }
-
-      if (subcategoria.changed('categoriaId') && !categoria.activo) {
-        throw new Error('No se puede mover la subcategoría a una categoría inactiva');
+      if (subcategoria.categoriaId) {
+        const categoria = await Categoria.findByPk(subcategoria.categoriaId);
+        if (!categoria) {
+          throw new Error('La categoría seleccionada no existe');
+        }
+        if (!categoria.activo && subcategoria.activo) {
+          throw new Error('No se puede activar una subcategoría en una categoría inactiva');
+        }
+        if (subcategoria.changed('categoriaId') && !categoria.activo) {
+          throw new Error('No se puede mover la subcategoría a una categoría inactiva');
+        }
+      } else {
+        // Subcategoría huérfana: PROHIBIDO ACTIVAR si no tiene categoría
+        if (subcategoria.activo) {
+          throw new Error('No se puede activar una subcategoría huérfana (sin categoría asignada). Asigne una categoría activa primero.');
+        }
       }
     },
 

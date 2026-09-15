@@ -16,6 +16,7 @@ import BotonExportar from '../../components/BotonExportar';
 import ToolbarSeleccionLote from '../../components/ToolbarSeleccionLote';
 import PaginacionTabla from '../../components/PaginacionTabla';
 import TextoTruncado from '../../components/TextoTruncado';
+import DesplegableElementosVinculados from '../../components/DesplegableElementosVinculados';
 import { exportarSubcategoriasAPDF, exportarSubcategoriasAExcel } from '../../utils/exportUtils';
 
 const AdminSubcategoriasPage = () => {
@@ -28,6 +29,7 @@ const AdminSubcategoriasPage = () => {
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [tipoExportacion, setTipoExportacion] = useState('pdf');
   const [seleccionados, setSeleccionados] = useState(new Set());
+  const [productosVinculadosModal, setProductosVinculadosModal] = useState({ productos: [], loading: false });
   
   // Modal de confirmación en pantalla
   const [modalConfirmacion, setModalConfirmacion] = useState({ show: false });
@@ -133,6 +135,18 @@ const AdminSubcategoriasPage = () => {
         categoriaId: subcategoria.categoriaId,
         activo: subcategoria.activo
       });
+      setProductosVinculadosModal({ productos: [], loading: true });
+      api.get(`/admin/subcategorias/${subcategoria.id}`)
+        .then(res => {
+          const subData = res.data?.data?.subcategoria || res.data?.subcategoria || {};
+          setProductosVinculadosModal({
+            productos: subData.productos || [],
+            loading: false
+          });
+        })
+        .catch(() => {
+          setProductosVinculadosModal(prev => ({ ...prev, loading: false }));
+        });
     } else {
       setEditando(null);
       setFormData({
@@ -141,6 +155,7 @@ const AdminSubcategoriasPage = () => {
         categoriaId: categorias.length > 0 ? categorias[0].id : '',
         activo: true
       });
+      setProductosVinculadosModal({ productos: [], loading: false });
     }
     setShowModal(true);
   };
@@ -149,6 +164,7 @@ const AdminSubcategoriasPage = () => {
     setShowModal(false);
     setEditando(null);
     setFormData({ nombre: '', descripcion: '', categoriaId: '', activo: true });
+    setProductosVinculadosModal({ productos: [], loading: false });
   };
 
   const handleChange = (e) => {
@@ -169,6 +185,17 @@ const AdminSubcategoriasPage = () => {
     if (!formData.categoriaId) {
       setMensaje({ tipo: 'danger', texto: 'Debes seleccionar una categoría' });
       return;
+    }
+
+    if (formData.activo) {
+      const cat = categorias.find(c => Number(c.id) === Number(formData.categoriaId));
+      if (cat && !cat.activo) {
+        setMensaje({ 
+          tipo: 'danger', 
+          texto: `No se puede activar la subcategoría porque la categoría "${cat.nombre}" está inactiva` 
+        });
+        return;
+      }
     }
 
     try {
@@ -219,15 +246,23 @@ const AdminSubcategoriasPage = () => {
     });
   };
 
-  const abrirModalEliminarConProductos = (subcategoria, totalProd) => {
+  const abrirModalEliminarConProductos = (subcategoria, productos = []) => {
+    const totalProd = productos.length;
     setModalConfirmacion({
       show: true,
-      titulo: '¿Eliminar subcategoría y sus productos?',
-      mensaje: `La subcategoría "${subcategoria.nombre}" tiene ${totalProd} producto(s) asociado(s). ¿Deseas eliminar permanentemente también todos sus productos? Si no aceptas, los productos no se borrarán y quedarán desactivados.`,
+      titulo: '¿Eliminar subcategoría?',
+      mensaje: `La subcategoría "${subcategoria.nombre}" tiene ${totalProd} producto(s) asociado(s). Al eliminarla, estos productos NO se destruirán: quedarán huérfanos de subcategoría y desactivados hasta que se les asigne una nueva subcategoría activa. ¿Deseas eliminar la subcategoría?`,
       tipo: 'danger',
-      icono: 'exclamation-triangle-fill',
-      textoConfirmar: 'Sí, eliminar todo',
-      textoCancelar: 'No eliminar (desactivar)',
+      icono: 'trash3-fill',
+      textoConfirmar: 'Sí, eliminar subcategoría',
+      textoCancelar: 'Cancelar',
+      contenidoExtra: (
+        <DesplegableElementosVinculados
+          mostrarSubcategorias={false}
+          productos={productos}
+          defaultAbierto={true}
+        />
+      ),
       onConfirm: async () => {
         try {
           setSubcategorias(prev => prev.filter(s => s.id !== subcategoria.id));
@@ -237,10 +272,10 @@ const AdminSubcategoriasPage = () => {
             return next;
           });
 
-          const res = await api.delete(`/admin/subcategorias/${subcategoria.id}?eliminarProductos=true`);
+          const res = await api.delete(`/admin/subcategorias/${subcategoria.id}`);
           setMensaje({ 
             tipo: 'success', 
-            texto: res.data?.message || `Subcategoría "${subcategoria.nombre}" y sus productos eliminados exitosamente` 
+            texto: res.data?.message || `Subcategoría "${subcategoria.nombre}" eliminada exitosamente` 
           });
           await loadData();
         } catch (error) {
@@ -251,45 +286,29 @@ const AdminSubcategoriasPage = () => {
           });
           await loadData();
         }
-      },
-      onCancel: async () => {
-        try {
-          if (subcategoria.activo) {
-            await api.patch(`/admin/subcategorias/${subcategoria.id}/toggle`);
-            await loadData();
-          }
-          setMensaje({
-            tipo: 'warning',
-            texto: 'Los productos no fueron borrados y están desactivados'
-          });
-        } catch (e) {
-          setMensaje({
-            tipo: 'info',
-            texto: 'Los productos no fueron borrados y están desactivados'
-          });
-        }
       }
     });
   };
 
-  // Eliminar individual con modal y opción de cascada
+  // Eliminar individual con modal
   const solicitarEliminar = async (subcategoria) => {
     try {
-      let totalProd = 0;
+      let productos = [];
 
       try {
-        const statsRes = await api.get(`/admin/subcategorias/${subcategoria.id}/stats`);
-        const stats = statsRes?.data?.data || statsRes?.data || {};
-        const est = stats.estadisticas || stats;
-        totalProd = est.productos?.total ?? est.totalProductos ?? stats.totalProductos ?? 0;
+        const subRes = await api.get(`/admin/subcategorias/${subcategoria.id}`);
+        const subData = subRes.data?.data?.subcategoria || subRes.data?.subcategoria || {};
+        if (Array.isArray(subData.productos)) {
+          productos = subData.productos;
+        }
       } catch (errStats) {
-        console.warn('No se pudieron obtener estadísticas de la subcategoría:', errStats);
+        console.warn('No se pudieron obtener productos de la subcategoría:', errStats);
       }
 
-      const tieneProductos = totalProd > 0;
+      const tieneProductos = productos.length > 0;
 
       if (tieneProductos) {
-        abrirModalEliminarConProductos(subcategoria, totalProd);
+        abrirModalEliminarConProductos(subcategoria, productos);
         return;
       }
 
@@ -303,7 +322,7 @@ const AdminSubcategoriasPage = () => {
         textoCancelar: 'Cancelar',
         onConfirm: async () => {
           try {
-            await api.delete(`/admin/subcategorias/${subcategoria.id}`);
+            const res = await api.delete(`/admin/subcategorias/${subcategoria.id}`);
             setSubcategorias(prev => prev.filter(s => s.id !== subcategoria.id));
             setSeleccionados(prev => {
               const next = new Set(prev);
@@ -311,15 +330,10 @@ const AdminSubcategoriasPage = () => {
               return next;
             });
 
-            setMensaje({ tipo: 'success', texto: `Subcategoría "${subcategoria.nombre}" eliminada exitosamente` });
+            setMensaje({ tipo: 'success', texto: res.data?.message || `Subcategoría "${subcategoria.nombre}" eliminada exitosamente` });
             await loadData();
           } catch (error) {
             console.error('Error al eliminar subcategoría:', error);
-            if (error.response?.data?.tieneProductos || error.response?.status === 400) {
-              const prodCount = error.response?.data?.productos || totalProd || 1;
-              abrirModalEliminarConProductos(subcategoria, prodCount);
-              return;
-            }
             setMensaje({ 
               tipo: 'danger', 
               texto: error.response?.data?.message || 'Error al eliminar la subcategoría' 
@@ -336,6 +350,15 @@ const AdminSubcategoriasPage = () => {
   // Toggle estado individual con modal
   const solicitarCambioEstado = (subcategoria) => {
     const nuevoEstado = !subcategoria.activo;
+
+    if (nuevoEstado && !subcategoria.categoriaId) {
+      setMensaje({
+        tipo: 'warning',
+        texto: `No se puede activar la subcategoría "${subcategoria.nombre}" porque es huérfana (no tiene categoría asignada). Edítala y asígnale una categoría activa primero.`
+      });
+      return;
+    }
+
     setModalConfirmacion({
       show: true,
       titulo: nuevoEstado ? '¿Activar subcategoría?' : '¿Desactivar subcategoría?',
@@ -380,7 +403,7 @@ const AdminSubcategoriasPage = () => {
     setModalConfirmacion({
       show: true,
       titulo: `¿Eliminar ${count} subcategoría${count !== 1 ? 's' : ''}?`,
-      mensaje: `Se eliminarán permanentemente las ${count} subcategorías seleccionadas. ¿Deseas continuar?`,
+      mensaje: `Se eliminarán las ${count} subcategorías seleccionadas. Los productos vinculados quedarán huérfanos y desactivados hasta que se les asigne una nueva subcategoría activa. ¿Deseas continuar?`,
       tipo: 'danger',
       icono: 'trash3-fill',
       textoConfirmar: 'Borrar',
@@ -416,6 +439,21 @@ const AdminSubcategoriasPage = () => {
     const count = seleccionados.size;
     if (count === 0) return;
     
+    const subcategoriasSeleccionadas = subcategorias.filter(s => seleccionados.has(s.id));
+    const todosActivos = subcategoriasSeleccionadas.length > 0 ? subcategoriasSeleccionadas.every(s => s.activo) : false;
+    const nuevoEstado = !todosActivos;
+
+    if (nuevoEstado) {
+      const huerfanas = subcategoriasSeleccionadas.filter(s => !s.categoriaId);
+      if (huerfanas.length > 0) {
+        setMensaje({
+          tipo: 'warning',
+          texto: `No se pueden activar ${huerfanas.length} de las subcategorías seleccionadas porque están huérfanas (no tienen categoría asignada). Asígnales una categoría primero.`
+        });
+        return;
+      }
+    }
+
     setModalConfirmacion({
       show: true,
       titulo: `¿Cambiar estado a ${count} subcategoría${count !== 1 ? 's' : ''}?`,
@@ -454,7 +492,8 @@ const AdminSubcategoriasPage = () => {
   }, [categorias]);
 
   const obtenerNombreCategoria = useCallback((categoriaId) => {
-    return categoriasMap.get(Number(categoriaId)) || '-';
+    if (!categoriaId) return 'Sin categoría (Huérfana)';
+    return categoriasMap.get(Number(categoriaId)) || 'Sin categoría (Huérfana)';
   }, [categoriasMap]);
 
   if (loading) {
@@ -637,30 +676,50 @@ const AdminSubcategoriasPage = () => {
                       <td className="align-middle fw-bold">
                         <div className="d-flex align-items-center gap-2 flex-wrap">
                           <TextoTruncado as="span" texto={sub.nombre} limite={30} maxWidth="220px" />
-                          <Badge bg={sub.activo ? 'success' : 'secondary'} className="d-md-none" style={{ fontSize: '0.68rem' }}>
-                            {sub.activo ? 'Activo' : 'Inactivo'}
+                          <Badge bg={!sub.categoriaId ? 'secondary' : (sub.activo ? 'success' : 'secondary')} className="d-md-none" style={{ fontSize: '0.68rem' }}>
+                            {!sub.categoriaId ? 'Inactivo (Huérfana)' : (sub.activo ? 'Activo' : 'Inactivo')}
                           </Badge>
                         </div>
-                        <TextoTruncado 
-                          as="small" 
-                          className="d-md-none text-muted d-block" 
-                          texto={obtenerNombreCategoria(sub.categoriaId)} 
-                          limite={25} 
-                          maxWidth="200px" 
-                        />
+                        {sub.categoriaId ? (
+                          <TextoTruncado 
+                            as="small" 
+                            className="d-md-none text-muted d-block" 
+                            texto={obtenerNombreCategoria(sub.categoriaId)} 
+                            limite={25} 
+                            maxWidth="200px" 
+                          />
+                        ) : (
+                          <small className="d-md-none text-danger d-block fw-semibold" style={{ fontSize: '0.75rem' }}>
+                            <i className="bi bi-exclamation-triangle-fill me-1" />
+                            Sin categoría (Huérfana)
+                          </small>
+                        )}
                       </td>
                       <td className="align-middle d-none d-md-table-cell">
-                        <Badge bg="info">
-                          <TextoTruncado texto={obtenerNombreCategoria(sub.categoriaId)} limite={25} maxWidth="180px" />
-                        </Badge>
+                        {sub.categoriaId ? (
+                          <Badge bg="info">
+                            <TextoTruncado texto={obtenerNombreCategoria(sub.categoriaId)} limite={25} maxWidth="180px" />
+                          </Badge>
+                        ) : (
+                          <Badge bg="danger" title="Subcategoría huérfana: sin categoría asignada">
+                            <i className="bi bi-exclamation-triangle-fill me-1" />
+                            Sin categoría
+                          </Badge>
+                        )}
                       </td>
                       <td className="align-middle d-none d-lg-table-cell">
                         <TextoTruncado texto={sub.descripcion} limite={45} maxWidth="320px" fallback="-" />
                       </td>
                       <td className="align-middle d-none d-md-table-cell">
-                        <Badge bg={sub.activo ? 'success' : 'secondary'}>
-                          {sub.activo ? 'Activo' : 'Inactivo'}
-                        </Badge>
+                        {!sub.categoriaId ? (
+                          <Badge bg="secondary" title="Subcategoría huérfana: debe asignarle una categoría activa para poder activarla">
+                            Inactivo (Huérfana)
+                          </Badge>
+                        ) : (
+                          <Badge bg={sub.activo ? 'success' : 'secondary'}>
+                            {sub.activo ? 'Activo' : 'Inactivo'}
+                          </Badge>
+                        )}
                       </td>
                       <td className="align-middle text-center col-acciones" onClick={(e) => e.stopPropagation()}>
                         <div className="action-btn-group">
@@ -685,7 +744,7 @@ const AdminSubcategoriasPage = () => {
                               e.stopPropagation();
                               solicitarCambioEstado(sub);
                             }}
-                            title={sub.activo ? 'Desactivar subcategoría' : 'Activar subcategoría'}
+                            title={!sub.categoriaId ? 'Subcategoría huérfana: asígnale una categoría activa para activarla' : (sub.activo ? 'Desactivar subcategoría' : 'Activar subcategoría')}
                           >
                             <i className={`bi bi-${sub.activo ? 'x-circle' : 'check-circle'}`} />
                             <span className="btn-text">{sub.activo ? 'Desactivar' : 'Activar'}</span>
@@ -732,6 +791,7 @@ const AdminSubcategoriasPage = () => {
         editando={editando}
         formData={formData}
         categorias={categorias}
+        productosVinculados={productosVinculadosModal}
         onChange={handleChange}
         onSubmit={handleSubmit}
       />
@@ -752,6 +812,7 @@ const SubcategoriaModal = ({
   editando,
   formData,
   categorias,
+  productosVinculados,
   onChange,
   onSubmit
 }) => (
@@ -843,6 +904,17 @@ const SubcategoriaModal = ({
             className="small text-secondary fw-medium"
           />
         </div>
+
+        {editando && (
+          <div className="mt-3 pt-2 border-top">
+            <DesplegableElementosVinculados
+              mostrarSubcategorias={false}
+              productos={productosVinculados?.productos || []}
+              loading={productosVinculados?.loading}
+              defaultAbierto={false}
+            />
+          </div>
+        )}
       </Modal.Body>
 
       <div className="product-minimal-footer">

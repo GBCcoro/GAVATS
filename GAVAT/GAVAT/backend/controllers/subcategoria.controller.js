@@ -314,11 +314,21 @@ const actualizarSubcategoria = async (req, res) => {
       });
     }
 
+    const finalActivo = activo !== undefined ? (activo === true || activo === 'true') : subcategoria.activo;
+    const finalCategoriaId = categoriaId !== undefined ? (categoriaId ? Number.parseInt(categoriaId) : null) : subcategoria.categoriaId;
+
+    if (finalActivo && !finalCategoriaId) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede activar una subcategoría huérfana. Asigne una categoría activa primero.'
+      });
+    }
+
     if (nombre !== undefined) subcategoria.nombre = nombre;
     if (descripcion !== undefined) subcategoria.descripcion = descripcion;
-    if (categoriaId !== undefined) subcategoria.categoriaId = categoriaId;
+    if (categoriaId !== undefined) subcategoria.categoriaId = finalCategoriaId;
     if (activo !== undefined) {
-      subcategoria.activo = activo;
+      subcategoria.activo = finalActivo;
       subcategoria.desactivadoPorPadre = false;
     }
 
@@ -383,10 +393,23 @@ const toggleSubcategoria = async (req, res) => {
     // Invierte el estado activo: true → false, false → true
     const nuevoEstado = !subcategoria.activo;
 
-    // Si se intenta activar una subcategoría, verifica que su categoría padre esté activa.
+    // Si se intenta activar una subcategoría:
     if (nuevoEstado) {
+      if (!subcategoria.categoriaId) {
+        return res.status(400).json({
+          success: false,
+          message: 'No se puede activar la subcategoría porque es huérfana (no tiene categoría asignada). Asigne una categoría activa primero.'
+        });
+      }
+
       const categoria = await Categoria.findByPk(subcategoria.categoriaId);
-      if (categoria && !categoria.activo) {
+      if (!categoria) {
+        return res.status(400).json({
+          success: false,
+          message: 'No se puede activar la subcategoría porque su categoría asignada no existe.'
+        });
+      }
+      if (!categoria.activo) {
         return res.status(400).json({
           success: false,
           message: `No se puede activar la subcategoría porque la categoría padre "${categoria.nombre}" está inactiva`
@@ -427,14 +450,18 @@ const toggleSubcategoria = async (req, res) => {
 
 /**
  * Eliminar subcategoría (admin)
+/**
+ * Eliminar subcategoría (admin)
  * 
  * Ruta: DELETE /api/admin/subcategorias/:id
- * Solo se puede eliminar si NO tiene productos asociados.
+ * 
+ * Al eliminar la subcategoría, sus productos asociados NO se destruyen:
+ * quedan huérfanos de subcategoría (subcategoriaId = null) y desactivados (activo = false)
+ * hasta que se les asigne una nueva subcategoría activa.
  */
 const eliminarSubcategoria = async (req, res) => {
   try {
     const { id } = req.params;
-    const eliminarProductos = req.query.eliminarProductos === 'true' || req.body?.eliminarProductos === true;
     
     const subcategoria = await Subcategoria.findByPk(id);
     
@@ -444,71 +471,30 @@ const eliminarSubcategoria = async (req, res) => {
         message: 'Subcategoría no encontrada'
       });
     }
-    
-    // Cuenta productos asociados
-    const totalProductos = await Producto.count({
-      where: { subcategoriaId: id }
-    });
-    
-    // Si tiene productos y NO se confirmó la eliminación en cascada
-    if (totalProductos > 0 && !eliminarProductos) {
-      return res.status(400).json({
-        success: false,
-        tieneProductos: true,
-        productos: totalProductos,
-        message: `No se puede eliminar la subcategoría porque tiene ${totalProductos} producto(s) asociado(s)`,
-        sugerencia: 'Confirme la eliminación en cascada de los productos o manténgalos desactivados.'
-      });
-    }
 
-    // Si se confirmó eliminar productos
-    if (eliminarProductos && totalProductos > 0) {
-      const DetallePedido = require('../models/DetallePedido');
-      const Carrito = require('../models/Carrito');
-      const Comentario = require('../models/Comentario');
-      const path = require('node:path');
-      const fs = require('node:fs').promises;
-
-      const productos = await Producto.findAll({
-        where: { subcategoriaId: id }
-      });
-
-      for (const prod of productos) {
-        try {
-          await DetallePedido.destroy({ where: { productoId: prod.id } });
-        } catch (e) {
-          console.warn('Advertencia al limpiar DetallePedido:', e.message);
-        }
-        try {
-          await Carrito.destroy({ where: { productoId: prod.id } });
-        } catch (e) {
-          console.warn('Advertencia al limpiar Carrito:', e.message);
-        }
-        try {
-          await Comentario.destroy({ where: { productoId: prod.id } });
-        } catch (e) {
-          console.warn('Advertencia al limpiar Comentario:', e.message);
-        }
-        if (prod.imagen && typeof prod.imagen === 'string' && !prod.imagen.startsWith('data:') && !prod.imagen.startsWith('http')) {
-          const rutaImagen = path.join(__dirname, '../uploads', prod.imagen);
-          try {
-            await fs.unlink(rutaImagen);
-          } catch (err) {
-            // Ignorar
-          }
-        }
-        await prod.destroy();
+    // 1. Dejar huérfanos de subcategoría e inactivos todos los productos vinculados
+    const [productosAfectados] = await Producto.update(
+      { 
+        subcategoriaId: null, 
+        activo: false, 
+        desactivadoPorSubcategoria: true 
+      },
+      { 
+        where: { subcategoriaId: id },
+        hooks: false
       }
-    }
+    );
 
-    // destroy() ejecuta DELETE FROM Subcategoria WHERE id = :id
+    // 2. Eliminar la subcategoría
     await subcategoria.destroy();
     
     res.json({
       success: true,
-      message: eliminarProductos && totalProductos > 0
-        ? `Subcategoría y ${totalProductos} producto(s) asociados eliminados exitosamente`
-        : 'Subcategoría eliminada exitosamente'
+      message: `Subcategoría "${subcategoria.nombre}" eliminada exitosamente. ${productosAfectados} producto(s) asociados quedaron huérfanos de subcategoría y desactivados hasta que se les asigne una nueva subcategoría.`,
+      data: {
+        subcategoriaId: id,
+        productosHuerfanos: productosAfectados
+      }
     });
     
   } catch (error) {

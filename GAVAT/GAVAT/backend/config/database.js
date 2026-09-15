@@ -170,11 +170,14 @@ const syncDatabase = async (force = false, alter = false) => {
     // Volver a habilitar las restricciones de clave foránea
     await sequelize.query('SET FOREIGN_KEY_CHECKS=1');
 
-    // Garantiza columnas para memoria de estado en cascada
+    // Garantiza columnas para memoria de estado en cascada y anulabilidad para huérfanas
     try {
       await sequelize.query('ALTER TABLE `subcategorias` ADD COLUMN IF NOT EXISTS `desactivadoPorPadre` TINYINT(1) DEFAULT 0');
       await sequelize.query('ALTER TABLE `productos` ADD COLUMN IF NOT EXISTS `desactivadoPorCategoria` TINYINT(1) DEFAULT 0');
       await sequelize.query('ALTER TABLE `productos` ADD COLUMN IF NOT EXISTS `desactivadoPorSubcategoria` TINYINT(1) DEFAULT 0');
+      await sequelize.query('ALTER TABLE `subcategorias` MODIFY COLUMN `categoriaId` INT(11) NULL DEFAULT NULL');
+      await sequelize.query('ALTER TABLE `productos` MODIFY COLUMN `subcategoriaId` INT(11) NULL DEFAULT NULL');
+      await sequelize.query('ALTER TABLE `productos` MODIFY COLUMN `categoriaId` INT(11) NULL DEFAULT NULL');
     } catch (colErr) {
       // Ignorar si ya existen o el dialecto no soporta la sintaxis
     }

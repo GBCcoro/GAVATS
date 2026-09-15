@@ -164,40 +164,31 @@ const Producto = sequelize.define('Producto', {
   },
 
   // Columna 'subcategoriaId' → Clave foránea (FK) a la tabla 'subcategorias'
-  // Indica a QUÉ subcategoría pertenece el producto
+  // Indica a QUÉ subcategoría pertenece el producto. Puede ser NULL si queda huérfano.
   subcategoriaId: {
     type: DataTypes.INTEGER,           // Tipo INT, coincide con subcategorias.id
-    allowNull: false,                  // Obligatorio: todo producto tiene subcategoría
+    allowNull: true,                   // Permite NULL cuando la subcategoría es eliminada
+    defaultValue: null,
     references: {                      // Define la FK en MySQL
       model: 'subcategorias',         // Tabla referenciada
       key: 'id'                       // Columna referenciada
     },
     onUpdate: 'CASCADE',              // Si cambia subcategorias.id → actualiza aquí
-    onDelete: 'CASCADE',              // Si se elimina la subcategoría → elimina productos
-    validate: {
-      notNull: {
-        msg: 'Debe seleccionar una subcategoría'
-      }
-    }
+    onDelete: 'SET NULL'              // Si se elimina la subcategoría → queda huérfano (subcategoriaId = NULL)
   },
 
   // Columna 'categoriaId' → Clave foránea (FK) a la tabla 'categorias'
-  // Se guarda TAMBIÉN aquí (además de en subcategoría) para facilitar búsquedas directas
-  // REGLA: Debe coincidir con la categoría de la subcategoría seleccionada (validado en hooks)
+  // Indica a QUÉ categoría pertenece el producto. Puede ser NULL si queda huérfano.
   categoriaId: {
     type: DataTypes.INTEGER,           // Tipo INT, coincide con categorias.id
-    allowNull: false,                  // Obligatorio
+    allowNull: true,                   // Permite NULL cuando la categoría es eliminada
+    defaultValue: null,
     references: {
       model: 'categorias',            // Tabla referenciada
       key: 'id'
     },
     onUpdate: 'CASCADE',
-    onDelete: 'CASCADE',
-    validate: {
-      notNull: {
-        msg: 'Debe seleccionar una categoría'
-      }
-    }
+    onDelete: 'SET NULL'              // Si se elimina la categoría → queda huérfano (categoriaId = NULL)
   },
 
   // Columna 'activo' → Estado del producto (visible/oculto en catálogo)
@@ -297,22 +288,39 @@ const Producto = sequelize.define('Producto', {
 
     /**
      * beforeUpdate → Se ejecuta ANTES de actualizar un producto existente
-     * Si se cambió subcategoría o categoría, valida la consistencia
+     * Si el producto se activa o está activo, no puede ser huérfano.
      */
     beforeUpdate: async (producto) => {
-      // changed() retorna true si el campo fue modificado
-      if (producto.changed('subcategoriaId') || producto.changed('categoriaId')) {
-        const Subcategoria = require('./Subcategoria');
-        
-        const subcategoria = await Subcategoria.findByPk(producto.subcategoriaId);
-        
-        if (!subcategoria) {
-          throw new Error('La subcategoría seleccionada no existe');
+      // Si el producto está activo, NO PUEDE ser huérfano
+      if (producto.activo) {
+        if (!producto.categoriaId || !producto.subcategoriaId) {
+          throw new Error('No se puede activar un producto huérfano. Debe asignarle una categoría y subcategoría activas.');
         }
-        
-        // Verifica consistencia subcategoría-categoría
+
+        const Categoria = require('./Categoria');
+        const Subcategoria = require('./Subcategoria');
+
+        const categoria = await Categoria.findByPk(producto.categoriaId);
+        if (!categoria || !categoria.activo) {
+          throw new Error('No se puede activar un producto con una categoría inexistente o inactiva');
+        }
+
+        const subcategoria = await Subcategoria.findByPk(producto.subcategoriaId);
+        if (!subcategoria || !subcategoria.activo) {
+          throw new Error('No se puede activar un producto con una subcategoría inexistente o inactiva');
+        }
+
         if (subcategoria.categoriaId !== producto.categoriaId) {
           throw new Error('La subcategoría no pertenece a la categoría seleccionada');
+        }
+      } else {
+        // Si el producto está inactivo pero se le asignan categoría y subcategoría, validar consistencia si ambas existen
+        if (producto.categoriaId && producto.subcategoriaId && (producto.changed('subcategoriaId') || producto.changed('categoriaId'))) {
+          const Subcategoria = require('./Subcategoria');
+          const subcategoria = await Subcategoria.findByPk(producto.subcategoriaId);
+          if (subcategoria && subcategoria.categoriaId !== producto.categoriaId) {
+            throw new Error('La subcategoría no pertenece a la categoría seleccionada');
+          }
         }
       }
     }

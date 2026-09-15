@@ -228,11 +228,21 @@ const crearProducto = async (req, res) => {
 };
 
 const validarCategoriaParaActualizacion = async (categoriaId, producto) => {
-  if (!categoriaId || categoriaId === producto.categoriaId) {
+  if (categoriaId === undefined || categoriaId === null || categoriaId === "" || categoriaId === "null") {
     return null;
   }
-  const categoria = await Categoria.findByPk(categoriaId);
-  if (!categoria?.activo) {
+  const catId = Number.parseInt(categoriaId);
+  if (catId === producto.categoriaId) {
+    return null;
+  }
+  const categoria = await Categoria.findByPk(catId);
+  if (!categoria) {
+    return {
+      status: 400,
+      message: "Categoría no encontrada",
+    };
+  }
+  if (!categoria.activo) {
     return {
       status: 400,
       message: "Categoría inválida o inactiva",
@@ -246,18 +256,31 @@ const validarSubcategoriaParaActualizacion = async (
   categoriaId,
   producto,
 ) => {
-  if (!subcategoriaId || subcategoriaId === producto.subcategoriaId) {
+  if (subcategoriaId === undefined || subcategoriaId === null || subcategoriaId === "" || subcategoriaId === "null") {
     return null;
   }
-  const subcategoria = await Subcategoria.findByPk(subcategoriaId);
-  if (!subcategoria?.activo) {
+  const subId = Number.parseInt(subcategoriaId);
+  if (subId === producto.subcategoriaId && categoriaId === undefined) {
+    return null;
+  }
+  const subcategoria = await Subcategoria.findByPk(subId);
+  if (!subcategoria) {
+    return {
+      status: 400,
+      message: "Subcategoría no encontrada",
+    };
+  }
+  if (!subcategoria.activo) {
     return {
       status: 400,
       message: "Subcategoría inválida o inactiva",
     };
   }
-  const catId = categoriaId || producto.categoriaId;
-  if (subcategoria.categoriaId !== Number.parseInt(catId)) {
+  const catId = (categoriaId !== undefined && categoriaId !== null && categoriaId !== "" && categoriaId !== "null")
+    ? Number.parseInt(categoriaId)
+    : producto.categoriaId;
+
+  if (catId && subcategoria.categoriaId !== catId) {
     return {
       status: 400,
       message: "La subcategoría no pertenece a la categoría seleccionada",
@@ -367,15 +390,47 @@ const actualizarProducto = async (req, res) => {
     if (descripcion !== undefined) producto.descripcion = descripcion;
     if (precio !== undefined) producto.precio = Number.parseFloat(precio);
     if (stock !== undefined) producto.stock = Number.parseInt(stock);
-    if (categoriaId !== undefined)
-      producto.categoriaId = Number.parseInt(categoriaId);
-    if (subcategoriaId !== undefined)
-      producto.subcategoriaId = Number.parseInt(subcategoriaId);
+    if (categoriaId !== undefined) {
+      producto.categoriaId = (categoriaId === null || categoriaId === "" || categoriaId === "null") ? null : Number.parseInt(categoriaId);
+    }
+    if (subcategoriaId !== undefined) {
+      producto.subcategoriaId = (subcategoriaId === null || subcategoriaId === "" || subcategoriaId === "null") ? null : Number.parseInt(subcategoriaId);
+    }
     if (activo !== undefined) {
-      producto.activo = activo;
+      producto.activo = (activo === true || activo === "true" || activo === 1 || activo === "1");
       producto.desactivadoPorCategoria = false;
       producto.desactivadoPorSubcategoria = false;
     }
+
+    if (producto.activo) {
+      if (!producto.categoriaId || !producto.subcategoriaId) {
+        return res.status(400).json({
+          success: false,
+          message: "No se puede activar un producto huérfano. Debe asignarle una categoría y subcategoría activas.",
+        });
+      }
+      const cat = await Categoria.findByPk(producto.categoriaId);
+      if (!cat || !cat.activo) {
+        return res.status(400).json({
+          success: false,
+          message: "No se puede activar el producto porque la categoría asignada no existe o está inactiva.",
+        });
+      }
+      const sub = await Subcategoria.findByPk(producto.subcategoriaId);
+      if (!sub || !sub.activo) {
+        return res.status(400).json({
+          success: false,
+          message: "No se puede activar el producto porque la subcategoría asignada no existe o está inactiva.",
+        });
+      }
+      if (sub.categoriaId !== producto.categoriaId) {
+        return res.status(400).json({
+          success: false,
+          message: "La subcategoría no pertenece a la categoría seleccionada.",
+        });
+      }
+    }
+
     await producto.save();
     await producto.reload({
       include: [
@@ -394,6 +449,12 @@ const actualizarProducto = async (req, res) => {
     });
   } catch (error) {
     console.error("Error en actualizarProducto:", error);
+    if (error.name === "SequelizeValidationError" || error.message.includes("huérfano") || error.message.includes("categoría") || error.message.includes("subcategoría")) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
     res.status(500).json({
       success: false,
       message: "Error al actualizar producto",
@@ -422,13 +483,26 @@ const toggleProducto = async (req, res) => {
       });
     }
     
-    // Si se va a activar, verificar que la categoría y subcategoría estén activas
+    // Si se va a activar, verificar que la categoría y subcategoría existan y estén activas
     if (!producto.activo) {
+      if (!producto.categoriaId) {
+        return res.status(400).json({
+          success: false,
+          message: 'No se puede activar el producto porque no tiene una categoría asignada (está huérfano). Edite el producto para asignarle una categoría y subcategoría.'
+        });
+      }
+      if (!producto.subcategoriaId) {
+        return res.status(400).json({
+          success: false,
+          message: 'No se puede activar el producto porque no tiene una subcategoría asignada (está huérfano). Edite el producto para asignarle una subcategoría.'
+        });
+      }
+
       const categoria = await Categoria.findByPk(producto.categoriaId);
       if (!categoria) {
         return res.status(400).json({
           success: false,
-          message: `No se puede activar el producto porque la categoría con ID ${producto.categoriaId} no existe`
+          message: `No se puede activar el producto porque la categoría asignada no existe`
         });
       }
       if (!categoria.activo) {
@@ -442,13 +516,20 @@ const toggleProducto = async (req, res) => {
       if (!subcategoria) {
         return res.status(400).json({
           success: false,
-          message: `No se puede activar el producto porque la subcategoría con ID ${producto.subcategoriaId} no existe`
+          message: `No se puede activar el producto porque la subcategoría asignada no existe`
         });
       }
       if (!subcategoria.activo) {
         return res.status(400).json({
           success: false,
           message: `No se puede activar el producto porque la subcategoría "${subcategoria.nombre}" está inactiva`
+        });
+      }
+
+      if (subcategoria.categoriaId !== producto.categoriaId) {
+        return res.status(400).json({
+          success: false,
+          message: 'La subcategoría no pertenece a la categoría seleccionada'
         });
       }
     }
@@ -470,6 +551,12 @@ const toggleProducto = async (req, res) => {
     
   } catch (error) {
     console.error('Error en toggleProducto:', error);
+    if (error.name === "SequelizeValidationError" || error.message.includes("huérfano") || error.message.includes("categoría") || error.message.includes("subcategoría")) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
     res.status(500).json({
       success: false,
       message: 'Error al cambiar estado del producto',
